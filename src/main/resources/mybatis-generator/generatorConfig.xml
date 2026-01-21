@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE generatorConfiguration
+        PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN"
+        "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+
+<generatorConfiguration>
+
+    <context id="Postgres" targetRuntime="MyBatis3">
+
+        <!-- output clean -->
+        <property name="javaFileEncoding" value="UTF-8"/>
+
+        <!-- DB connection -->
+        <jdbcConnection
+                driverClass="org.postgresql.Driver"
+                connectionURL="jdbc:postgresql://localhost:5432/be_sme"
+                userId="postgres"
+                password="123456">
+        </jdbcConnection>
+
+        <!-- Type mapping -->
+        <javaTypeResolver>
+            <property name="forceBigDecimals" value="false"/>
+        </javaTypeResolver>
+
+        <!-- 1) Entity: gen vào persistence/entity -->
+        <javaModelGenerator
+                targetPackage="com.sme.be_sme.modules.identity.infrastructure.persistence.entity"
+                targetProject="src/main/java">
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <!-- 2) Mapper XML: gen vào resources/mybatis/modules/identity -->
+        <sqlMapGenerator
+                targetPackage="mybatis/modules/identity"
+                targetProject="src/main/resources"/>
+
+        <!-- 3) Mapper Interface: gen vào infrastructure/mapper -->
+        <javaClientGenerator
+                type="XMLMAPPER"
+                targetPackage="com.sme.be_sme.modules.identity.infrastructure.mapper"
+                targetProject="src/main/java"/>
+
+        <!-- ✅ Chỉ định table cần gen -->
+        <!-- Ví dụ bảng users: chỉnh đúng tên bảng trong DB của mày -->
+        <table tableName="users" domainObjectName="UserEntity">
+            <!-- ID là varchar(36) => String, OK -->
+            <!-- Nếu cột là snake_case, MBG tự camelCase field -->
+        </table>
+
+        <!-- Nếu còn bảng identity khác thì add tiếp -->
+        <!-- <table tableName="roles" domainObjectName="RoleEntity"/> -->
+        <!-- <table tableName="user_roles" domainObjectName="UserRoleEntity"/> -->
+
+    </context>
+</generatorConfiguration>
