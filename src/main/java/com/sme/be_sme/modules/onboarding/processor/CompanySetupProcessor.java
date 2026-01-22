@@ -6,7 +6,11 @@ import com.sme.be_sme.modules.company.api.response.CreateCompanyResponse;
 import com.sme.be_sme.modules.company.api.response.CreateDepartmentResponse;
 import com.sme.be_sme.modules.company.processor.CreateCompanyProcessor;
 import com.sme.be_sme.modules.company.processor.CreateDepartmentProcessor;
+import com.sme.be_sme.modules.employee.request.UpsertEmployeeProfileRequest;
+import com.sme.be_sme.modules.employee.processor.UpsertEmployeeProfileProcessor;
+import com.sme.be_sme.modules.identity.api.request.AssignRoleRequest;
 import com.sme.be_sme.modules.identity.api.response.CreateUserResponse;
+import com.sme.be_sme.modules.identity.processor.AssignRoleProcessor;
 import com.sme.be_sme.modules.identity.processor.CreateUserProcessor;
 import com.sme.be_sme.modules.onboarding.api.request.CompanySetupRequest;
 import com.sme.be_sme.modules.onboarding.api.response.CompanySetupResponse;
@@ -22,9 +26,15 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CompanySetupProcessor extends BaseBizProcessor<BizContext> {
 
+    private static final String ADMIN_ROLE_CODE = "ADMIN";
+
     private final CreateCompanyProcessor createCompanyProcessor;
     private final CreateDepartmentProcessor createDepartmentProcessor;
     private final CreateUserProcessor createUserProcessor;
+
+    private final UpsertEmployeeProfileProcessor upsertEmployeeProfileProcessor;
+    private final AssignRoleProcessor assignRoleProcessor;
+
     private final ObjectMapper objectMapper;
 
     @Override
@@ -35,6 +45,54 @@ public class CompanySetupProcessor extends BaseBizProcessor<BizContext> {
 
     @Transactional
     public CompanySetupResponse process(BizContext context, CompanySetupRequest request) {
+        validate(request);
+
+        BizContext safeContext = (context == null) ? BizContext.of(null, null) : context;
+
+        // 1) Create company (tenant)
+        CreateCompanyResponse company = createCompanyProcessor.process(safeContext, request.getCompany());
+
+        // tenant context for subsequent operations
+        BizContext tenantCtx = BizContext.of(company.getCompanyId(), safeContext.getRequestId());
+
+        // 2) Create initial department
+        CreateDepartmentResponse department = createDepartmentProcessor.process(tenantCtx, request.getDepartment());
+
+        // 3) Create admin user
+        CreateUserResponse adminUser = createUserProcessor.process(tenantCtx, request.getAdminUser());
+
+        // 4) Ensure admin employee profile exists
+        upsertEmployeeProfileProcessor.process(
+                tenantCtx,
+                UpsertEmployeeProfileRequest.builder()
+                        .userId(adminUser.getUserId())
+                        .departmentId(department.getDepartmentId())
+                        .employeeName(request.getAdminUser().getFullName())
+                        .employeeEmail(request.getAdminUser().getEmail())
+                        .employeePhone(request.getAdminUser().getPhone())
+                        .status("ACTIVE")
+                        .build()
+        );
+
+        // 5) Assign exactly ONE role for admin (ADMIN)
+        assignRoleProcessor.process(
+                tenantCtx,
+                new AssignRoleRequest(adminUser.getUserId(), ADMIN_ROLE_CODE)
+        );
+
+        CompanySetupResponse res = new CompanySetupResponse();
+        res.setCompanyId(company.getCompanyId());
+        res.setDepartmentId(department.getDepartmentId());
+        res.setAdminUserId(adminUser.getUserId());
+        res.setMemberUserId(null);
+        return res;
+    }
+
+    public CompanySetupResponse process(CompanySetupRequest request) {
+        return process(BizContext.of(null, null), request);
+    }
+
+    private static void validate(CompanySetupRequest request) {
         if (request == null || request.getCompany() == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "company is required");
         }
@@ -44,38 +102,5 @@ public class CompanySetupProcessor extends BaseBizProcessor<BizContext> {
         if (request.getAdminUser() == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "adminUser is required");
         }
-
-        BizContext safeContext = context == null ? BizContext.of(null, null) : context;
-        CreateCompanyResponse company = createCompanyProcessor.process(safeContext, request.getCompany());
-        CreateDepartmentResponse department = createDepartmentProcessor.process(
-                BizContext.of(company.getCompanyId(), safeContext.getRequestId()),
-                request.getDepartment()
-        );
-
-        CreateUserResponse adminUser = createUserProcessor.process(
-                BizContext.of(company.getCompanyId(), safeContext.getRequestId()),
-                request.getAdminUser()
-        );
-
-        CreateUserResponse memberUser = null;
-        if (request.getMemberUser() != null) {
-            memberUser = createUserProcessor.process(
-                    BizContext.of(company.getCompanyId(), safeContext.getRequestId()),
-                    request.getMemberUser()
-            );
-        }
-
-        CompanySetupResponse res = new CompanySetupResponse();
-        res.setCompanyId(company.getCompanyId());
-        res.setDepartmentId(department.getDepartmentId());
-        res.setAdminUserId(adminUser.getUserId());
-        if (memberUser != null) {
-            res.setMemberUserId(memberUser.getUserId());
-        }
-        return res;
-    }
-
-    public CompanySetupResponse process(CompanySetupRequest request) {
-        return process(BizContext.of(null, null), request);
     }
 }

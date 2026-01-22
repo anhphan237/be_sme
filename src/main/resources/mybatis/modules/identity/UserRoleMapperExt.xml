@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sme.be_sme.modules.identity.infrastructure.persistence.mapper.UserRoleMapperExt">
+
+    <select id="countByCompanyIdAndUserIdAndRoleCode" resultType="int">
+        select count(1)
+        from user_roles
+        where company_id = #{companyId}
+          and user_id = #{userId}
+          and role_code = #{roleCode}
+    </select>
+
+    <insert id="insert">
+        insert into user_roles (
+            user_role_id, company_id, user_id, role_code, created_at, updated_at
+        ) values (
+                     #{userRoleId}, #{companyId}, #{userId}, #{roleCode}, #{createdAt}, #{updatedAt}
+                 )
+    </insert>
+
+</mapper>
