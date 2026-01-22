@@ -17,6 +17,10 @@ public class UserHandler {
         return userRepository.findByEmail(companyId, email);
     }
 
+    public Optional<UserEntity> findById(String companyId, String userId) {
+        return userRepository.findById(companyId, userId);
+    }
+
     public void create(UserEntity entity) {
         userRepository.insert(entity);
     }

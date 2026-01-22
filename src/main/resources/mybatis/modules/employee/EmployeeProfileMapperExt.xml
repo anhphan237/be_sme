@@ -62,4 +62,13 @@
         </set>
         where employee_id = #{employeeId}
     </update>
+
+    <update id="updateStatusByCompanyIdAndUserId">
+        UPDATE employee_profiles
+        SET
+            status = #{status},
+            updated_at = #{updatedAt}
+        WHERE company_id = #{companyId}
+          AND user_id = #{userId}
+    </update>
 </mapper>

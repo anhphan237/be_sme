@@ -21,6 +21,10 @@ public class UserService {
         userHandler.create(entity);
     }
 
+    public Optional<UserEntity> findById(String companyId, String userId) {
+        return userHandler.findById(companyId, userId);
+    }
+
     public void updateUser(UserEntity entity) {
         userHandler.update(entity);
     }
