@@ -19,3 +19,12 @@ spring:
       hmacSecret: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET_32+"
       accessTtlSeconds: 3600
 
+mybatis:
+  mapper-locations: classpath*:mybatis/**/*.xml
+
+logging:
+  level:
+    org.apache.ibatis: DEBUG
+    org.mybatis: DEBUG
+
+
