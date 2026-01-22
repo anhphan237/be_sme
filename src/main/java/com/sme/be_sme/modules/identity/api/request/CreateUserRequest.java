@@ -1,8 +1,10 @@
 package com.sme.be_sme.modules.identity.api.request;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class CreateUserRequest {
     private String email;
     private String password;   // tạm plain, sau này hash ở preCheck/doExecute

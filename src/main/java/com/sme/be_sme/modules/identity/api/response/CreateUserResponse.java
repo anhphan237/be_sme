@@ -1,12 +1,12 @@
 package com.sme.be_sme.modules.identity.api.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter
+@Setter
 public class CreateUserResponse {
     private String userId;
+    private String email;
+    private String fullName;
+    private String status;
 }
