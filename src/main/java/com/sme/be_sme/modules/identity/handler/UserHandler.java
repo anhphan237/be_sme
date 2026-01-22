@@ -20,4 +20,8 @@ public class UserHandler {
     public void create(UserEntity entity) {
         userRepository.insert(entity);
     }
+
+    public void update(UserEntity entity) {
+        userRepository.update(entity);
+    }
 }

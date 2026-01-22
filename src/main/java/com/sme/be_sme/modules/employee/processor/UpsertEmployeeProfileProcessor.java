@@ -1,7 +1,7 @@
 package com.sme.be_sme.modules.employee.processor;
 
-import com.sme.be_sme.modules.employee.request.UpsertEmployeeProfileRequest;
-import com.sme.be_sme.modules.employee.response.UpsertEmployeeProfileResponse;
+import com.sme.be_sme.modules.employee.api.request.UpsertEmployeeProfileRequest;
+import com.sme.be_sme.modules.employee.api.response.UpsertEmployeeProfileResponse;
 import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
 import com.sme.be_sme.shared.constant.ErrorCodes;

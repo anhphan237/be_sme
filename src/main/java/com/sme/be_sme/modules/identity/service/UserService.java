@@ -20,4 +20,8 @@ public class UserService {
     public void createUser(UserEntity entity) {
         userHandler.create(entity);
     }
+
+    public void updateUser(UserEntity entity) {
+        userHandler.update(entity);
+    }
 }

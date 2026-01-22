@@ -6,7 +6,7 @@ import com.sme.be_sme.modules.company.api.response.CreateCompanyResponse;
 import com.sme.be_sme.modules.company.api.response.CreateDepartmentResponse;
 import com.sme.be_sme.modules.company.processor.CreateCompanyProcessor;
 import com.sme.be_sme.modules.company.processor.CreateDepartmentProcessor;
-import com.sme.be_sme.modules.employee.request.UpsertEmployeeProfileRequest;
+import com.sme.be_sme.modules.employee.api.request.UpsertEmployeeProfileRequest;
 import com.sme.be_sme.modules.employee.processor.UpsertEmployeeProfileProcessor;
 import com.sme.be_sme.modules.identity.api.request.AssignRoleRequest;
 import com.sme.be_sme.modules.identity.api.response.CreateUserResponse;

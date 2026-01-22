@@ -1,4 +1,4 @@
-package com.sme.be_sme.modules.employee.response;
+package com.sme.be_sme.modules.employee.api.response;
 
 import lombok.*;
 
