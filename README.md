@@ -8,12 +8,12 @@ Hướng dẫn này dành cho người mới để tải và chạy dự án nha
 - **Docker** + Docker Compose (khuyến nghị để chạy PostgreSQL nhanh)
 - (Tuỳ chọn) PostgreSQL cài trực tiếp nếu không dùng Docker
 
-> Dự án sử dụng Spring Boot, Maven Wrapper (`./mvnw`) nên không cần cài Maven riêng.
+> Dự án sử dụng Spring Boot, Apache Maven 3.9.12 hoặc nếu không muốn cài có thể dùng Maven Wrapper (`./mvnw`).
 
 ## 1) Clone dự án
 
 ```bash
-git clone <URL_REPO>
+git clone https://github.com/anhphan237/be_sme.git
 cd be_sme
 ```
 
