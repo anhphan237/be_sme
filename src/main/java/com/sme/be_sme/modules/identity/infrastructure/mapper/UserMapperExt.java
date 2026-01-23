@@ -11,4 +11,9 @@ public interface UserMapperExt {
 
     UserEntity selectByCompanyIdAndEmail(@Param("companyId") String companyId,
                                          @Param("email") String email);
+
+    int countActiveByCompanyIdAndUserId(
+            @Param("companyId") String companyId,
+            @Param("userId") String userId
+    );
 }

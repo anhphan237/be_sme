@@ -4,73 +4,63 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.company.api.request.CreateDepartmentRequest;
 import com.sme.be_sme.modules.company.api.response.CreateDepartmentResponse;
-import com.sme.be_sme.modules.company.infrastructure.persistence.entity.DepartmentEntity;
-import com.sme.be_sme.modules.company.service.DepartmentService;
+import com.sme.be_sme.modules.company.context.CreateDepartmentContext;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
-import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
+import com.sme.be_sme.shared.gateway.core.BaseCoreProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import java.util.Date;
-import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
-public class CreateDepartmentProcessor extends BaseBizProcessor<BizContext> {
+public class CreateDepartmentProcessor extends BaseCoreProcessor<CreateDepartmentContext> {
 
-    private final DepartmentService departmentService;
     private final ObjectMapper objectMapper;
+    private final CreateDepartmentCoreProcessor createDepartmentCoreProcessor;
 
     @Override
-    protected Object doProcess(BizContext context, JsonNode payload) {
+    protected CreateDepartmentContext buildContext(BizContext biz, JsonNode payload) {
         CreateDepartmentRequest req = objectMapper.convertValue(payload, CreateDepartmentRequest.class);
-        return process(context, req);
+
+        CreateDepartmentContext ctx = new CreateDepartmentContext();
+        ctx.setBiz(biz);
+        ctx.setRequest(req);
+        ctx.setResponse(new CreateDepartmentResponse());
+        return ctx;
     }
 
-    public CreateDepartmentResponse process(BizContext context, CreateDepartmentRequest request) {
-        if (request == null || request.getName() == null || request.getName().isBlank()) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "department.name is required");
-        }
+    @Override
+    @Transactional
+    protected Object process(CreateDepartmentContext ctx) {
+        validate(ctx);
 
-        BizContext safeContext = context == null ? BizContext.of(null, null) : context;
-        String companyId = resolveCompanyId(safeContext.getTenantId(), request);
-        String departmentId = (request.getDepartmentId() != null && !request.getDepartmentId().isBlank())
-                ? request.getDepartmentId()
-                : UUID.randomUUID().toString();
+        createDepartmentCoreProcessor.processWith(ctx);
 
-        Date now = new Date();
-        DepartmentEntity entity = new DepartmentEntity();
-        entity.setDepartmentId(departmentId);
-        entity.setCompanyId(companyId);
-        entity.setName(request.getName());
-        entity.setType(request.getType() == null ? "DEFAULT" : request.getType());
-        entity.setStatus(request.getStatus() == null ? "ACTIVE" : request.getStatus());
-        entity.setCreatedAt(now);
-        entity.setUpdatedAt(now);
-
-        departmentService.createDepartment(entity);
-
-        CreateDepartmentResponse res = new CreateDepartmentResponse();
-        res.setDepartmentId(departmentId);
-        res.setCompanyId(companyId);
-        res.setName(entity.getName());
-        res.setStatus(entity.getStatus());
-        return res;
+        ctx.getResponse().setDepartmentId(ctx.getDepartmentId());
+        ctx.getResponse().setCompanyId(ctx.getBiz().getTenantId());
+        ctx.getResponse().setName(ctx.getRequest().getName());
+        ctx.getResponse().setStatus(ctx.getRequest().getStatus() != null ? ctx.getRequest().getStatus() : "ACTIVE");
+        return ctx.getResponse();
     }
 
-    public CreateDepartmentResponse process(String tenantId, CreateDepartmentRequest request) {
-        return process(BizContext.of(tenantId, null), request);
-    }
-
-    private String resolveCompanyId(String tenantId, CreateDepartmentRequest request) {
-        if (tenantId != null && !tenantId.isBlank()) {
-            return tenantId;
+    private static void validate(CreateDepartmentContext ctx) {
+        if (ctx == null || ctx.getBiz() == null || ctx.getBiz().getTenantId() == null || ctx.getBiz().getTenantId().isBlank()) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
         }
-        if (request.getCompanyId() != null && !request.getCompanyId().isBlank()) {
-            return request.getCompanyId();
+        if (ctx.getRequest() == null) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "payload is required");
         }
-        throw AppException.of(ErrorCodes.BAD_REQUEST, "companyId is required");
+        if (ctx.getRequest().getCompanyId() == null || ctx.getRequest().getCompanyId().isBlank()) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "companyId is required");
+        }
+        if (!ctx.getBiz().getTenantId().equals(ctx.getRequest().getCompanyId())) {
+            throw AppException.of(ErrorCodes.FORBIDDEN, "companyId mismatch");
+        }
+        if (ctx.getRequest().getName() == null || ctx.getRequest().getName().isBlank()) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "name is required");
+        }
     }
 }
+

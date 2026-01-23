@@ -30,4 +30,9 @@ public class UserRepositoryImpl implements UserRepository {
     public void insert(UserEntity entity) {
         userMapper.insert(entity);
     }
+
+    @Override
+    public void update(UserEntity entity) {
+        userMapper.updateByPrimaryKey(entity);
+    }
 }
