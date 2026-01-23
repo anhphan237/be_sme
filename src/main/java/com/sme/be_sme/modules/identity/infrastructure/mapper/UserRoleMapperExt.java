@@ -4,6 +4,8 @@ import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserRol
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Date;
+
 @Mapper
 public interface UserRoleMapperExt {
     int countByCompanyIdAndUserIdAndRoleId(@Param("companyId") String companyId,
@@ -11,5 +13,13 @@ public interface UserRoleMapperExt {
                                            @Param("roleId") String roleId);
 
     int insert(UserRoleEntity entity);
+
+    int insertUserRole(
+            @Param("userRoleId") String userRoleId,
+            @Param("companyId") String companyId,
+            @Param("userId") String userId,
+            @Param("roleId") String roleId,
+            @Param("createdAt") Date createdAt
+    );
 }
 

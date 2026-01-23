@@ -42,8 +42,14 @@ public class AssignRoleProcessor {
 
         // 2) idempotent insert
         int exists = userRoleMapperExt.countByCompanyIdAndUserIdAndRoleId(companyId, req.getUserId(), roleId);
+        AssignRoleResponse res = new AssignRoleResponse();
+        res.setUserId(req.getUserId());
+        res.setRoleId(roleId);
+        res.setRoleCode(req.getRoleCode());
+
         if (exists > 0) {
-            return new AssignRoleResponse(false, roleId);
+            res.setStatus("EXISTS");   // idempotent
+            return res;
         }
 
         UserRoleEntity e = new UserRoleEntity();
@@ -55,6 +61,7 @@ public class AssignRoleProcessor {
 
         userRoleMapperExt.insert(e);
 
-        return new AssignRoleResponse(true, roleId);
+        res.setStatus("ASSIGNED");
+        return res;
     }
 }

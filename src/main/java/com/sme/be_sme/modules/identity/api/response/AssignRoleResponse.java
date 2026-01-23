@@ -5,6 +5,8 @@ import lombok.*;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 public class AssignRoleResponse {
-    private boolean created;
+    private String userId;
+    private String roleCode;
     private String roleId;
+    private String status;
 }

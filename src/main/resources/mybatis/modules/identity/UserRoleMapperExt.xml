@@ -20,4 +20,17 @@
                  )
     </insert>
 
+    <select id="countByCompanyIdAndUserIdAndRoleId" resultType="int">
+        SELECT COUNT(1)
+        FROM user_roles
+        WHERE company_id = #{companyId}
+          AND user_id = #{userId}
+          AND role_id = #{roleId}
+    </select>
+
+    <insert id="insertUserRole">
+        INSERT INTO user_roles (user_role_id, company_id, user_id, role_id, created_at)
+        VALUES (#{userRoleId}, #{companyId}, #{userId}, #{roleId}, #{createdAt})
+    </insert>
+
 </mapper>

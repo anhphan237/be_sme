@@ -1,19 +1,16 @@
-package com.sme.be_sme.modules.identity.facade;
+package com.sme.be_sme.modules.identity.facade.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.sme.be_sme.modules.identity.api.request.CreateUserRequest;
 import com.sme.be_sme.modules.identity.api.request.DisableUserRequest;
 import com.sme.be_sme.modules.identity.api.request.UpdateUserRequest;
 import com.sme.be_sme.modules.identity.api.response.CreateUserResponse;
 import com.sme.be_sme.modules.identity.api.response.DisableUserResponse;
 import com.sme.be_sme.modules.identity.api.response.UpdateUserResponse;
-import com.sme.be_sme.modules.identity.processor.CreateUserProcessor;
+import com.sme.be_sme.modules.identity.facade.UserFacade;
 import com.sme.be_sme.modules.identity.processor.IdentityUserCreateProcessor;
 import com.sme.be_sme.modules.identity.processor.IdentityUserDisableProcessor;
 import com.sme.be_sme.modules.identity.processor.IdentityUserUpdateProcessor;
 import com.sme.be_sme.shared.gateway.core.BaseOperationFacade;
-import com.sme.be_sme.shared.gateway.core.BizContext;
-import com.sme.be_sme.shared.gateway.core.BizContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

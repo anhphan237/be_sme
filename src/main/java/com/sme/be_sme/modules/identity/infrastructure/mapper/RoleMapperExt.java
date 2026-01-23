@@ -7,4 +7,9 @@ import org.apache.ibatis.annotations.Param;
 public interface RoleMapperExt {
     String selectRoleIdByCode(@Param("companyId") String companyId,
                               @Param("code") String code);
+
+    String selectRoleIdByCompanyIdAndCode(
+            @Param("companyId") String companyId,
+            @Param("code") String code
+    );
 }

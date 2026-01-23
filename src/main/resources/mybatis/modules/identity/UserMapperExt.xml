@@ -26,6 +26,14 @@
             limit 1
     </select>
 
+    <select id="countActiveByCompanyIdAndUserId" resultType="int">
+        SELECT COUNT(1)
+        FROM users
+        WHERE company_id = #{companyId}
+          AND user_id = #{userId}
+          AND status = 'ACTIVE'
+    </select>
+
     <select id="selectByCompanyIdAndEmail" resultMap="BaseResultMap">
         select *
         from users
