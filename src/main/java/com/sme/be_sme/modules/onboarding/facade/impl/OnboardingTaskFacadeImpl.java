@@ -1,10 +1,11 @@
-package com.sme.be_sme.modules.onboarding.facade;
+package com.sme.be_sme.modules.onboarding.facade.impl;
 
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskAssignRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskGenerateRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskUpdateStatusRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskGenerationResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
+import com.sme.be_sme.modules.onboarding.facade.OnboardingTaskFacade;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskAssignProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskGenerateProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskUpdateStatusProcessor;

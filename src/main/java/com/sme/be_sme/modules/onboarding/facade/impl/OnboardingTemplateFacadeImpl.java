@@ -1,8 +1,9 @@
-package com.sme.be_sme.modules.onboarding.facade;
+package com.sme.be_sme.modules.onboarding.facade.impl;
 
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateCreateRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateUpdateRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTemplateResponse;
+import com.sme.be_sme.modules.onboarding.facade.OnboardingTemplateFacade;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTemplateCreateProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTemplateUpdateProcessor;
 import com.sme.be_sme.shared.gateway.core.BaseOperationFacade;

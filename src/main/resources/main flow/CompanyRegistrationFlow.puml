@@ -1,0 +1,108 @@
+@startuml
+
+title Company Registration Flow
+
+autonumber
+
+participant "Company Admin" as com
+participant "Frontend" as fe
+participant "Backend" as be
+database "Database" as db
+
+== Register company and create first admin ==
+com -> fe: Open registration page
+fe -> com: Show company info form + admin account form
+com -> fe: Fill the forms and click Submit
+fe -> be: Send registration request (company info + admin info)
+
+activate be
+be -> db: Check if company/admin already exists
+activate db
+db --> be: Return result (exists / not exists)
+deactivate db
+
+alt Already exists
+  be --> fe: Return error message (already registered)
+  deactivate be
+  fe --> com: Show error message
+else Not exists
+  be -> db: Create company (organization)
+  activate db
+  db --> be: Company created (companyId)
+  deactivate db
+
+  be -> db: Create first user (Company Admin)
+  activate db
+  db --> be: Admin user created (adminUserId)
+  deactivate db
+
+  be -> db: Create default roles for this company
+  activate db
+  db --> be: Roles created (Admin/HR/Manager/IT/Employee)
+  deactivate db
+
+  be -> db: Connect admin user with Admin role
+  activate db
+  db --> be: Role assigned
+  deactivate db
+
+  be --> fe: Return success (companyId + adminUserId)
+  deactivate be
+  fe --> com: Show success message + go to login
+end
+
+== Admin logs in ==
+com -> fe: Log in with the admin account
+fe -> be: Send login request
+activate be
+be -> db: Check username/password
+activate db
+db --> be: Login OK
+deactivate db
+be --> fe: Return login success (access granted)
+deactivate be
+fe --> com: Show main dashboard
+
+== Admin sets up departments ==
+com -> fe: Create a department
+fe -> be: Send create department request
+activate be
+be -> db: Save department
+activate db
+db --> be: Department saved (departmentId)
+deactivate db
+be --> fe: Return success
+deactivate be
+fe --> com: Show department in the list
+
+== Admin creates users and selects roles ==
+com -> fe: Add a new user and choose a role
+fe -> be: Send create user request (user info + chosen role + department)
+activate be
+be -> db: Save new user
+activate db
+db --> be: User saved (userId)
+deactivate db
+
+be -> db: Link user to role
+activate db
+db --> be: Role linked
+deactivate db
+
+be -> db: Link user to department
+activate db
+db --> be: Department linked
+deactivate db
+
+alt Role is "New Employee"
+  be -> db: Create employee profile linked to this user
+  activate db
+  db --> be: Employee profile created (employeeId)
+  deactivate db
+end
+
+be --> fe: Return success (userId and details)
+deactivate be
+fe --> com: Show user in user list
+
+@enduml
