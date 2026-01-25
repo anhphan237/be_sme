@@ -8,4 +8,6 @@ import lombok.Setter;
 public class OnboardingTemplateCreateRequest {
     private String name;
     private String description;
+    private String status;
+    private String createdBy;
 }
