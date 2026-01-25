@@ -8,7 +8,6 @@ import com.sme.be_sme.modules.company.facade.DepartmentFacade;
 import com.sme.be_sme.modules.company.processor.CreateDepartmentProcessor;
 import com.sme.be_sme.modules.company.processor.UpdateDepartmentProcessor;
 import com.sme.be_sme.shared.gateway.core.BaseOperationFacade;
-import com.sme.be_sme.shared.gateway.core.BizContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -27,5 +26,15 @@ public class DepartmentFacadeImpl extends BaseOperationFacade implements Departm
     @Override
     public UpdateDepartmentResponse updateDepartment(UpdateDepartmentRequest request) {
         return call(updateDepartmentProcessor, request, UpdateDepartmentResponse.class);
+    }
+
+    @Override
+    public CreateDepartmentResponse createOrgDepartment(CreateDepartmentRequest request) {
+        return createDepartment(request);
+    }
+
+    @Override
+    public UpdateDepartmentResponse updateOrgDepartment(UpdateDepartmentRequest request) {
+        return updateDepartment(request);
     }
 }
