@@ -28,4 +28,14 @@ public class DepartmentFacadeImpl extends BaseOperationFacade implements Departm
     public UpdateDepartmentResponse updateDepartment(UpdateDepartmentRequest request) {
         return call(updateDepartmentProcessor, request, UpdateDepartmentResponse.class);
     }
+
+    @Override
+    public CreateDepartmentResponse createOrgDepartment(CreateDepartmentRequest request) {
+        return call(createDepartmentProcessor, request, CreateDepartmentResponse.class);
+    }
+
+    @Override
+    public UpdateDepartmentResponse updateOrgDepartment(UpdateDepartmentRequest request) {
+        return call(updateDepartmentProcessor, request, UpdateDepartmentResponse.class);
+    }
 }

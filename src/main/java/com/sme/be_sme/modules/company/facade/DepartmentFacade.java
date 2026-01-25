@@ -15,4 +15,9 @@ public interface DepartmentFacade extends OperationFacadeProvider {
     @OperationType("com.sme.company.department.update")
     UpdateDepartmentResponse updateDepartment(UpdateDepartmentRequest request);
 
+    @OperationType("com.sme.org.department.create")
+    CreateDepartmentResponse createOrgDepartment(CreateDepartmentRequest request);
+
+    @OperationType("com.sme.org.department.update")
+    UpdateDepartmentResponse updateOrgDepartment(UpdateDepartmentRequest request);
 }
