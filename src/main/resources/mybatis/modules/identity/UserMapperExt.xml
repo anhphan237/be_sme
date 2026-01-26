@@ -42,4 +42,11 @@
             limit 1
     </select>
 
+    <select id="countByEmail" resultType="int">
+        select count(1)
+        from users
+        where email is not null
+          and lower(email) = lower(#{email})
+    </select>
+
 </mapper>

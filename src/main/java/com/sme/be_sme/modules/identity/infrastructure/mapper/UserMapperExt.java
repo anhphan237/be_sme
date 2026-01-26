@@ -16,4 +16,6 @@ public interface UserMapperExt {
             @Param("companyId") String companyId,
             @Param("userId") String userId
     );
+
+    int countByEmail(@Param("email") String email);
 }
