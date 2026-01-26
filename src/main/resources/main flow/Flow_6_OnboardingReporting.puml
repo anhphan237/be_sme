@@ -1,0 +1,71 @@
+@startuml
+title Onboarding Reporting and Analytics Flow
+autonumber
+
+participant "HR Staff" as hr
+participant "HR Manager" as hm
+participant "Platform Administrator" as pa
+participant "Frontend" as fe
+participant "Backend" as be
+database "Database" as db
+
+== SME Level: Company Dashboard ==
+be -> db: Aggregate onboarding data for one company (automatic / on request)
+activate db
+db --> be: Active + completed onboarding data, task progress, durations
+deactivate db
+
+be -> db: Aggregate survey results (7/30/60) for the company
+activate db
+db --> be: Survey summaries and satisfaction metrics
+deactivate db
+
+group HR Staff views dashboard
+  hr -> fe: Open company onboarding dashboard
+  fe -> be: Request onboarding statistics (company level)
+  activate be
+  be -> db: Load aggregated company metrics
+  activate db
+  db --> be: Return metrics (count, completion rate, avg duration,\nby department/manager, survey summary)
+  deactivate db
+  be --> fe: Return dashboard data
+  deactivate be
+  fe --> hr: Show charts and indicators
+end
+
+group HR Manager views dashboard (same data, broader scope)
+  hm -> fe: Open company onboarding dashboard
+  fe -> be: Request onboarding statistics (company level)
+  activate be
+  be -> db: Load aggregated company metrics
+  activate db
+  db --> be: Return metrics
+  deactivate db
+  be --> fe: Return dashboard data
+  deactivate be
+  fe --> hm: Show charts and indicators
+end
+
+== Platform Level: Admin Analytics ==
+be -> db: Aggregate onboarding data across all companies (automatic / scheduled)
+activate db
+db --> be: Cross-tenant onboarding stats (volume, success rate, feature usage)
+deactivate db
+
+be -> db: Combine onboarding stats with subscription + billing metrics
+activate db
+db --> be: Plan-based analytics + financial/usage metrics
+deactivate db
+
+pa -> fe: Open platform analytics dashboard
+fe -> be: Request platform-wide analytics
+activate be
+be -> db: Load aggregated platform metrics (all tenants)
+activate db
+db --> be: Return metrics (volume by plan, feature usage,\nsuccess rate, financial/usage combined)
+deactivate db
+be --> fe: Return dashboard data
+deactivate be
+fe --> pa: Show admin charts and insights
+
+@enduml
