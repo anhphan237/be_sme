@@ -10,6 +10,8 @@ import com.sme.be_sme.shared.gateway.core.BizContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Set;
+
 @Component
 @RequiredArgsConstructor
 public class CompanySetupUpsertAdminProfileCoreProcessor extends BaseCoreProcessor<CompanySetupContext> {
@@ -30,7 +32,11 @@ public class CompanySetupUpsertAdminProfileCoreProcessor extends BaseCoreProcess
 
         String companyId = ctx.getCompany().getCompanyId();
         String requestId = (ctx.getBiz() != null) ? ctx.getBiz().getRequestId() : null;
-        BizContext tenantCtx = BizContext.of(companyId, requestId);
+        BizContext tenantCtx = BizContext.internal(companyId,
+                requestId,
+                ctx.getAdminUser().getUserId(),
+                Set.of("ADMIN")
+        );
 
         // build upsert employee profile request
         UpsertEmployeeProfileRequest upsertReq = UpsertEmployeeProfileRequest.builder()

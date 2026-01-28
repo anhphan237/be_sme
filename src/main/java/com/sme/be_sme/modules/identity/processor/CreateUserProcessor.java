@@ -39,7 +39,7 @@ public class CreateUserProcessor extends BaseBizProcessor<BizContext> {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "password is required");
         }
 
-        BizContext safeContext = context == null ? BizContext.of(null, null) : context;
+        BizContext safeContext = context == null ? BizContext.of(null, null, null) : context;
         String companyId = resolveCompanyId(safeContext.getTenantId(), request);
 
         userService.findByCompanyIdAndEmail(companyId, request.getEmail())
@@ -68,10 +68,6 @@ public class CreateUserProcessor extends BaseBizProcessor<BizContext> {
         res.setFullName(entity.getFullName());
         res.setStatus(entity.getStatus());
         return res;
-    }
-
-    public CreateUserResponse process(String tenantId, CreateUserRequest request) {
-        return process(BizContext.of(tenantId, null), request);
     }
 
     private String resolveCompanyId(String tenantId, CreateUserRequest request) {

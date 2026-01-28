@@ -16,7 +16,7 @@ public class CompanySetupCreateCompanyCoreProcessor extends BaseCoreProcessor<Co
 
     @Override
     protected Object process(CompanySetupContext ctx) {
-        BizContext safe = (ctx.getBiz() == null) ? BizContext.of(null, null) : ctx.getBiz();
+        BizContext safe = (ctx.getBiz() == null) ? BizContext.of(null, null, null) : ctx.getBiz();
         CreateCompanyResponse company = createCompanyProcessor.process(safe, ctx.getRequest().getCompany());
         ctx.setCompany(company);
         return null;
