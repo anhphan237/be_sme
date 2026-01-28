@@ -42,7 +42,7 @@ public class CreateUserProcessor extends BaseBizProcessor<BizContext> {
         BizContext safeContext = context == null ? BizContext.of(null, null) : context;
         String companyId = resolveCompanyId(safeContext.getTenantId(), request);
 
-        userService.findByEmail(companyId, request.getEmail())
+        userService.findByCompanyIdAndEmail(companyId, request.getEmail())
                 .ifPresent(user -> {
                     throw AppException.of(ErrorCodes.BAD_REQUEST, "email already exists");
                 });

@@ -13,8 +13,12 @@ public class UserService {
 
     private final UserHandler userHandler;
 
-    public Optional<UserEntity> findByEmail(String companyId, String email) {
+    public Optional<UserEntity> findByCompanyIdAndEmail(String companyId, String email) {
         return userHandler.findByEmail(companyId, email);
+    }
+
+    public Optional<UserEntity> findByEmail(String email) {
+        return userHandler.findByEmail(email);
     }
 
     public void createUser(UserEntity entity) {

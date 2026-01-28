@@ -41,11 +41,12 @@ public class IdentityLoginProcessor extends BaseBizProcessor<BizContext> {
     }
 
     private LoginResponse process(BizContext context, LoginRequest request) {
-        String companyId = context.getTenantId();
         String email = request.getEmail().trim();
 
-        UserEntity user = userService.findByEmail(companyId, email)
+        UserEntity user = userService.findByEmail(email)
                 .orElseThrow(() -> AppException.of(ErrorCodes.UNAUTHORIZED, "invalid credentials"));
+
+        String companyId = user.getCompanyId();
 
         if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "user is inactive");
@@ -74,9 +75,6 @@ public class IdentityLoginProcessor extends BaseBizProcessor<BizContext> {
     }
 
     private static void validate(BizContext context, LoginRequest request) {
-        if (context == null || context.getTenantId() == null || context.getTenantId().isBlank()) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
-        }
         if (request == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "payload is required");
         }

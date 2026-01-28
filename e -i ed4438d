@@ -1,0 +1,20 @@
+[33mc8fce87[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdev[m[33m)[m remove pÃass
+[33m974a1b9[m update
+[33med4438d[m[33m ([m[1;31morigin/dev[m[33m)[m fix
+[33m3860b95[m add páºermission dÃata
+[33m75f4106[m fix
+[33me51d01a[m Merge pull request #14 from anhphan237/codex/implement-company-registration-flow
+[33m78658b1[m Make admin email globally unique
+[33m7621576[m update main workflow sequence diagram
+[33m50d5251[m update
+[33m562ec8f[m udpate
+[33mc17f209[m Add Company Registration Flow
+[33mc2bd6fa[m Merge pull request #13 from anhphan237/codex/write-detailed-code-for-com.sme.identity.auth.login
+[33m59ef635[m Implement detailed login processor
+[33m8a333f6[m Merge pull request #12 from anhphan237/codex/write-detailed-code-for-onboarding-summary-and-metrics
+[33m1d116e3[m Implement analytics summary and subscription metrics
+[33m5cc9031[m Merge pull request #11 from anhphan237/codex/implement-detailed-code-for-operation-types
+[33mb4c3119[m Implement detailed billing operations
+[33mdc00d6c[m Merge pull request #10 from anhphan237/codex/write-detailed-code-for-operation-types
+[33m8f11af5[m Implement detailed survey operations
+[33m633fc0d[m Merge pull request #9 from anhphan237/codex/write-code-for-onboarding-tasks
