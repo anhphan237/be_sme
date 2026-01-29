@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.identity.infrastructure.mapper;
 
 import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.RolePermissionEntity;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -46,4 +47,7 @@ public interface RolePermissionMapper {
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
     int updateByPrimaryKey(RolePermissionEntity row);
+
+    int insertBatch(@Param("list") List<RolePermissionEntity> list);
+
 }

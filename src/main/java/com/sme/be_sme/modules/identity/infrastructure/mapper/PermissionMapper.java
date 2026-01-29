@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.identity.infrastructure.mapper;
 
 import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.PermissionEntity;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -46,4 +47,10 @@ public interface PermissionMapper {
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
     int updateByPrimaryKey(PermissionEntity row);
+
+    List<String> selectAllGlobalActivePermissionIds();
+
+    List<String> selectGlobalActivePermissionIdsByCodes(@Param("codes") List<String> codes);
+
+    List<String> selectGlobalActivePermissionCodesByCodes(@Param("codes") List<String> codes);
 }

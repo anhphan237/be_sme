@@ -28,6 +28,7 @@ public class CompanyRegisterProcessor extends BaseCoreProcessor<CompanyRegisterC
     private final CompanyRegisterCreateCompanyCoreProcessor createCompany;
     private final CompanyRegisterCreateAdminUserCoreProcessor createAdminUser;
     private final CompanyRegisterCreateDefaultRolesCoreProcessor createDefaultRoles;
+    private final CompanyRegisterSeedRolePermissionsCoreProcessor seedRolePermissions;
     private final CompanyRegisterAssignAdminRoleCoreProcessor assignAdminRole;
 
     @Override
@@ -49,6 +50,7 @@ public class CompanyRegisterProcessor extends BaseCoreProcessor<CompanyRegisterC
         createCompany.processWith(ctx);
         createAdminUser.processWith(ctx);
         createDefaultRoles.processWith(ctx);
+        seedRolePermissions.processWith(ctx);
         assignAdminRole.processWith(ctx);
 
         ctx.getResponse().setCompanyId(ctx.getCompany().getCompanyId());
