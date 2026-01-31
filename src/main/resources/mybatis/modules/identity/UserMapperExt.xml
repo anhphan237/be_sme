@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt">
+
+    <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity">
+        <id column="user_id" jdbcType="VARCHAR" property="userId" />
+        <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+        <result column="email" jdbcType="VARCHAR" property="email" />
+        <result column="password_hash" jdbcType="VARCHAR" property="passwordHash" />
+        <result column="full_name" jdbcType="VARCHAR" property="fullName" />
+        <result column="phone" jdbcType="VARCHAR" property="phone" />
+        <result column="status" jdbcType="VARCHAR" property="status" />
+        <result column="last_login_at" jdbcType="TIMESTAMP" property="lastLoginAt" />
+        <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+        <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+    </resultMap>
+
+    <select id="selectByCompanyIdAndUserId" resultMap="BaseResultMap">
+        select *
+        from users
+        where company_id = #{companyId}
+          and user_id = #{userId}
+            limit 1
+    </select>
+
+    <select id="countActiveByCompanyIdAndUserId" resultType="int">
+        SELECT COUNT(1)
+        FROM users
+        WHERE company_id = #{companyId}
+          AND user_id = #{userId}
+          AND status = 'ACTIVE'
+    </select>
+
+    <select id="selectByCompanyIdAndEmail" resultMap="BaseResultMap">
+        select *
+        from users
+        where company_id = #{companyId}
+          and email = #{email}
+            limit 1
+    </select>
+
+    <select id="selectByEmail" resultMap="BaseResultMap">
+        select *
+        from users
+        where email = #{email}
+            limit 1
+    </select>
+
+    <select id="countByEmail" resultType="int">
+        select count(1)
+        from users
+        where email is not null
+          and lower(email) = lower(#{email})
+    </select>
+
+</mapper>

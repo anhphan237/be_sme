@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE generatorConfiguration
+        PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN"
+        "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+
+<generatorConfiguration>
+
+    <!-- =========================================================
+         0) Common note:
+         - targetRuntime = MyBatis3Simple (no Example/Criteria)
+         - IDs in DB are varchar(36) => String in generated entities
+         - No FK constraints (OK)
+         ========================================================= -->
+
+    <!-- =========================
+         A) IDENTITY / RBAC
+         tables: users, roles, permissions, user_roles, role_permissions
+         ========================= -->
+    <context id="identity" targetRuntime="MyBatis3Simple">
+        <property name="javaFileEncoding" value="UTF-8"/>
+
+        <jdbcConnection driverClass="org.postgresql.Driver"
+                        connectionURL="jdbc:postgresql://localhost:5432/be_sme"
+                        userId="postgres"
+                        password="123456"/>
+
+        <javaTypeResolver>
+            <property name="forceBigDecimals" value="false"/>
+        </javaTypeResolver>
+
+        <javaModelGenerator targetProject="src/main/java"
+                            targetPackage="com.sme.be_sme.modules.identity.infrastructure.persistence.entity">
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <sqlMapGenerator targetProject="src/main/resources"
+                         targetPackage="mybatis/modules/identity"/>
+
+        <javaClientGenerator targetProject="src/main/java"
+                             type="XMLMAPPER"
+                             targetPackage="com.sme.be_sme.modules.identity.infrastructure.mapper"/>
+
+        <table tableName="users" domainObjectName="UserEntity" mapperName="UserMapper"/>
+        <table tableName="roles" domainObjectName="RoleEntity" mapperName="RoleMapper"/>
+        <table tableName="permissions" domainObjectName="PermissionEntity" mapperName="PermissionMapper"/>
+        <table tableName="user_roles" domainObjectName="UserRoleEntity" mapperName="UserRoleMapper"/>
+        <table tableName="role_permissions" domainObjectName="RolePermissionEntity" mapperName="RolePermissionMapper"/>
+    </context>
+
+    <!-- =========================
+         B) COMPANY / ORG
+         tables: companies, departments
+         ========================= -->
+    <context id="company" targetRuntime="MyBatis3Simple">
+        <property name="javaFileEncoding" value="UTF-8"/>
+
+        <jdbcConnection driverClass="org.postgresql.Driver"
+                        connectionURL="jdbc:postgresql://localhost:5432/be_sme"
+                        userId="postgres"
+                        password="123456"/>
+
+        <javaTypeResolver>
+            <property name="forceBigDecimals" value="false"/>
+        </javaTypeResolver>
+
+        <javaModelGenerator targetProject="src/main/java"
+                            targetPackage="com.sme.be_sme.modules.company.infrastructure.persistence.entity">
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <sqlMapGenerator targetProject="src/main/resources"
+                         targetPackage="mybatis/modules/company"/>
+
+        <javaClientGenerator targetProject="src/main/java"
+                             type="XMLMAPPER"
+                             targetPackage="com.sme.be_sme.modules.company.infrastructure.mapper"/>
+
+        <table tableName="companies" domainObjectName="CompanyEntity" mapperName="CompanyMapper"/>
+        <table tableName="departments" domainObjectName="DepartmentEntity" mapperName="DepartmentMapper"/>
+    </context>
+
+    <!-- =========================
+         C) EMPLOYEE
+         tables: employee_profiles
+         ========================= -->
+    <context id="employee" targetRuntime="MyBatis3Simple">
+        <property name="javaFileEncoding" value="UTF-8"/>
+
+        <jdbcConnection driverClass="org.postgresql.Driver"
+                        connectionURL="jdbc:postgresql://localhost:5432/be_sme"
+                        userId="postgres"
+                        password="123456"/>
+
+        <javaTypeResolver>
+            <property name="forceBigDecimals" value="false"/>
+        </javaTypeResolver>
+
+        <javaModelGenerator targetProject="src/main/java"
+                            targetPackage="com.sme.be_sme.modules.employee.infrastructure.persistence.entity">
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <sqlMapGenerator targetProject="src/main/resources"
+                         targetPackage="mybatis/modules/employee"/>
+
+        <javaClientGenerator targetProject="src/main/java"
+                             type="XMLMAPPER"
+                             targetPackage="com.sme.be_sme.modules.employee.infrastructure.mapper"/>
+
+        <table tableName="employee_profiles" domainObjectName="EmployeeProfileEntity" mapperName="EmployeeProfileMapper"/>
+    </context>
+
+    <!-- =========================
+         D) ONBOARDING
+         tables:
+           onboarding_templates, checklist_templates, task_templates,
+           onboarding_instances, checklist_instances, task_instances,
+           task_comments, task_activity_logs, task_attachments, onboarding_events
+         ========================= -->
+    <context id="onboarding" targetRuntime="MyBatis3Simple">
+        <property name="javaFileEncoding" value="UTF-8"/>
+
+        <jdbcConnection driverClass="org.postgresql.Driver"
+                        connectionURL="jdbc:postgresql://localhost:5432/be_sme"
+                        userId="postgres"
+                        password="123456"/>
+
+        <javaTypeResolver>
+            <property name="forceBigDecimals" value="false"/>
+        </javaTypeResolver>
+
+        <javaModelGenerator targetProject="src/main/java"
+                            targetPackage="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity">
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <sqlMapGenerator targetProject="src/main/resources"
+                         targetPackage="mybatis/modules/onboarding"/>
+
+        <javaClientGenerator targetProject="src/main/java"
+                             type="XMLMAPPER"
+                             targetPackage="com.sme.be_sme.modules.onboarding.infrastructure.mapper"/>
+
+        <table tableName="onboarding_templates" domainObjectName="OnboardingTemplateEntity" mapperName="OnboardingTemplateMapper"/>
+        <table tableName="checklist_templates" domainObjectName="ChecklistTemplateEntity" mapperName="ChecklistTemplateMapper"/>
+        <table tableName="task_templates" domainObjectName="TaskTemplateEntity" mapperName="TaskTemplateMapper"/>
+
+        <table tableName="onboarding_instances" domainObjectName="OnboardingInstanceEntity" mapperName="OnboardingInstanceMapper"/>
+        <table tableName="checklist_instances" domainObjectName="ChecklistInstanceEntity" mapperName="ChecklistInstanceMapper"/>
+        <table tableName="task_instances" domainObjectName="TaskInstanceEntity" mapperName="TaskInstanceMapper"/>
+
+        <table tableName="task_comments" domainObjectName="TaskCommentEntity" mapperName="TaskCommentMapper"/>
+        <table tableName="task_activity_logs" domainObjectName="TaskActivityLogEntity" mapperName="TaskActivityLogMapper"/>
+        <table tableName="task_attachments" domainObjectName="TaskAttachmentEntity" mapperName="TaskAttachmentMapper"/>
+
+        <table tableName="onboarding_events" domainObjectName="OnboardingEventEntity" mapperName="OnboardingEventMapper"/>
+    </context>
+
+    <!-- =========================
+         E) NOTIFICATION
+         tables: notifications
+         ========================= -->
+    <context id="notification" targetRuntime="MyBatis3Simple">
+        <property name="javaFileEncoding" value="UTF-8"/>
+
+        <jdbcConnection driverClass="org.postgresql.Driver"
+                        connectionURL="jdbc:postgresql://localhost:5432/be_sme"
+                        userId="postgres"
+                        password="123456"/>
+
+        <javaTypeResolver>
+            <property name="forceBigDecimals" value="false"/>
+        </javaTypeResolver>
+
+        <javaModelGenerator targetProject="src/main/java"
+                            targetPackage="com.sme.be_sme.modules.notification.infrastructure.persistence.entity">
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <sqlMapGenerator targetProject="src/main/resources"
+                         targetPackage="mybatis/modules/notification"/>
+
+        <javaClientGenerator targetProject="src/main/java"
+                             type="XMLMAPPER"
+                             targetPackage="com.sme.be_sme.modules.notification.infrastructure.mapper"/>
+
+        <table tableName="notifications" domainObjectName="NotificationEntity" mapperName="NotificationMapper"/>
+    </context>
+
+    <!-- =========================
+         F) EMAIL / AUTOMATION
+         tables: email_templates, email_campaigns, automation_rules, email_logs
+         ========================= -->
+    <context id="automation" targetRuntime="MyBatis3Simple">
+        <property name="javaFileEncoding" value="UTF-8"/>
+
+        <jdbcConnection driverClass="org.postgresql.Driver"
+                        connectionURL="jdbc:postgresql://localhost:5432/be_sme"
+                        userId="postgres"
+                        password="123456"/>
+
+        <javaTypeResolver>
+            <property name="forceBigDecimals" value="false"/>
+        </javaTypeResolver>
+
+        <javaModelGenerator targetProject="src/main/java"
+                            targetPackage="com.sme.be_sme.modules.automation.infrastructure.persistence.entity">
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <sqlMapGenerator targetProject="src/main/resources"
+                         targetPackage="mybatis/modules/automation"/>
+
+        <javaClientGenerator targetProject="src/main/java"
+                             type="XMLMAPPER"
+                             targetPackage="com.sme.be_sme.modules.automation.infrastructure.mapper"/>
+
+        <table tableName="email_templates" domainObjectName="EmailTemplateEntity" mapperName="EmailTemplateMapper"/>
+        <table tableName="email_campaigns" domainObjectName="EmailCampaignEntity" mapperName="EmailCampaignMapper"/>
+        <table tableName="automation_rules" domainObjectName="AutomationRuleEntity" mapperName="AutomationRuleMapper"/>
+        <table tableName="email_logs" domainObjectName="EmailLogEntity" mapperName="EmailLogMapper"/>
+    </context>
+
+    <!-- =========================
+         G) DOCUMENTS
+         tables: document_categories, documents, document_versions,
+                 document_access_rules, document_acknowledgements
+         ========================= -->
+    <context id="document" targetRuntime="MyBatis3Simple">
+        <property name="javaFileEncoding" value="UTF-8"/>
+
+        <jdbcConnection driverClass="org.postgresql.Driver"
+                        connectionURL="jdbc:postgresql://localhost:5432/be_sme"
+                        userId="postgres"
+                        password="123456"/>
+
+        <javaTypeResolver>
+            <property name="forceBigDecimals" value="false"/>
+        </javaTypeResolver>
+
+        <javaModelGenerator targetProject="src/main/java"
+                            targetPackage="com.sme.be_sme.modules.document.infrastructure.persistence.entity">
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <sqlMapGenerator targetProject="src/main/resources"
+                         targetPackage="mybatis/modules/document"/>
+
+        <javaClientGenerator targetProject="src/main/java"
+                             type="XMLMAPPER"
+                             targetPackage="com.sme.be_sme.modules.document.infrastructure.mapper"/>
+
+        <table tableName="document_categories" domainObjectName="DocumentCategoryEntity" mapperName="DocumentCategoryMapper"/>
+        <table tableName="documents" domainObjectName="DocumentEntity" mapperName="DocumentMapper"/>
+        <table tableName="document_versions" domainObjectName="DocumentVersionEntity" mapperName="DocumentVersionMapper"/>
+        <table tableName="document_access_rules" domainObjectName="DocumentAccessRuleEntity" mapperName="DocumentAccessRuleMapper"/>
+        <table tableName="document_acknowledgements" domainObjectName="DocumentAcknowledgementEntity" mapperName="DocumentAcknowledgementMapper"/>
+    </context>
+
+    <!-- =========================
+         H) SURVEY
+         tables: survey_templates, survey_questions, survey_instances,
+                 survey_responses, survey_answers
+         ========================= -->
+    <context id="survey" targetRuntime="MyBatis3Simple">
+        <property name="javaFileEncoding" value="UTF-8"/>
+
+        <jdbcConnection driverClass="org.postgresql.Driver"
+                        connectionURL="jdbc:postgresql://localhost:5432/be_sme"
+                        userId="postgres"
+                        password="123456"/>
+
+        <javaTypeResolver>
+            <property name="forceBigDecimals" value="false"/>
+        </javaTypeResolver>
+
+        <javaModelGenerator targetProject="src/main/java"
+                            targetPackage="com.sme.be_sme.modules.survey.infrastructure.persistence.entity">
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <sqlMapGenerator targetProject="src/main/resources"
+                         targetPackage="mybatis/modules/survey"/>
+
+        <javaClientGenerator targetProject="src/main/java"
+                             type="XMLMAPPER"
+                             targetPackage="com.sme.be_sme.modules.survey.infrastructure.mapper"/>
+
+        <table tableName="survey_templates" domainObjectName="SurveyTemplateEntity" mapperName="SurveyTemplateMapper"/>
+        <table tableName="survey_questions" domainObjectName="SurveyQuestionEntity" mapperName="SurveyQuestionMapper"/>
+        <table tableName="survey_instances" domainObjectName="SurveyInstanceEntity" mapperName="SurveyInstanceMapper"/>
+        <table tableName="survey_responses" domainObjectName="SurveyResponseEntity" mapperName="SurveyResponseMapper"/>
+        <table tableName="survey_answers" domainObjectName="SurveyAnswerEntity" mapperName="SurveyAnswerMapper"/>
+    </context>
+
+    <!-- =========================
+         I) KNOWLEDGE BASE / CHAT
+         tables: kb_articles, tags, kb_article_tags, chat_sessions, chat_messages
+         ========================= -->
+    <context id="knowledge" targetRuntime="MyBatis3Simple">
+        <property name="javaFileEncoding" value="UTF-8"/>
+
+        <jdbcConnection driverClass="org.postgresql.Driver"
+                        connectionURL="jdbc:postgresql://localhost:5432/be_sme"
+                        userId="postgres"
+                        password="123456"/>
+
+        <javaTypeResolver>
+            <property name="forceBigDecimals" value="false"/>
+        </javaTypeResolver>
+
+        <javaModelGenerator targetProject="src/main/java"
+                            targetPackage="com.sme.be_sme.modules.knowledge.infrastructure.persistence.entity">
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <sqlMapGenerator targetProject="src/main/resources"
+                         targetPackage="mybatis/modules/knowledge"/>
+
+        <javaClientGenerator targetProject="src/main/java"
+                             type="XMLMAPPER"
+                             targetPackage="com.sme.be_sme.modules.knowledge.infrastructure.mapper"/>
+
+        <table tableName="kb_articles" domainObjectName="KbArticleEntity" mapperName="KbArticleMapper"/>
+        <table tableName="tags" domainObjectName="TagEntity" mapperName="TagMapper"/>
+        <table tableName="kb_article_tags" domainObjectName="KbArticleTagEntity" mapperName="KbArticleTagMapper"/>
+
+        <table tableName="chat_sessions" domainObjectName="ChatSessionEntity" mapperName="ChatSessionMapper"/>
+        <table tableName="chat_messages" domainObjectName="ChatMessageEntity" mapperName="ChatMessageMapper"/>
+    </context>
+
+    <!-- =========================
+         J) BILLING / SUBSCRIPTION
+         tables: plans, plan_features, subscriptions, usage_monthly,
+                 invoices, payment_transactions, discount_codes,
+                 subscription_discounts, dunning_cases
+         ========================= -->
+    <context id="billing" targetRuntime="MyBatis3Simple">
+        <property name="javaFileEncoding" value="UTF-8"/>
+
+        <jdbcConnection driverClass="org.postgresql.Driver"
+                        connectionURL="jdbc:postgresql://localhost:5432/be_sme"
+                        userId="postgres"
+                        password="123456"/>
+
+        <javaTypeResolver>
+            <property name="forceBigDecimals" value="false"/>
+        </javaTypeResolver>
+
+        <javaModelGenerator targetProject="src/main/java"
+                            targetPackage="com.sme.be_sme.modules.billing.infrastructure.persistence.entity">
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <sqlMapGenerator targetProject="src/main/resources"
+                         targetPackage="mybatis/modules/billing"/>
+
+        <javaClientGenerator targetProject="src/main/java"
+                             type="XMLMAPPER"
+                             targetPackage="com.sme.be_sme.modules.billing.infrastructure.mapper"/>
+
+        <table tableName="plans" domainObjectName="PlanEntity" mapperName="PlanMapper"/>
+        <table tableName="plan_features" domainObjectName="PlanFeatureEntity" mapperName="PlanFeatureMapper"/>
+        <table tableName="subscriptions" domainObjectName="SubscriptionEntity" mapperName="SubscriptionMapper"/>
+        <table tableName="usage_monthly" domainObjectName="UsageMonthlyEntity" mapperName="UsageMonthlyMapper"/>
+        <table tableName="invoices" domainObjectName="InvoiceEntity" mapperName="InvoiceMapper"/>
+        <table tableName="payment_transactions" domainObjectName="PaymentTransactionEntity" mapperName="PaymentTransactionMapper"/>
+        <table tableName="discount_codes" domainObjectName="DiscountCodeEntity" mapperName="DiscountCodeMapper"/>
+        <table tableName="subscription_discounts" domainObjectName="SubscriptionDiscountEntity" mapperName="SubscriptionDiscountMapper"/>
+        <table tableName="dunning_cases" domainObjectName="DunningCaseEntity" mapperName="DunningCaseMapper"/>
+    </context>
+
+</generatorConfiguration>

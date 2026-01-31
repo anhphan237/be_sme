@@ -1,0 +1,111 @@
+@startuml
+title Onboarding Task Assignment and Progress Tracking Flow
+autonumber
+
+participant "HR Staff" as hr
+participant "Manager" as mgr
+participant "New Employee" as emp
+participant "Frontend" as fe
+participant "Backend" as be
+database "Database" as db
+
+== System prepares tasks from the template ==
+hr -> fe: Open an employee's onboarding plan
+fe -> be: Request onboarding plan details
+activate be
+be -> db: Load onboarding plan + selected template
+activate db
+db --> be: Return plan + template tasks
+deactivate db
+
+be -> db: Generate checklist and tasks for this onboarding (if not yet created)
+activate db
+db --> be: Tasks created and linked to the onboarding
+deactivate db
+
+be -> db: Auto-assign each task to a role/department/user
+activate db
+db --> be: Task owners saved
+deactivate db
+be --> fe: Return onboarding tasks + owners + due dates
+deactivate be
+fe --> hr: Display checklist and task list
+
+== System notifies task owners (automatic) ==
+be -> hr: Notify tasks assigned to HR (if any)
+be -> mgr: Notify tasks assigned to Manager (if any)
+be -> emp: Notify tasks assigned to Employee (if any)
+
+== Task owners update status ==
+group HR updates a task
+  hr -> fe: Open task and update status (e.g., In Progress / Done)
+  fe -> be: Send task status update
+  activate be
+  be -> db: Save new task status + update time
+  activate db
+  db --> be: Saved
+  deactivate db
+  be --> fe: Return updated task
+  deactivate be
+  fe --> hr: Show updated status
+end
+
+group Manager updates a task
+  mgr -> fe: Update status of a manager-owned task
+  fe -> be: Send task status update
+  activate be
+  be -> db: Save new task status
+  activate db
+  db --> be: Saved
+  deactivate db
+  be --> fe: Return updated task
+  deactivate be
+  fe --> mgr: Show updated status
+end
+
+group Employee completes a task
+  emp -> fe: Complete employee tasks (read policy, upload docs, etc.)
+  fe -> be: Send task status update
+  activate be
+  be -> db: Save new task status
+  activate db
+  db --> be: Saved
+  deactivate db
+  be --> fe: Return updated task
+  deactivate be
+  fe --> emp: Show updated status
+end
+
+== System sends reminders for upcoming deadlines (automatic) ==
+be -> db: Find tasks nearing due date or overdue
+activate db
+db --> be: Return list of tasks to remind
+deactivate db
+be -> hr: Send reminder for HR-owned tasks
+be -> mgr: Send reminder for manager-owned tasks
+be -> emp: Send reminder for employee-owned tasks
+
+== HR and managers monitor progress ==
+hr -> fe: Open onboarding dashboard
+fe -> be: Request progress summary
+activate be
+be -> db: Calculate progress (done vs total, overdue, upcoming)
+activate db
+db --> be: Return progress numbers and indicators
+deactivate db
+be --> fe: Return dashboard data
+deactivate be
+fe --> hr: Show progress indicators
+
+mgr -> fe: Open team onboarding dashboard
+fe -> be: Request progress summary for assigned employees
+activate be
+be -> db: Load progress data for manager's employees
+activate db
+db --> be: Return progress summary
+deactivate db
+be --> fe: Return dashboard data
+deactivate be
+fe --> mgr: Show progress indicators
+
+@enduml
