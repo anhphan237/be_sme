@@ -11,7 +11,6 @@ public class OperationPermissionPolicy {
             "com.sme.identity.auth.login",
             "com.sme.onboarding.company.setup",
             "com.sme.company.register"
-            // add: "com.sme.company.register", "com.sme.identity.invite.accept" ...
     );
 
     public boolean isPublic(String op) {

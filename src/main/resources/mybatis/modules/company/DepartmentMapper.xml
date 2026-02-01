@@ -91,4 +91,40 @@
       AND name = #{name}
   </select>
 
+  <select id="countByCompanyAndNameExcludeId" resultType="int">
+    select count(1)
+    from departments
+    where company_id = #{companyId}
+      and name = #{name}
+      and department_id &lt;&gt; #{departmentId}
+  </select>
+
+  <update id="updateByPrimaryKeySelective" parameterType="com.sme.be_sme.modules.company.infrastructure.persistence.entity.DepartmentEntity">
+    update departments
+    <set>
+      <if test="name != null">name = #{name},</if>
+      <if test="type != null">type = #{type},</if>
+      <if test="status != null">status = #{status},</if>
+      updated_at = now()
+    </set>
+    where department_id = #{departmentId}
+  </update>
+
+  <select id="selectByCompany"
+          resultMap="BaseResultMap">
+    select *
+    from departments
+    where company_id = #{companyId}
+    order by name asc
+  </select>
+
+  <select id="selectByCompanyAndStatus"
+          resultMap="BaseResultMap">
+    select *
+    from departments
+    where company_id = #{companyId}
+      and status = #{status}
+    order by name asc
+  </select>
+
 </mapper>

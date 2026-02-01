@@ -9,5 +9,6 @@ public class UpdateDepartmentResponse {
     private String departmentId;
     private String companyId;
     private String name;
+    private String type;
     private String status;
 }
