@@ -35,12 +35,16 @@ public class SurveyTemplateCreateProcessor extends BaseBizProcessor<BizContext> 
         entity.setSurveyTemplateId(templateId);
         entity.setCompanyId(context.getTenantId());
         entity.setName(request.getName().trim());
+        entity.setDescription(request.getDescription() != null ? request.getDescription().trim() : null);
         entity.setStage("D7");
         entity.setManagerOnly(Boolean.FALSE);
         entity.setStatus("DRAFT");
-        entity.setCreatedBy("system");
+        entity.setCreatedBy(context.getOperatorId() != null ? context.getOperatorId() : "system");
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
+
+        entity.setVersion(1);
+        entity.setIsDefault(Boolean.FALSE);
 
         int inserted = surveyTemplateMapper.insert(entity);
         if (inserted != 1) {
@@ -51,6 +55,12 @@ public class SurveyTemplateCreateProcessor extends BaseBizProcessor<BizContext> 
         response.setTemplateId(templateId);
         response.setName(entity.getName());
         response.setStatus(entity.getStatus());
+        response.setDescription(entity.getDescription());
+        response.setStage(entity.getStage());
+        response.setManagerOnly(entity.getManagerOnly());
+        response.setVersion(1);
+        response.setCreatedBy(entity.getCreatedBy());
+        response.setCreatedAt(entity.getCreatedAt());
         return response;
     }
 
@@ -66,6 +76,9 @@ public class SurveyTemplateCreateProcessor extends BaseBizProcessor<BizContext> 
         }
         if (request.getName().trim().length() > 255) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "name is too long");
+        }
+        if (request.getDescription() != null && request.getDescription().length() > 5000) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "description is too long");
         }
     }
 }
