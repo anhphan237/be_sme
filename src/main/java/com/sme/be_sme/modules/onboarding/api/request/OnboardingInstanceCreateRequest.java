@@ -7,5 +7,6 @@ import lombok.Setter;
 @Setter
 public class OnboardingInstanceCreateRequest {
     private String templateId;
-    private String employeeUserId;
+    private String employeeId;
+    private String managerId; // optional
 }
