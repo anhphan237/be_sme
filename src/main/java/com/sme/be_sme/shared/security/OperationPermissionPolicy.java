@@ -9,7 +9,8 @@ public class OperationPermissionPolicy {
 
     private static final Set<String> PUBLIC_OPS = Set.of(
             "com.sme.identity.auth.login",
-            "com.sme.onboarding.company.setup"
+            "com.sme.onboarding.company.setup",
+            "com.sme.company.register"
             // add: "com.sme.company.register", "com.sme.identity.invite.accept" ...
     );
 

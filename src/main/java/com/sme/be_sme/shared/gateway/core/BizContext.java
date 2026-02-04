@@ -2,24 +2,40 @@ package com.sme.be_sme.shared.gateway.core;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Getter;
+import lombok.Setter;
+
+import java.util.Set;
 
 @Getter
+@Setter
 public class BizContext {
-    private final String tenantId;
-    private final String requestId;
-    private final JsonNode payload;
+    // ===== request meta =====
+    private String requestId;
+    private String operationType;
 
-    private BizContext(String tenantId, String requestId, JsonNode payload) {
-        this.tenantId = tenantId;
-        this.requestId = requestId;
-        this.payload = payload;
+    // ===== auth context =====
+    private String tenantId;     // companyId
+    private String operatorId;   // userId from JWT
+    private Set<String> roles;   // roles from JWT
+
+    // ===== payload =====
+    private JsonNode payload;
+
+    public static BizContext of(String requestId, String operationType, JsonNode payload) {
+        BizContext ctx = new BizContext();
+        ctx.requestId = requestId;
+        ctx.operationType = operationType;
+        ctx.payload = payload;
+        return ctx;
     }
 
-    public static BizContext of(String tenantId, String requestId, JsonNode payload) {
-        return new BizContext(tenantId, requestId, payload);
+    public static BizContext internal(String tenantId, String requestId, String operatorId, Set<String> roles) {
+        BizContext ctx = new BizContext();
+        ctx.setTenantId(tenantId);
+        ctx.setRequestId(requestId);
+        ctx.setOperatorId(operatorId);
+        ctx.setRoles(roles);
+        return ctx;
     }
 
-    public static BizContext of(String tenantId, String requestId) {
-        return new BizContext(tenantId, requestId, null);
-    }
 }

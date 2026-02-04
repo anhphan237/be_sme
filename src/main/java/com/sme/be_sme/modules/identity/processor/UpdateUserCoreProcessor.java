@@ -22,7 +22,7 @@ public class UpdateUserCoreProcessor {
     public void process(BizContext context, UpdateUserRequest request) {
         String companyId = context.getTenantId();
 
-        UserEntity existing = userService.findByEmail(companyId, request.getEmployeeEmail())
+        UserEntity existing = userService.findByCompanyIdAndEmail(companyId, request.getEmployeeEmail())
                 .orElseThrow(() -> AppException.of(ErrorCodes.NOT_FOUND, "user not found"));
 
         if (request.getEmail() != null) existing.setEmail(request.getEmail());

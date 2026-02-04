@@ -1,10 +1,14 @@
 package com.sme.be_sme.shared.security;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
+import com.sme.be_sme.shared.gateway.core.BizContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -14,8 +18,19 @@ public class GatewayAuthGuard {
     private final OperationPermissionPolicy policy;
     private final PermissionService permissionService;
 
-    public void check(String operationType, String tenantId, String authorizationHeader) {
-        if (policy.isPublic(operationType)) return;
+    public BizContext buildContext(
+            String operationType,
+            String requestId,
+            JsonNode payload,
+            String authorizationHeader
+    ) {
+        BizContext ctx = BizContext.of(requestId, operationType, payload);
+
+        // public operation
+        if (policy.isPublic(operationType)) {
+            ctx.setRoles(Set.of());
+            return ctx;
+        }
 
         String token = extractBearer(authorizationHeader);
 
@@ -26,15 +41,20 @@ public class GatewayAuthGuard {
             throw AppException.of(ErrorCodes.UNAUTHORIZED, e.getMessage());
         }
 
-        if (!StringUtils.hasText(tenantId) || !tenantId.equals(principal.getTenantId())) {
-            throw AppException.of(ErrorCodes.FORBIDDEN, "tenantId mismatch");
-        }
+        // tenant/operator/roles ONLY from JWT
+        ctx.setTenantId(principal.getTenantId());
+        ctx.setOperatorId(principal.getUserId());
+        ctx.setRoles(principal.getRoles());
 
+        // permission check (giữ nguyên)
         String requiredPerm = policy.requiredPermission(operationType);
         if (!permissionService.allow(principal.getRoles(), requiredPerm)) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "no permission");
         }
+
+        return ctx;
     }
+
 
     private String extractBearer(String header) {
         if (!StringUtils.hasText(header) || !header.startsWith("Bearer ")) {

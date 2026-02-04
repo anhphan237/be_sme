@@ -1,0 +1,72 @@
+@startuml
+title Employee Onboarding Initialization Flow
+autonumber
+
+participant "HR Staff" as hr
+participant "Frontend" as fe
+participant "Backend" as be
+database "Database" as db
+participant "Assigned Manager" as mgr
+participant "New Employee" as emp
+
+== Update/Create Employee Profile ==
+hr -> fe: Open employee profile page
+fe -> hr: Show employee profile form
+hr -> fe: Enter/update employee information and Save
+fe -> be: Send request to save employee profile
+activate be
+be -> db: Create/Update employee profile
+activate db
+db --> be: Return employeeId (and saved info)
+deactivate db
+be --> fe: Return success
+deactivate be
+fe --> hr: Show updated employee profile
+
+== Select Onboarding Template ==
+hr -> fe: Choose onboarding template (predefined or custom)
+fe -> be: Request template details
+activate be
+be -> db: Load available templates + template details
+activate db
+db --> be: Return templates + selected template content
+deactivate db
+be --> fe: Send template to frontend
+deactivate be
+fe --> hr: Display template tasks/milestones
+
+== Configure Onboarding Parameters ==
+hr -> fe: Set start date, assigned manager, timeline
+fe -> be: Send onboarding initialization request
+
+activate be
+be -> db: Validate data (employeeId, templateId, dates, manager)
+activate db
+db --> be: Validation OK
+deactivate db
+
+be -> db: Create onboarding instance (Draft)
+activate db
+db --> be: onboardingInstanceId created
+deactivate db
+
+be -> db: Copy template items into this onboarding instance
+activate db
+db --> be: Instance items created
+deactivate db
+
+== Activate onboarding ==
+be -> db: Mark onboarding instance as Active
+activate db
+db --> be: Status updated = Active
+deactivate db
+
+be --> fe: Return success (onboardingInstanceId, status Active)
+deactivate be
+fe --> hr: Show onboarding is Active
+
+== Notify related people (optional but common) ==
+be -> mgr: Notify manager assigned to onboarding
+be -> emp: Notify employee onboarding has started
+
+@enduml

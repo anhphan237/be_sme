@@ -65,4 +65,25 @@
     select role_permission_id, company_id, role_id, permission_id, created_at
     from role_permissions
   </select>
+
+  <insert id="insertBatch">
+    insert into role_permissions (
+    role_permission_id,
+    company_id,
+    role_id,
+    permission_id,
+    created_at
+    )
+    values
+    <foreach collection="list" item="e" separator=",">
+      (
+      #{e.rolePermissionId},
+      #{e.companyId},
+      #{e.roleId},
+      #{e.permissionId},
+      now()
+      )
+    </foreach>
+  </insert>
+
 </mapper>

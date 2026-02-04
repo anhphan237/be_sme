@@ -22,8 +22,13 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
-    public Optional<UserEntity> findByEmail(String companyId, String email) {
+    public Optional<UserEntity> findByCompanyIdAndEmail(String companyId, String email) {
         return Optional.ofNullable(userMapperExt.selectByCompanyIdAndEmail(companyId, email));
+    }
+
+    @Override
+    public Optional<UserEntity> findByEmail(String email) {
+        return Optional.ofNullable(userMapperExt.selectByEmail(email));
     }
 
     @Override

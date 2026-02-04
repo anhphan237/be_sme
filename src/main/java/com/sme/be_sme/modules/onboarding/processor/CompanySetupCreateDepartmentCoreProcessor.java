@@ -28,7 +28,7 @@ public class CompanySetupCreateDepartmentCoreProcessor extends BaseCoreProcessor
         JsonNode payload = objectMapper.valueToTree(depReq);
 
         CreateDepartmentResponse department = (CreateDepartmentResponse)
-                createDepartmentProcessor.execute(companyId, requestId, payload);
+                createDepartmentProcessor.execute(ctx.getBiz());
 
         ctx.setDepartment(department);
         return null;

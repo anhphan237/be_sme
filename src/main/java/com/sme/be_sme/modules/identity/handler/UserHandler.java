@@ -14,7 +14,11 @@ public class UserHandler {
     private final UserRepository userRepository;
 
     public Optional<UserEntity> findByEmail(String companyId, String email) {
-        return userRepository.findByEmail(companyId, email);
+        return userRepository.findByCompanyIdAndEmail(companyId, email);
+    }
+
+    public Optional<UserEntity> findByEmail(String email) {
+        return userRepository.findByEmail(email);
     }
 
     public Optional<UserEntity> findById(String companyId, String userId) {
