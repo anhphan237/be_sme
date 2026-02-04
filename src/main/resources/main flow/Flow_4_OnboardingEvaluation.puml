@@ -1,0 +1,95 @@
+@startuml
+title Onboarding Evaluation and Experience Measurement Flow
+autonumber
+
+participant "New Employee" as emp
+participant "Manager" as mgr
+participant "HR Staff" as hr
+participant "Frontend" as fe
+participant "Backend" as be
+database "Database" as db
+
+== System schedules surveys at milestones (automatic) ==
+be -> db: Check active onboardings and milestone dates (7/30/60 days)
+activate db
+db --> be: Return onboardings reaching milestones
+deactivate db
+
+be -> db: Create survey instances for each milestone (employee + manager)
+activate db
+db --> be: Survey instances created
+deactivate db
+
+== System distributes surveys (automatic) ==
+be -> emp: Notify "Survey ready" (7/30/60 day survey)
+be -> mgr: Notify "Survey ready" (manager evaluation)
+
+== Employee submits survey ==
+emp -> fe: Open survey from notification
+fe -> be: Request survey questions
+activate be
+be -> db: Load survey instance + questions
+activate db
+db --> be: Return survey questions
+deactivate db
+be --> fe: Return survey form
+deactivate be
+fe --> emp: Display questions
+
+emp -> fe: Answer questions and submit
+fe -> be: Submit employee survey responses
+activate be
+be -> db: Save survey responses
+activate db
+db --> be: Saved
+deactivate db
+be --> fe: Return submission success
+deactivate be
+fe --> emp: Show thank-you message
+
+== Manager submits survey ==
+mgr -> fe: Open survey from notification
+fe -> be: Request survey questions
+activate be
+be -> db: Load survey instance + questions
+activate db
+db --> be: Return survey questions
+deactivate db
+be --> fe: Return survey form
+deactivate be
+fe --> mgr: Display questions
+
+mgr -> fe: Answer questions and submit
+fe -> be: Submit manager survey responses
+activate be
+be -> db: Save survey responses
+activate db
+db --> be: Saved
+deactivate db
+be --> fe: Return submission success
+deactivate be
+fe --> mgr: Show thank-you message
+
+== System aggregates and analyzes results (automatic) ==
+be -> db: Aggregate responses by milestone, team, manager, time
+activate db
+db --> be: Return aggregated metrics (scores, comments, trends)
+deactivate db
+be -> db: Store summary metrics for reporting
+activate db
+db --> be: Stored
+deactivate db
+
+== HR reviews reports ==
+hr -> fe: Open onboarding evaluation dashboard
+fe -> be: Request summary reports and satisfaction metrics
+activate be
+be -> db: Load aggregated metrics and summaries
+activate db
+db --> be: Return reports
+deactivate db
+be --> fe: Return dashboard data
+deactivate be
+fe --> hr: Display charts, scores, and insights
+
+@enduml

@@ -58,7 +58,4 @@ public class CreateCompanyProcessor extends BaseBizProcessor<BizContext> {
         return res;
     }
 
-    public CreateCompanyResponse process(CreateCompanyRequest request) {
-        return process(BizContext.of(null, null), request);
-    }
 }

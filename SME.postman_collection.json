@@ -1,0 +1,180 @@
+{
+  "info": {
+    "_postman_id": "57172171-ae17-4612-b6eb-e2cf4f27cf2b",
+    "name": "SME",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "34620499",
+    "_collection_link": "https://go.postman.co/collection/34620499-57172171-ae17-4612-b6eb-e2cf4f27cf2b?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Identity",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "req-auth-login-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"operationType\": \"com.sme.identity.auth.login\",\n    \"requestId\": \"req-auth-login-001\",\n    \"tenantId\": null,\n    \"payload\": {\n      \"email\": \"admin003@acme.com\",\n      \"password\": \"123\"\n    }\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/v1/gateway",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "gateway"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Setup Company",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"operationType\": \"com.sme.onboarding.company.setup\",\n    \"tenantId\": \"\",\n    \"requestId\": \"req-setup-001\",\n    \"payload\": {\n      \"company\": { \"name\": \"SME Demo\" },\n      \"department\": { \"name\": \"Head Office\" },\n      \"adminUser\": {\n        \"email\": \"admin@sme.com\",\n        \"password\": \"Admin@123\",\n        \"fullName\": \"System Admin\"\n      }\n    }\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/gateway",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "gateway"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Register Company",
+      "item": [
+        {
+          "name": "Register Company",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "req-company-register-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"operationType\": \"com.sme.company.register\",\n    \"requestId\": \"req-company-register-001\",\n    \"tenantId\": null,\n    \"payload\": {\n        \"company\": {\n            \"name\": \"Acme Corporation 004\",\n            \"taxCode\": \"ACME-004\",\n            \"address\": \"123 Main Street\",\n            \"timezone\": \"Asia/Ho_Chi_Minh\"\n        },\n        \"admin\": {\n            \"username\": \"admin004@acme.com\",\n            \"password\": \"123\",\n            \"fullName\": \"Acme Admin\",\n            \"phone\": \"0900000000\"\n        }\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/gateway",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "gateway"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create department",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "req-dept-create-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"operationType\": \"com.sme.company.department.create\",\n    \"requestId\": \"req-dept-create-001\",\n    \"tenantId\": 20260128080523533000,\n    \"payload\": {\n        \"companyId\": \"20260128080523533000\",\n        \"name\": \"Product Department\",\n        \"type\": \"PD\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/v1/gateway",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "gateway"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseURL",
+      "value": "",
+      "type": "default"
+    }
+  ]
+}

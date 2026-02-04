@@ -38,6 +38,18 @@
       #{name,jdbcType=VARCHAR}, #{description,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR}, 
       #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
   </insert>
+  <insert id="insertBatch">
+    insert into roles (role_id, company_id, code,
+      name, description, status,
+      created_at, updated_at)
+    values
+    <foreach collection="roles" item="role" separator=",">
+      (#{role.roleId,jdbcType=VARCHAR}, #{role.companyId,jdbcType=VARCHAR}, #{role.code,jdbcType=VARCHAR},
+      #{role.name,jdbcType=VARCHAR}, #{role.description,jdbcType=VARCHAR}, #{role.status,jdbcType=VARCHAR},
+      #{role.createdAt,jdbcType=TIMESTAMP}, #{role.updatedAt,jdbcType=TIMESTAMP})
+    </foreach>
+    on conflict (company_id, code) do nothing
+  </insert>
   <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.identity.infrastructure.persistence.entity.RoleEntity">
     <!--
       WARNING - @mbg.generated
@@ -72,5 +84,12 @@
     -->
     select role_id, company_id, code, name, description, status, created_at, updated_at
     from roles
+  </select>
+  <select id="selectByCompanyIdAndRoleCode" resultType="string">
+    select role_id
+    from roles
+    where company_id = #{companyId}
+      and code = #{code}
+    limit 1
   </select>
 </mapper>

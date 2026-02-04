@@ -82,16 +82,18 @@ public class FacadeRegistry {
         }
 
         @Override
-        public Object execute(String tenantId, String requestId, JsonNode payload) {
+        public Object execute(BizContext context) {
             Class<?>[] paramTypes = method.getParameterTypes();
             if (paramTypes.length != 1) {
                 throw new IllegalStateException("Operation method must have 1 param: request");
             }
-            Object arg = payload;
+
+            Object arg = context.getPayload();
             if (!JsonNode.class.equals(paramTypes[0])) {
-                arg = objectMapper.convertValue(payload, paramTypes[0]);
+                arg = objectMapper.convertValue(context.getPayload(), paramTypes[0]);
             }
-            BizContextHolder.set(BizContext.of(tenantId, requestId, payload));
+
+            BizContextHolder.set(context);
             try {
                 return method.invoke(target, arg);
             } catch (IllegalAccessException e) {
@@ -107,4 +109,5 @@ public class FacadeRegistry {
             }
         }
     }
+
 }

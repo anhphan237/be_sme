@@ -10,7 +10,7 @@ public class OperationRouter {
 
     private final FacadeRegistry registry;
 
-    public Object route(String operationType, String tenantId, String requestId, JsonNode payload) {
-        return registry.get(operationType).execute(tenantId, requestId, payload);
+    public Object route(BizContext context) {
+        return registry.get(context.getOperationType()).execute(context);
     }
 }
