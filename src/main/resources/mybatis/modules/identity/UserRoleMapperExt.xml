@@ -33,4 +33,12 @@
         VALUES (#{userRoleId}, #{companyId}, #{userId}, #{roleId}, #{createdAt})
     </insert>
 
+    <update id="updateRoleForUser">
+        UPDATE user_roles
+        SET role_id = #{newRoleId},
+            updated_at = #{updatedAt}
+        WHERE company_id = #{companyId}
+          AND user_id = #{userId}
+          AND role_id = #{oldRoleId}
+    </update>
 </mapper>
