@@ -28,8 +28,6 @@ public class SurveyGetProcessor extends BaseBizProcessor<BizContext> {
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
 
-
-
         List<SurveyInstanceEntity> instances = surveyInstanceMapper.selectAll();
 
         List<SurveyTemplateResponse> items = new ArrayList<>();
