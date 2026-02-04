@@ -1,11 +1,11 @@
 package com.sme.be_sme.modules.identity.processor;
 
 import com.sme.be_sme.modules.identity.api.request.UpdateUserRequest;
+import com.sme.be_sme.modules.identity.context.IdentityUpdateUserContext;
 import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
 import com.sme.be_sme.modules.identity.service.UserService;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
-import com.sme.be_sme.shared.gateway.core.BizContext;
 import com.sme.be_sme.shared.security.PasswordHasher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +21,7 @@ public class UpdateUserCoreProcessor {
     private final UserService userService;
     private final PasswordHasher passwordHasher;
 
-    public void process(BizContext context, UpdateUserRequest request) {
+    public void process(IdentityUpdateUserContext context, UpdateUserRequest request) {
         String companyId = context.getTenantId();
 
         log.info("Updating user with company id {}", companyId);
@@ -40,6 +40,12 @@ public class UpdateUserCoreProcessor {
         }
 
         existing.setUpdatedAt(new Date());
+
+        context.setUserId(existing.getUserId());
+        context.setUserEmail(existing.getEmail());
+        context.setFullName(existing.getFullName());
+        context.setUserStatus(existing.getStatus());
+
         userService.updateUser(existing);
     }
 }

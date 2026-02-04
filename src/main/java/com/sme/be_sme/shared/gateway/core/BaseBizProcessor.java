@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 public abstract class BaseBizProcessor<C extends BizContext> implements OperationFacade {
 
     @Override
-    public final Object execute(BizContext context) {
+    public Object execute(BizContext context) {
         BizContextHolder.set(context);
         try {
             @SuppressWarnings("unchecked")
