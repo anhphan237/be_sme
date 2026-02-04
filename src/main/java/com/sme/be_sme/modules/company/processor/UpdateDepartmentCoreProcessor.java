@@ -1,9 +1,7 @@
 package com.sme.be_sme.modules.company.processor;
 
 import com.sme.be_sme.modules.company.context.UpdateDepartmentContext;
-import com.sme.be_sme.modules.company.infrastructure.mapper.DepartmentMapper;
 import com.sme.be_sme.modules.company.infrastructure.mapper.DepartmentMapperExt;
-import com.sme.be_sme.modules.company.infrastructure.persistence.entity.DepartmentEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseCoreProcessor;
@@ -16,64 +14,26 @@ import java.util.Date;
 @RequiredArgsConstructor
 public class UpdateDepartmentCoreProcessor extends BaseCoreProcessor<UpdateDepartmentContext> {
 
-    private final DepartmentMapper departmentMapper;
-
-    private static final String DEFAULT_TYPE = "OTHER";
+    private final DepartmentMapperExt departmentMapperExt;
 
     @Override
     protected Object process(UpdateDepartmentContext ctx) {
-        final String tenantId = requireText(ctx.getBiz().getTenantId(), ErrorCodes.UNAUTHORIZED, "missing tenantId");
+        int updated = departmentMapperExt.updateDepartmentByIdAndCompanyId(
+                ctx.getRequest().getDepartmentId(),
+                ctx.getBiz().getTenantId(),
+                blankToNull(ctx.getRequest().getName()),
+                blankToNull(ctx.getRequest().getType()),
+                blankToNull(ctx.getRequest().getStatus()),
+                new Date()
+        );
 
-        final var req = requireNotNull(ctx.getRequest(), ErrorCodes.INVALID_REQUEST, "request is required");
-        final String departmentId = requireText(req.getDepartmentId(), ErrorCodes.INVALID_REQUEST, "departmentId is required").trim();
-        final String name = requireText(req.getName(), ErrorCodes.INVALID_REQUEST, "name is required").trim();
-
-        DepartmentEntity existing = departmentMapper.selectByPrimaryKey(departmentId);
-        if (existing == null) {
+        if (updated == 0) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "department not found");
         }
-        if (existing.getCompanyId() == null || !tenantId.equals(existing.getCompanyId())) {
-            // tránh user tenant khác update
-            throw AppException.of(ErrorCodes.FORBIDDEN, "department not in tenant");
-        }
-
-        // duplicate name (exclude itself)
-        if (departmentMapper.countByCompanyAndNameExcludeId(tenantId, name, departmentId) > 0) {
-            throw AppException.of(ErrorCodes.DUPLICATED, "department name already exists");
-        }
-
-        String type = normalizeOrDefault(req.getType(), existing.getType() == null ? DEFAULT_TYPE : existing.getType());
-        String status = normalizeOrDefault(req.getStatus(), existing.getStatus());
-
-        DepartmentEntity toUpdate = new DepartmentEntity();
-        toUpdate.setDepartmentId(departmentId);
-        toUpdate.setCompanyId(tenantId); // giữ tenant
-        toUpdate.setName(name);
-        toUpdate.setType(type);
-        toUpdate.setStatus(status);
-
-        if (departmentMapper.updateByPrimaryKeySelective(toUpdate) != 1) {
-            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "update department failed");
-        }
-
-        ctx.setDepartmentId(departmentId);
-        ctx.setName(name);
-        ctx.setType(type);
-        ctx.setStatus(status);
         return null;
     }
 
-    private static String normalizeOrDefault(String v, String def) {
-        return (v == null || v.isBlank()) ? def : v.trim();
-    }
-
-    private static String requireText(String v, String code, String msg) {
-        if (v == null || v.isBlank()) throw AppException.of(code, msg);
-        return v;
-    }
-
-    private static <T> T requireNotNull(T v, String code, String msg) {
-        if (v == null) throw AppException.of(code, msg);
-        return v;
+    private static String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s;
     }
 }

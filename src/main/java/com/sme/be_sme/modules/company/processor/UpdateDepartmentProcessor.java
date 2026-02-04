@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UpdateDepartmentProcessor extends BaseCoreProcessor<UpdateDepartmentContext> {
 
     private final ObjectMapper objectMapper;
+
     private final UpdateDepartmentCoreProcessor updateDepartmentCoreProcessor;
 
     @Override
@@ -38,13 +39,11 @@ public class UpdateDepartmentProcessor extends BaseCoreProcessor<UpdateDepartmen
 
         updateDepartmentCoreProcessor.processWith(ctx);
 
-        UpdateDepartmentResponse res = ctx.getResponse();
-        res.setDepartmentId(ctx.getDepartmentId());
-        res.setCompanyId(ctx.getBiz().getTenantId());
-        res.setName(ctx.getName());
-        res.setType(ctx.getType());
-        res.setStatus(ctx.getStatus());
-        return res;
+        ctx.getResponse().setDepartmentId(ctx.getRequest().getDepartmentId());
+        ctx.getResponse().setCompanyId(ctx.getBiz().getTenantId());
+        ctx.getResponse().setName(ctx.getRequest().getName());   // nếu FE không gửi name thì vẫn trả null
+        ctx.getResponse().setStatus(ctx.getRequest().getStatus());
+        return ctx.getResponse();
     }
 
     private static void validate(UpdateDepartmentContext ctx) {
@@ -54,12 +53,24 @@ public class UpdateDepartmentProcessor extends BaseCoreProcessor<UpdateDepartmen
         if (ctx.getRequest() == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "payload is required");
         }
+        if (ctx.getRequest().getCompanyId() == null || ctx.getRequest().getCompanyId().isBlank()) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "companyId is required");
+        }
+        if (!ctx.getBiz().getTenantId().equals(ctx.getRequest().getCompanyId())) {
+            throw AppException.of(ErrorCodes.FORBIDDEN, "companyId mismatch");
+        }
         if (ctx.getRequest().getDepartmentId() == null || ctx.getRequest().getDepartmentId().isBlank()) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "departmentId is required");
         }
-        // giống create: bắt buộc name
-        if (ctx.getRequest().getName() == null || ctx.getRequest().getName().isBlank()) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "name is required");
+
+        // ít nhất phải có 1 field để update
+        boolean hasUpdate =
+                (ctx.getRequest().getName() != null && !ctx.getRequest().getName().isBlank())
+                        || (ctx.getRequest().getType() != null && !ctx.getRequest().getType().isBlank())
+                        || (ctx.getRequest().getStatus() != null && !ctx.getRequest().getStatus().isBlank());
+
+        if (!hasUpdate) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "no fields to update");
         }
     }
 }

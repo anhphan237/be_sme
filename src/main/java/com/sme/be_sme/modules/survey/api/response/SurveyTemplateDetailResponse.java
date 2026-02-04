@@ -1,20 +1,17 @@
 package com.sme.be_sme.modules.survey.api.response;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
-import java.util.Date;
-
-@Getter
-@Setter
-public class SurveyTemplateResponse {
+import java.util.List;
+@Data
+public class SurveyTemplateDetailResponse {
     private String templateId;
     private String name;
-    private String status;
     private String description;
+    private String status;
     private String stage;
     private Boolean managerOnly;
     private Integer version;
-    private String createdBy;
-    private Date createdAt;
+
+    private List<SurveyQuestionResponse> questions;
 }

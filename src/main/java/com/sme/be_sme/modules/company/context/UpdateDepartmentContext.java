@@ -12,10 +12,4 @@ public class UpdateDepartmentContext {
     private BizContext biz;
     private UpdateDepartmentRequest request;
     private UpdateDepartmentResponse response;
-
-    // output from core
-    private String departmentId;
-    private String name;
-    private String type;
-    private String status;
 }

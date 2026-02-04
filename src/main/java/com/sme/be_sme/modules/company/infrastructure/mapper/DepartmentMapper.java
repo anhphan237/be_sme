@@ -50,15 +50,4 @@ public interface DepartmentMapper {
 
     int countByCompanyAndName(@Param("companyId") String companyId,
                               @Param("name") String name);
-
-    int countByCompanyAndNameExcludeId(@Param("companyId") String companyId,
-                                       @Param("name") String name,
-                                       @Param("departmentId") String departmentId);
-
-    int updateByPrimaryKeySelective(DepartmentEntity row);
-
-    List<DepartmentEntity> selectByCompany(@Param("companyId") String companyId);
-
-    List<DepartmentEntity> selectByCompanyAndStatus(@Param("companyId") String companyId,
-                                                    @Param("status") String status);
 }
