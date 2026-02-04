@@ -8,10 +8,12 @@ import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import com.sme.be_sme.shared.security.PasswordHasher;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class UpdateUserCoreProcessor {
@@ -22,7 +24,10 @@ public class UpdateUserCoreProcessor {
     public void process(BizContext context, UpdateUserRequest request) {
         String companyId = context.getTenantId();
 
-        UserEntity existing = userService.findByCompanyIdAndEmail(companyId, request.getEmployeeEmail())
+        log.info("Updating user with company id {}", companyId);
+        log.info("Updating user with user id {}", request.getUserId());
+
+        UserEntity existing = userService.findById(companyId, request.getUserId())
                 .orElseThrow(() -> AppException.of(ErrorCodes.NOT_FOUND, "user not found"));
 
         if (request.getEmail() != null) existing.setEmail(request.getEmail());
