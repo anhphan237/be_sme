@@ -11,11 +11,11 @@ import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import com.sme.be_sme.shared.security.PasswordHasher;
+import com.sme.be_sme.shared.util.UuidGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -49,7 +49,7 @@ public class CreateUserProcessor extends BaseBizProcessor<BizContext> {
 
         Date now = new Date();
         UserEntity entity = new UserEntity();
-        entity.setUserId(UUID.randomUUID().toString());
+        entity.setUserId(UuidGenerator.generate());
         entity.setCompanyId(companyId);
         entity.setEmail(request.getEmail());
         entity.setPasswordHash(passwordHasher.hash(request.getPassword()));
