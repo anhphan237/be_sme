@@ -9,6 +9,7 @@ import java.util.Date;
 @Setter
 public class SurveyTemplateResponse {
     private String templateId;
+    private String companyId;
     private String name;
     private String status;
     private String description;
@@ -17,4 +18,6 @@ public class SurveyTemplateResponse {
     private Integer version;
     private String createdBy;
     private Date createdAt;
+    private Date updatedAt;
+    private Boolean isDefault;
 }
