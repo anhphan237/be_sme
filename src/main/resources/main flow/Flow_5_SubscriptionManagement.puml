@@ -1,0 +1,121 @@
+@startuml
+title Subscription, Usage, and Billing Management Flow
+autonumber
+
+participant "HR Staff" as hr
+participant "System Administrator" as sa
+participant "Frontend" as fe
+participant "Backend" as be
+database "Database" as db
+
+== Subscribe to a pricing plan ==
+hr -> fe: Open pricing page
+fe -> hr: Show plans (Basic/Pro/Business/Enterprise)
+hr -> fe: Select a plan and click Subscribe
+fe -> be: Send subscription request (selected plan)
+
+activate be
+be -> db: Load company current subscription status
+activate db
+db --> be: Return current status
+deactivate db
+
+be -> db: Create or update subscription record (Active)
+activate db
+db --> be: Subscription saved
+deactivate db
+
+be -> db: Generate invoice for the plan period
+activate db
+db --> be: Invoice created
+deactivate db
+
+be --> fe: Return invoice and payment instructions
+deactivate be
+fe --> hr: Show invoice + payment page
+
+== Payment processing (simplified) ==
+hr -> fe: Confirm payment
+fe -> be: Send payment request for invoice
+
+activate be
+be -> db: Mark invoice as "Payment Pending"
+activate db
+db --> be: Updated
+deactivate db
+
+be -> be: Process payment via payment gateway (external)
+alt Payment success
+  be -> db: Mark invoice as Paid
+  activate db
+  db --> be: Updated
+  deactivate db
+  be -> db: Keep subscription Active
+  activate db
+  db --> be: Updated
+  deactivate db
+  be --> fe: Return payment success
+  deactivate be
+  fe --> hr: Show subscription active confirmation
+else Payment failed
+  be -> db: Mark invoice as Failed
+  activate db
+  db --> be: Updated
+  deactivate db
+  be --> fe: Return payment failed message
+  deactivate be
+  fe --> hr: Show failure + next steps
+end
+
+== Track usage during the month ==
+note over be,db: Each time HR starts onboarding for a new employee,\nusage count increases for the current billing period.
+
+hr -> fe: Start onboarding for a new employee
+fe -> be: Request to start onboarding
+activate be
+be -> db: Read subscription plan and current usage
+activate db
+db --> be: Return plan limits + current usage
+deactivate db
+
+alt Within usage limit
+  be -> db: Increase usage count (employees onboarded this month)
+  activate db
+  db --> be: Usage updated
+  deactivate db
+  be --> fe: Allow onboarding to start
+  deactivate be
+  fe --> hr: Onboarding started
+else Exceed usage limit
+  be --> fe: Block action (limit reached) + suggest upgrade
+  deactivate be
+  fe --> hr: Show upgrade prompt
+end
+
+== Failed payment retry and suspension (automatic) ==
+be -> db: Find overdue/failed invoices
+activate db
+db --> be: Return invoices needing retry
+deactivate db
+be -> be: Retry payment (multiple attempts)
+
+alt Retry eventually succeeds
+  be -> db: Mark invoice as Paid, keep subscription Active
+else Retry still fails after max attempts
+  be -> db: Mark subscription as Suspended
+  be -> hr: Notify account is suspended until payment is made
+end
+
+== Admin monitors billing and SaaS metrics ==
+sa -> fe: Open billing/admin dashboard
+fe -> be: Request financial metrics (MRR, churn, active subscriptions)
+activate be
+be -> db: Aggregate subscription and invoice data
+activate db
+db --> be: Return metrics
+deactivate db
+be --> fe: Return dashboard data
+deactivate be
+fe --> sa: Show metrics dashboard
+
+@enduml

@@ -41,7 +41,6 @@ public class CreateDepartmentProcessor extends BaseCoreProcessor<CreateDepartmen
         ctx.getResponse().setDepartmentId(ctx.getDepartmentId());
         ctx.getResponse().setCompanyId(ctx.getBiz().getTenantId());
         ctx.getResponse().setName(ctx.getRequest().getName());
-        ctx.getResponse().setStatus(ctx.getRequest().getStatus() != null ? ctx.getRequest().getStatus() : "ACTIVE");
         return ctx.getResponse();
     }
 
@@ -54,9 +53,6 @@ public class CreateDepartmentProcessor extends BaseCoreProcessor<CreateDepartmen
         }
         if (ctx.getRequest().getCompanyId() == null || ctx.getRequest().getCompanyId().isBlank()) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "companyId is required");
-        }
-        if (!ctx.getBiz().getTenantId().equals(ctx.getRequest().getCompanyId())) {
-            throw AppException.of(ErrorCodes.FORBIDDEN, "companyId mismatch");
         }
         if (ctx.getRequest().getName() == null || ctx.getRequest().getName().isBlank()) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "name is required");

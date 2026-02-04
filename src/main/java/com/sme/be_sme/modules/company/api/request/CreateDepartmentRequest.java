@@ -6,9 +6,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CreateDepartmentRequest {
-    private String departmentId;
     private String companyId;
     private String name;
     private String type;
-    private String status;
 }

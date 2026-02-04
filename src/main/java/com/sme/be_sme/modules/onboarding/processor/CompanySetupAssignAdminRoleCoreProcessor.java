@@ -8,6 +8,8 @@ import com.sme.be_sme.shared.gateway.core.BizContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Set;
+
 @Component
 @RequiredArgsConstructor
 public class CompanySetupAssignAdminRoleCoreProcessor extends BaseCoreProcessor<CompanySetupContext> {
@@ -17,7 +19,12 @@ public class CompanySetupAssignAdminRoleCoreProcessor extends BaseCoreProcessor<
 
     @Override
     protected Object process(CompanySetupContext ctx) {
-        BizContext tenantCtx = BizContext.of(ctx.getCompany().getCompanyId(), ctx.getBiz() != null ? ctx.getBiz().getRequestId() : null);
+        BizContext tenantCtx = BizContext.internal(
+                ctx.getCompany().getCompanyId(),
+                ctx.getBiz() != null ? ctx.getBiz().getRequestId() : null,
+                ctx.getAdminUser().getUserId(),   
+                Set.of("ADMIN")
+        );
 
         AssignRoleRequest r = new AssignRoleRequest();
         r.setUserId(ctx.getAdminUser().getUserId());

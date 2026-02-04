@@ -28,7 +28,7 @@ public class CompanySetupCreateAdminUserCoreProcessor extends BaseCoreProcessor<
 
         String companyId = ctx.getCompany().getCompanyId();
         String requestId = (ctx.getBiz() != null) ? ctx.getBiz().getRequestId() : null;
-        BizContext tenantCtx = BizContext.of(companyId, requestId);
+        BizContext tenantCtx = BizContext.of(companyId, requestId, null);
 
         // enforce companyId in admin user request (nếu request có field companyId)
         CreateUserRequest adminReq = ctx.getRequest().getAdminUser();

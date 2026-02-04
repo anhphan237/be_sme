@@ -332,4 +332,41 @@ public class SurveyQuestionEntity {
     public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    private String dimensionCode;    // JOB_CLARITY, MANAGER_SUPPORT...
+    private Boolean measurable;      // use for counting API or not
+    private Integer scaleMin;        // min = 1
+    private Integer scaleMax;       // min = 5
+
+    public String getDimensionCode() {
+        return dimensionCode;
+    }
+
+    public void setDimensionCode(String dimensionCode) {
+        this.dimensionCode = dimensionCode;
+    }
+
+    public Boolean getMeasurable() {
+        return measurable;
+    }
+
+    public void setMeasurable(Boolean measurable) {
+        this.measurable = measurable;
+    }
+
+    public Integer getScaleMin() {
+        return scaleMin;
+    }
+
+    public void setScaleMin(Integer scaleMin) {
+        this.scaleMin = scaleMin;
+    }
+
+    public Integer getScaleMax() {
+        return scaleMax;
+    }
+
+    public void setScaleMax(Integer scaleMax) {
+        this.scaleMax = scaleMax;
+    }
 }

@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.company.infrastructure.mapper;
 
 import com.sme.be_sme.modules.company.infrastructure.persistence.entity.DepartmentEntity;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -46,4 +47,18 @@ public interface DepartmentMapper {
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
     int updateByPrimaryKey(DepartmentEntity row);
+
+    int countByCompanyAndName(@Param("companyId") String companyId,
+                              @Param("name") String name);
+
+    int countByCompanyAndNameExcludeId(@Param("companyId") String companyId,
+                                       @Param("name") String name,
+                                       @Param("departmentId") String departmentId);
+
+    int updateByPrimaryKeySelective(DepartmentEntity row);
+
+    List<DepartmentEntity> selectByCompany(@Param("companyId") String companyId);
+
+    List<DepartmentEntity> selectByCompanyAndStatus(@Param("companyId") String companyId,
+                                                    @Param("status") String status);
 }

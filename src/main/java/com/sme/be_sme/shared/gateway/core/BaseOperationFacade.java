@@ -16,12 +16,16 @@ public abstract class BaseOperationFacade implements OperationFacadeProvider {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "BizContext is missing");
         }
 
-        Object res = processor.execute(
-                biz.getTenantId(),
-                biz.getRequestId(),
-                objectMapper.valueToTree(request)
-        );
+        // reuse context, only override payload for this call
+        BizContext ctx = new BizContext();
+        ctx.setRequestId(biz.getRequestId());
+        ctx.setOperationType(biz.getOperationType());
+        ctx.setTenantId(biz.getTenantId());
+        ctx.setOperatorId(biz.getOperatorId());
+        ctx.setRoles(biz.getRoles());
+        ctx.setPayload(objectMapper.valueToTree(request));
 
+        Object res = processor.execute(ctx);
         return responseType.cast(res);
     }
 }

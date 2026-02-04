@@ -73,4 +73,20 @@
     select company_id, name, tax_code, address, timezone, status, created_at, updated_at
     from companies
   </select>
+
+  <select id="countByTaxCodeOrName" resultType="int">
+    select count(1)
+    from companies
+    <where>
+      <if test="taxCode != null and taxCode != ''">
+        tax_code = #{taxCode}
+      </if>
+      <if test="name != null and name != ''">
+        <if test="taxCode != null and taxCode != ''">
+          OR
+        </if>
+        lower(name) = lower(#{name})
+      </if>
+    </where>
+  </select>
 </mapper>

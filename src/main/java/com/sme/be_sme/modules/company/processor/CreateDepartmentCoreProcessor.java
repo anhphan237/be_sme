@@ -18,27 +18,50 @@ public class CreateDepartmentCoreProcessor extends BaseCoreProcessor<CreateDepar
 
     private final DepartmentMapper departmentMapper;
 
+    private static final String DEFAULT_STATUS = "ACTIVE";
+    private static final String DEFAULT_TYPE = "OTHER";
+
     @Override
     protected Object process(CreateDepartmentContext ctx) {
-        String departmentId = UuidGenerator.generate();
-        ctx.setDepartmentId(departmentId);
+        final String tenantId = requireText(ctx.getBiz().getTenantId(), ErrorCodes.UNAUTHORIZED, "missing tenantId");
 
-        Date now = new Date();
+        final var req = requireNotNull(ctx.getRequest(), ErrorCodes.INVALID_REQUEST, "request is required");
+        final String name = requireText(req.getName(), ErrorCodes.INVALID_REQUEST, "name is required").trim();
+        final String type = normalizeOrDefault(req.getType(), DEFAULT_TYPE);
+
+        if (departmentMapper.countByCompanyAndName(tenantId, name) > 0) {
+            throw AppException.of(ErrorCodes.DUPLICATED, "department name already exists");
+        }
+
+        final String departmentId = UuidGenerator.generate();
+        ctx.setDepartmentId(departmentId);
 
         DepartmentEntity e = new DepartmentEntity();
         e.setDepartmentId(departmentId);
-        e.setCompanyId(ctx.getBiz().getTenantId());
-        e.setName(ctx.getRequest().getName());
-        e.setType(ctx.getRequest().getType());
-        e.setStatus(ctx.getRequest().getStatus() != null ? ctx.getRequest().getStatus() : "ACTIVE");
-        e.setCreatedAt(now);
-        e.setUpdatedAt(now);
+        e.setCompanyId(tenantId);
+        e.setName(name);
+        e.setType(type);
+        e.setStatus(DEFAULT_STATUS);
 
-        int inserted = departmentMapper.insert(e);
-        if (inserted != 1) {
+        if (departmentMapper.insert(e) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create department failed");
         }
         return null;
     }
+
+    private static String normalizeOrDefault(String v, String def) {
+        return (v == null || v.isBlank()) ? def : v.trim();
+    }
+
+    private static String requireText(String v, String code, String msg) {
+        if (v == null || v.isBlank()) throw AppException.of(code, msg);
+        return v;
+    }
+
+    private static <T> T requireNotNull(T v, String code, String msg) {
+        if (v == null) throw AppException.of(code, msg);
+        return v;
+    }
+
 }
 
