@@ -21,7 +21,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class SurveyTemplateGetProcessor extends BaseBizProcessor<BizContext> {
+public class SurveyTemplateGetDetailProcessor extends BaseBizProcessor<BizContext> {
 
     private final ObjectMapper objectMapper;
     private final SurveyTemplateMapper surveyTemplateMapper;
@@ -37,7 +37,7 @@ public class SurveyTemplateGetProcessor extends BaseBizProcessor<BizContext> {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "templateId is required");
         }
 
-        // 1️⃣ Get template
+
         SurveyTemplateEntity template =
                 surveyTemplateMapper.selectByPrimaryKey(request.getTemplateId());
 
@@ -46,7 +46,6 @@ public class SurveyTemplateGetProcessor extends BaseBizProcessor<BizContext> {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
         }
 
-        // 2️⃣ Get questions
         List<SurveyQuestionEntity> entities =
                 surveyQuestionMapper.selectByTemplateId(template.getSurveyTemplateId());
 
@@ -75,7 +74,7 @@ public class SurveyTemplateGetProcessor extends BaseBizProcessor<BizContext> {
         response.setManagerOnly(template.getManagerOnly());
         response.setVersion(template.getVersion());
         response.setQuestions(questions);
-
+        response.setIsDefault(template.getIsDefault());
         return response;
     }
 }
