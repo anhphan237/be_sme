@@ -89,4 +89,13 @@
     owner_ref_id, due_days_offset, require_ack, sort_order, status, created_at, updated_at
     from task_templates
   </select>
+  <update id="updateStatusByOnboardingTemplateId">
+    update task_templates
+    set status = #{status,jdbcType=VARCHAR},
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where checklist_template_id in (
+      select checklist_template_id from checklist_templates
+      where onboarding_template_id = #{onboardingTemplateId,jdbcType=VARCHAR}
+    )
+  </update>
 </mapper>

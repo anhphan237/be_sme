@@ -2,7 +2,9 @@ package com.sme.be_sme.modules.onboarding.infrastructure.mapper;
 
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.ChecklistTemplateEntity;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
+import java.util.Date;
 import java.util.List;
 
 @Mapper
@@ -46,4 +48,10 @@ public interface ChecklistTemplateMapper {
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
     int updateByPrimaryKey(ChecklistTemplateEntity row);
+
+    int updateStatusByOnboardingTemplateId(
+            @Param("onboardingTemplateId") String onboardingTemplateId,
+            @Param("status") String status,
+            @Param("updatedAt") Date updatedAt
+    );
 }

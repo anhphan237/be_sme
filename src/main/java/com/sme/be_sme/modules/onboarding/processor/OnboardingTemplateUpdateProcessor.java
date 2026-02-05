@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateUpdateRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTemplateResponse;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistTemplateMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingTemplateMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingTemplateMapperExt;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskTemplateMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingTemplateEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -23,6 +25,8 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
     private final ObjectMapper objectMapper;
     private final OnboardingTemplateMapper onboardingTemplateMapper;
     private final OnboardingTemplateMapperExt onboardingTemplateMapperExt;
+    private final ChecklistTemplateMapper checklistTemplateMapper;
+    private final TaskTemplateMapper taskTemplateMapper;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -50,6 +54,15 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
         int updated = onboardingTemplateMapper.updateByPrimaryKey(entity);
         if (updated != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "update onboarding template failed");
+        }
+
+        if (request.getStatus() != null) {
+            Date now = entity.getUpdatedAt();
+            String newStatus = entity.getStatus();
+            checklistTemplateMapper.updateStatusByOnboardingTemplateId(
+                    entity.getOnboardingTemplateId(), newStatus, now);
+            taskTemplateMapper.updateStatusByOnboardingTemplateId(
+                    entity.getOnboardingTemplateId(), newStatus, now);
         }
 
         OnboardingTemplateResponse response = new OnboardingTemplateResponse();
