@@ -3,28 +3,34 @@ package com.sme.be_sme.modules.billing.facade.impl;
 import com.sme.be_sme.modules.billing.api.request.InvoiceGenerateRequest;
 import com.sme.be_sme.modules.billing.api.request.InvoiceGetRequest;
 import com.sme.be_sme.modules.billing.api.request.InvoiceListRequest;
+import com.sme.be_sme.modules.billing.api.request.PlanGetRequest;
 import com.sme.be_sme.modules.billing.api.request.PlanListRequest;
 import com.sme.be_sme.modules.billing.api.request.SubscriptionCreateRequest;
 import com.sme.be_sme.modules.billing.api.request.SubscriptionGetCurrentRequest;
 import com.sme.be_sme.modules.billing.api.request.SubscriptionUpdateRequest;
+import com.sme.be_sme.modules.billing.api.request.UsageCheckRequest;
 import com.sme.be_sme.modules.billing.api.request.UsageSummaryRequest;
 import com.sme.be_sme.modules.billing.api.request.UsageTrackRequest;
 import com.sme.be_sme.modules.billing.api.response.InvoiceDetailResponse;
 import com.sme.be_sme.modules.billing.api.response.InvoiceGenerateResponse;
 import com.sme.be_sme.modules.billing.api.response.InvoiceListResponse;
+import com.sme.be_sme.modules.billing.api.response.PlanGetResponse;
 import com.sme.be_sme.modules.billing.api.response.PlanListResponse;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionCurrentResponse;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionResponse;
+import com.sme.be_sme.modules.billing.api.response.UsageCheckResponse;
 import com.sme.be_sme.modules.billing.api.response.UsageSummaryResponse;
 import com.sme.be_sme.modules.billing.api.response.UsageTrackResponse;
 import com.sme.be_sme.modules.billing.facade.BillingFacade;
 import com.sme.be_sme.modules.billing.processor.InvoiceGetProcessor;
 import com.sme.be_sme.modules.billing.processor.InvoiceGenerateProcessor;
 import com.sme.be_sme.modules.billing.processor.InvoiceListProcessor;
+import com.sme.be_sme.modules.billing.processor.PlanGetProcessor;
 import com.sme.be_sme.modules.billing.processor.PlanListProcessor;
 import com.sme.be_sme.modules.billing.processor.SubscriptionCreateProcessor;
 import com.sme.be_sme.modules.billing.processor.SubscriptionGetCurrentProcessor;
 import com.sme.be_sme.modules.billing.processor.SubscriptionUpdateProcessor;
+import com.sme.be_sme.modules.billing.processor.UsageCheckProcessor;
 import com.sme.be_sme.modules.billing.processor.UsageSummaryProcessor;
 import com.sme.be_sme.modules.billing.processor.UsageTrackProcessor;
 import com.sme.be_sme.shared.gateway.core.BaseOperationFacade;
@@ -39,10 +45,12 @@ public class BillingFacadeImpl extends BaseOperationFacade implements BillingFac
     private final SubscriptionUpdateProcessor subscriptionUpdateProcessor;
     private final SubscriptionGetCurrentProcessor subscriptionGetCurrentProcessor;
     private final UsageTrackProcessor usageTrackProcessor;
+    private final UsageCheckProcessor usageCheckProcessor;
     private final UsageSummaryProcessor usageSummaryProcessor;
     private final InvoiceGenerateProcessor invoiceGenerateProcessor;
     private final InvoiceListProcessor invoiceListProcessor;
     private final InvoiceGetProcessor invoiceGetProcessor;
+    private final PlanGetProcessor planGetProcessor;
     private final PlanListProcessor planListProcessor;
 
     @Override
@@ -66,6 +74,11 @@ public class BillingFacadeImpl extends BaseOperationFacade implements BillingFac
     }
 
     @Override
+    public UsageCheckResponse checkUsage(UsageCheckRequest request) {
+        return call(usageCheckProcessor, request, UsageCheckResponse.class);
+    }
+
+    @Override
     public UsageSummaryResponse getUsageSummary(UsageSummaryRequest request) {
         return call(usageSummaryProcessor, request, UsageSummaryResponse.class);
     }
@@ -83,6 +96,11 @@ public class BillingFacadeImpl extends BaseOperationFacade implements BillingFac
     @Override
     public InvoiceDetailResponse getInvoice(InvoiceGetRequest request) {
         return call(invoiceGetProcessor, request, InvoiceDetailResponse.class);
+    }
+
+    @Override
+    public PlanGetResponse getPlan(PlanGetRequest request) {
+        return call(planGetProcessor, request, PlanGetResponse.class);
     }
 
     @Override
