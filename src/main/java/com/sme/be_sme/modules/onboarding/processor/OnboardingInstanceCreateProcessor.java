@@ -21,6 +21,7 @@ public class OnboardingInstanceCreateProcessor
     private final OnboardingInstanceCreateValidateCoreProcessor validate;
     private final OnboardingInstanceCreateIdempotencyCoreProcessor idempotency;
     private final OnboardingInstanceCreateLoadTemplateCoreProcessor loadTemplate;
+    private final OnboardingInstanceCreateUsageCheckCoreProcessor usageCheck;
     private final OnboardingInstanceCreateSubscriptionTrackCoreProcessor subscriptionTrack;
     private final OnboardingInstanceCreateCloneCoreProcessor clone;
     private final OnboardingInstanceCreateBuildResponseCoreProcessor buildRes;
@@ -47,6 +48,7 @@ public class OnboardingInstanceCreateProcessor
             return ctx.getResponse();
         }
         loadTemplate.processWith(ctx);
+        usageCheck.processWith(ctx);
         subscriptionTrack.processWith(ctx);
         clone.processWith(ctx);
         buildRes.processWith(ctx);

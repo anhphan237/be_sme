@@ -88,4 +88,11 @@
       and request_no = #{requestNo,jdbcType=VARCHAR}
     limit 1
   </select>
+  <select id="countByCompanyIdAndMonth" resultType="int">
+    select count(*)
+    from onboarding_instances
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and created_at &gt;= #{monthStart,jdbcType=TIMESTAMP}
+      and created_at &lt; #{monthEnd,jdbcType=TIMESTAMP}
+  </select>
 </mapper>

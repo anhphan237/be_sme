@@ -79,4 +79,13 @@
     status, read_at, acked_at, created_at
     from document_acknowledgements
   </select>
+  <select id="selectByCompanyIdAndDocumentIdAndUserIdAndOnboardingId" resultMap="BaseResultMap">
+    select document_acknowledgement_id, company_id, document_id, user_id, onboarding_id,
+    status, read_at, acked_at, created_at
+    from document_acknowledgements
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and document_id = #{documentId,jdbcType=VARCHAR}
+      and user_id = #{userId,jdbcType=VARCHAR}
+      and onboarding_id = #{onboardingId,jdbcType=VARCHAR}
+  </select>
 </mapper>

@@ -52,4 +52,11 @@ public interface OnboardingInstanceMapper {
             @Param("companyId") String companyId,
             @Param("requestNo") String requestNo
     );
+
+    /** Count instances created in the given month (yyyy-MM). Used for usage check. */
+    int countByCompanyIdAndMonth(
+            @Param("companyId") String companyId,
+            @Param("monthStart") java.util.Date monthStart,
+            @Param("monthEnd") java.util.Date monthEnd
+    );
 }
