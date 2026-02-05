@@ -16,12 +16,16 @@ public interface SurveyFacade extends OperationFacadeProvider {
     @OperationType("com.sme.survey.response.submit")
     SurveySubmitResponse submitSurveyResponse(SurveySubmitRequest request);
 
-    @OperationType("com.sme.survey.response.get")
-    SurveyGetResponse getAllSurveys(SurveyGetRequest request);
-
     @OperationType("com.sme.survey.question.create")
     SurveyQuestionResponse createSurveyQuestion(SurveyQuestionCreateRequest request);
 
     @OperationType("com.sme.survey.template.get")
-    SurveyTemplateDetailResponse getSurveyTemplate(SurveyTemplateGetRequest request);
+    SurveyTemplateDetailResponse getSurveyDetailTemplate(SurveyTemplateGetRequest request);
+
+    @OperationType("com.sme.survey.template.list")
+    SurveyTemplateListResponse listSurveyTemplates(SurveyTemplateGetListRequest request);
+
+    @OperationType("com.sme.survey.template.update")
+    SurveyTemplateResponse updateSurveyTemplate(SurveyTemplateUpdateRequest request);
+
 }

@@ -12,6 +12,6 @@ public class SurveyTemplateDetailResponse {
     private String stage;
     private Boolean managerOnly;
     private Integer version;
-
+    private Boolean isDefault;
     private List<SurveyQuestionResponse> questions;
 }
