@@ -31,4 +31,8 @@ logging:
     org.apache.ibatis: DEBUG
     org.mybatis: DEBUG
 
+google:
+  ai:
+    gemini:
+      api-key: AIzaSyAl3zW9MgvPY7LK8_I4G6srVOanVFIGor4
 
