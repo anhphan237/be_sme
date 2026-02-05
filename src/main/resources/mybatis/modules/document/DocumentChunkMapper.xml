@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.document.infrastructure.mapper.DocumentChunkMapper">
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentChunkEntity">
+    <id column="chunk_id" jdbcType="VARCHAR" property="chunkId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="document_id" jdbcType="VARCHAR" property="documentId" />
+    <result column="version_no" jdbcType="INTEGER" property="versionNo" />
+    <result column="chunk_no" jdbcType="INTEGER" property="chunkNo" />
+    <result column="chunk_text" jdbcType="LONGVARCHAR" property="chunkText" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+
+  <insert id="insertBatch">
+    insert into document_chunks (chunk_id, company_id, document_id, version_no, chunk_no, chunk_text, created_at)
+    values
+    <foreach collection="chunks" item="c" separator=",">
+      (#{c.chunkId,jdbcType=VARCHAR}, #{c.companyId,jdbcType=VARCHAR}, #{c.documentId,jdbcType=VARCHAR},
+       #{c.versionNo,jdbcType=INTEGER}, #{c.chunkNo,jdbcType=INTEGER}, #{c.chunkText,jdbcType=LONGVARCHAR},
+       #{c.createdAt,jdbcType=TIMESTAMP})
+    </foreach>
+  </insert>
+
+  <delete id="deleteByDocumentIdAndVersion">
+    delete from document_chunks
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and document_id = #{documentId,jdbcType=VARCHAR}
+      and version_no = #{versionNo,jdbcType=INTEGER}
+  </delete>
+
+  <select id="selectByCompanyId" resultMap="BaseResultMap">
+    select chunk_id, company_id, document_id, version_no, chunk_no, chunk_text, created_at
+    from document_chunks
+    where company_id = #{companyId,jdbcType=VARCHAR}
+    order by document_id, chunk_no
+  </select>
+</mapper>
