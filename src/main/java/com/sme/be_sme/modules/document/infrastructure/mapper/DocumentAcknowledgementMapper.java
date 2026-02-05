@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.document.infrastructure.mapper;
 
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentAcknowledgementEntity;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -46,4 +47,10 @@ public interface DocumentAcknowledgementMapper {
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
     int updateByPrimaryKey(DocumentAcknowledgementEntity row);
+
+    DocumentAcknowledgementEntity selectByCompanyIdAndDocumentIdAndUserIdAndOnboardingId(
+            @Param("companyId") String companyId,
+            @Param("documentId") String documentId,
+            @Param("userId") String userId,
+            @Param("onboardingId") String onboardingId);
 }
