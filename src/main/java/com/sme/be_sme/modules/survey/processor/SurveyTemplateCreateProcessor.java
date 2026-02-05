@@ -35,7 +35,7 @@ public class SurveyTemplateCreateProcessor extends BaseBizProcessor<BizContext> 
         entity.setSurveyTemplateId(templateId);
         entity.setCompanyId(context.getTenantId());
         entity.setName(request.getName().trim());
-        entity.setDescription(request.getDescription() != null ? request.getDescription().trim() : null);
+        entity.setDescription(request.getDescription());
         entity.setStage("D7");
         entity.setManagerOnly(Boolean.FALSE);
         entity.setStatus("DRAFT");
@@ -44,7 +44,7 @@ public class SurveyTemplateCreateProcessor extends BaseBizProcessor<BizContext> 
         entity.setUpdatedAt(now);
 
         entity.setVersion(1);
-        entity.setDefault(Boolean.FALSE);
+        entity.setIsDefault(Boolean.FALSE);
 
         int inserted = surveyTemplateMapper.insert(entity);
         if (inserted != 1) {

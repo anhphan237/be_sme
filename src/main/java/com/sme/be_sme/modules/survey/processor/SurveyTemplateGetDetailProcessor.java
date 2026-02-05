@@ -37,7 +37,7 @@ public class SurveyTemplateGetDetailProcessor extends BaseBizProcessor<BizContex
             throw AppException.of(ErrorCodes.BAD_REQUEST, "templateId is required");
         }
 
-       
+
         SurveyTemplateEntity template =
                 surveyTemplateMapper.selectByPrimaryKey(request.getTemplateId());
 
@@ -74,7 +74,7 @@ public class SurveyTemplateGetDetailProcessor extends BaseBizProcessor<BizContex
         response.setManagerOnly(template.getManagerOnly());
         response.setVersion(template.getVersion());
         response.setQuestions(questions);
-
+        response.setIsDefault(template.getIsDefault());
         return response;
     }
 }

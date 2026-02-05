@@ -25,4 +25,7 @@ public interface SurveyFacade extends OperationFacadeProvider {
     @OperationType("com.sme.survey.template.list")
     SurveyTemplateListResponse listSurveyTemplates(SurveyTemplateGetListRequest request);
 
+    @OperationType("com.sme.survey.template.update")
+    SurveyTemplateResponse updateSurveyTemplate(SurveyTemplateUpdateRequest request);
+
 }
