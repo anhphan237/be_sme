@@ -3,55 +3,49 @@ package com.sme.be_sme.modules.onboarding.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateCreateRequest;
-import com.sme.be_sme.modules.onboarding.api.response.OnboardingTemplateResponse;
-import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingTemplateMapper;
-import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingTemplateEntity;
-import com.sme.be_sme.shared.constant.ErrorCodes;
-import com.sme.be_sme.shared.exception.AppException;
-import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
+import com.sme.be_sme.modules.onboarding.context.OnboardingTemplateCreateContext;
+import com.sme.be_sme.modules.onboarding.processor.template.core.OnboardingTemplateCreateBuildResponseCoreProcessor;
+import com.sme.be_sme.modules.onboarding.processor.template.core.OnboardingTemplateCreateChecklistsAndTasksCoreProcessor;
+import com.sme.be_sme.modules.onboarding.processor.template.core.OnboardingTemplateCreateInsertTemplateCoreProcessor;
+import com.sme.be_sme.modules.onboarding.processor.template.core.OnboardingTemplateCreateValidateCoreProcessor;
+import com.sme.be_sme.shared.gateway.core.BaseCoreProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import com.sme.be_sme.shared.util.UuidGenerator;
-import java.util.Date;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Date;
 
 @Component
 @RequiredArgsConstructor
-public class OnboardingTemplateCreateProcessor extends BaseBizProcessor<BizContext> {
+public class OnboardingTemplateCreateProcessor extends BaseCoreProcessor<OnboardingTemplateCreateContext> {
 
     private final ObjectMapper objectMapper;
-    private final OnboardingTemplateMapper onboardingTemplateMapper;
+    private final OnboardingTemplateCreateValidateCoreProcessor validate;
+    private final OnboardingTemplateCreateInsertTemplateCoreProcessor insertTemplate;
+    private final OnboardingTemplateCreateChecklistsAndTasksCoreProcessor createChecklistsAndTasks;
+    private final OnboardingTemplateCreateBuildResponseCoreProcessor buildResponse;
 
     @Override
-    protected Object doProcess(BizContext context, JsonNode payload) {
+    protected OnboardingTemplateCreateContext buildContext(BizContext biz, JsonNode payload) {
         OnboardingTemplateCreateRequest request = objectMapper.convertValue(payload, OnboardingTemplateCreateRequest.class);
-        if (!StringUtils.hasText(request.getName())) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "name is required");
-        }
+        OnboardingTemplateCreateContext ctx = new OnboardingTemplateCreateContext();
+        ctx.setBiz(biz);
+        ctx.setRequest(request);
+        ctx.setCompanyId(biz.getTenantId());
+        ctx.setTemplateId(UuidGenerator.generate());
+        ctx.setNow(new Date());
+        return ctx;
+    }
 
-        String templateId = UuidGenerator.generate();
-        Date now = new Date();
-
-        OnboardingTemplateEntity entity = new OnboardingTemplateEntity();
-        entity.setOnboardingTemplateId(templateId);
-        entity.setCompanyId(context.getTenantId());
-        entity.setName(request.getName().trim());
-        entity.setDescription(request.getDescription());
-        entity.setStatus(StringUtils.hasText(request.getStatus()) ? request.getStatus() : "DRAFT");
-        entity.setCreatedBy(StringUtils.hasText(request.getCreatedBy()) ? request.getCreatedBy() : "system");
-        entity.setCreatedAt(now);
-        entity.setUpdatedAt(now);
-
-        int inserted = onboardingTemplateMapper.insert(entity);
-        if (inserted != 1) {
-            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create onboarding template failed");
-        }
-
-        OnboardingTemplateResponse response = new OnboardingTemplateResponse();
-        response.setTemplateId(templateId);
-        response.setName(entity.getName());
-        response.setStatus(entity.getStatus());
-        return response;
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    protected Object process(OnboardingTemplateCreateContext ctx) {
+        validate.processWith(ctx);
+        insertTemplate.processWith(ctx);
+        createChecklistsAndTasks.processWith(ctx);
+        buildResponse.processWith(ctx);
+        return ctx.getResponse();
     }
 }
