@@ -3,7 +3,7 @@ package com.sme.be_sme.modules.onboarding.processor.template.core;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTemplateListResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTemplateResponse;
 import com.sme.be_sme.modules.onboarding.context.OnboardingTemplateListContext;
-import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingTemplateMapper;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingTemplateMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingTemplateEntity;
 import com.sme.be_sme.shared.gateway.core.BaseCoreProcessor;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OnboardingTemplateListCoreProcessor extends BaseCoreProcessor<OnboardingTemplateListContext> {
 
-    private final OnboardingTemplateMapper onboardingTemplateMapper;
+    private final OnboardingTemplateMapperExt onboardingTemplateMapperExt;
 
     @Override
     protected Object process(OnboardingTemplateListContext ctx) {
@@ -23,7 +23,7 @@ public class OnboardingTemplateListCoreProcessor extends BaseCoreProcessor<Onboa
         String status = ctx.getRequest().getStatus();
 
         List<OnboardingTemplateEntity> rows =
-                onboardingTemplateMapper.selectByCompanyIdAndStatus(companyId, status);
+                onboardingTemplateMapperExt.selectByCompanyIdAndStatus(companyId, status);
 
         ctx.setTemplates(rows);
 

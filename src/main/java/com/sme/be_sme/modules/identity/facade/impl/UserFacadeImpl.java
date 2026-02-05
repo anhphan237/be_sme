@@ -8,6 +8,7 @@ import com.sme.be_sme.modules.identity.api.response.CreateUserResponse;
 import com.sme.be_sme.modules.identity.api.response.DisableUserResponse;
 import com.sme.be_sme.modules.identity.api.response.GetUserResponse;
 import com.sme.be_sme.modules.identity.api.response.UpdateUserResponse;
+import com.sme.be_sme.modules.identity.context.IdentityUpdateUserContext;
 import com.sme.be_sme.modules.identity.facade.UserFacade;
 import com.sme.be_sme.modules.identity.processor.IdentityUserCreateProcessor;
 import com.sme.be_sme.modules.identity.processor.IdentityUserDisableProcessor;
@@ -38,7 +39,11 @@ public class UserFacadeImpl extends BaseOperationFacade implements UserFacade {
 
     @Override
     public UpdateUserResponse updateUser(UpdateUserRequest request) {
-        return call(identityUserUpdateProcessor, request, UpdateUserResponse.class);
+        return call(
+                identityUserUpdateProcessor,
+                request,
+                UpdateUserResponse.class,
+                IdentityUpdateUserContext::new);
     }
 
     @Override

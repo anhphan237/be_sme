@@ -79,4 +79,12 @@
     created_at, updated_at
     from checklist_instances
   </select>
+  <select id="selectByCompanyIdAndOnboardingId" resultMap="BaseResultMap">
+    select checklist_id, company_id, onboarding_id, name, stage, status, progress_percent,
+    created_at, updated_at
+    from checklist_instances
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and onboarding_id = #{onboardingId,jdbcType=VARCHAR}
+    order by created_at asc
+  </select>
 </mapper>

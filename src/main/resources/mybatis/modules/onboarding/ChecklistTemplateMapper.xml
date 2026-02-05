@@ -79,4 +79,10 @@
     status, created_at, updated_at
     from checklist_templates
   </select>
+  <update id="updateStatusByOnboardingTemplateId">
+    update checklist_templates
+    set status = #{status,jdbcType=VARCHAR},
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where onboarding_template_id = #{onboardingTemplateId,jdbcType=VARCHAR}
+  </update>
 </mapper>

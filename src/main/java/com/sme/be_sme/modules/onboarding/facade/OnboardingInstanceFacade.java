@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.onboarding.facade;
 
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceActivateRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceCancelRequest;
+import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceCompleteRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceCreateRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceGetRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceListRequest;
@@ -27,4 +28,7 @@ public interface OnboardingInstanceFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.onboarding.instance.cancel")
     OnboardingInstanceResponse cancelOnboardingInstance(OnboardingInstanceCancelRequest request);
+
+    @OperationType("com.sme.onboarding.instance.complete")
+    OnboardingInstanceResponse completeOnboardingInstance(OnboardingInstanceCompleteRequest request);
 }

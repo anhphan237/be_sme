@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.sme.be_sme.modules.employee.infrastructure.persistence.mapper.EmployeeProfileMapperExt">
+<mapper namespace="com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt">
 
     <resultMap id="EmployeeProfileResultMap" type="com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity">
         <id column="employee_id" property="employeeId"/>

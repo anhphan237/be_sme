@@ -46,7 +46,6 @@ public class IdentityUserDisableProcessor extends BaseCoreProcessor<IdentityUser
         updateEmployeeProfileStatusCoreProcessor.processWith(ctx);
 
         ctx.getResponse().setUserId(ctx.getRequest().getUserId());
-        ctx.getResponse().setStatus(status);
         return ctx.getResponse();
     }
 
@@ -59,9 +58,6 @@ public class IdentityUserDisableProcessor extends BaseCoreProcessor<IdentityUser
         }
         if (ctx.getRequest().getUserId() == null || ctx.getRequest().getUserId().isBlank()) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "userId is required");
-        }
-        if (ctx.getRequest().getDisabled() == null) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "disabled is required");
         }
     }
 }

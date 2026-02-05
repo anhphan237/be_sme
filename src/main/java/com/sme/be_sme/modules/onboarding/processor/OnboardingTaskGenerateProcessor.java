@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -40,6 +41,7 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
     private final TaskInstanceMapper taskInstanceMapper;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     protected Object doProcess(BizContext context, JsonNode payload) {
         OnboardingTaskGenerateRequest request = objectMapper.convertValue(payload, OnboardingTaskGenerateRequest.class);
         validate(context, request);
@@ -65,7 +67,7 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
             checklistInstance.setOnboardingId(instance.getOnboardingId());
             checklistInstance.setName(checklistTemplate.getName());
             checklistInstance.setStage(checklistTemplate.getStage());
-            checklistInstance.setStatus("PENDING");
+            checklistInstance.setStatus("NOT_STARTED");
             checklistInstance.setProgressPercent(0);
             checklistInstance.setCreatedAt(now);
             checklistInstance.setUpdatedAt(now);
@@ -86,9 +88,9 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
                 taskInstance.setTaskTemplateId(taskTemplate.getTaskTemplateId());
                 taskInstance.setTitle(taskTemplate.getTitle());
                 taskInstance.setDescription(taskTemplate.getDescription());
-                taskInstance.setStatus("PENDING");
+                taskInstance.setStatus("TODO");
                 taskInstance.setDueDate(calculateDueDate(now, taskTemplate.getDueDaysOffset()));
-                applyOwnerAssignment(taskInstance, taskTemplate);
+                applyOwnerAssignment(taskInstance, taskTemplate, instance, request);
                 taskInstance.setCreatedBy("system");
                 taskInstance.setCreatedAt(now);
                 taskInstance.setUpdatedAt(now);
@@ -168,19 +170,25 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
         return calendar.getTime();
     }
 
-    private static void applyOwnerAssignment(TaskInstanceEntity taskInstance, TaskTemplateEntity template) {
+    private static void applyOwnerAssignment(TaskInstanceEntity taskInstance, TaskTemplateEntity template,
+                                             OnboardingInstanceEntity instance, OnboardingTaskGenerateRequest request) {
         if (taskInstance == null || template == null) {
             return;
         }
-        if (!StringUtils.hasText(template.getOwnerType()) || !StringUtils.hasText(template.getOwnerRefId())) {
+        if (!StringUtils.hasText(template.getOwnerType())) {
             return;
         }
         String ownerType = template.getOwnerType().trim().toUpperCase(Locale.US);
-        String ownerRefId = template.getOwnerRefId().trim();
-        if ("USER".equals(ownerType)) {
-            taskInstance.setAssignedUserId(ownerRefId);
-        } else if ("DEPARTMENT".equals(ownerType)) {
-            taskInstance.setAssignedDepartmentId(ownerRefId);
+        if ("USER".equals(ownerType) && StringUtils.hasText(template.getOwnerRefId())) {
+            taskInstance.setAssignedUserId(template.getOwnerRefId().trim());
+        } else if ("DEPARTMENT".equals(ownerType) && StringUtils.hasText(template.getOwnerRefId())) {
+            taskInstance.setAssignedDepartmentId(template.getOwnerRefId().trim());
+        } else if ("EMPLOYEE".equals(ownerType) && instance != null && StringUtils.hasText(instance.getEmployeeId())) {
+            taskInstance.setAssignedUserId(instance.getEmployeeId());
+        } else if ("MANAGER".equals(ownerType) && request != null && StringUtils.hasText(request.getManagerId())) {
+            taskInstance.setAssignedUserId(request.getManagerId());
+        } else if ("IT_STAFF".equals(ownerType) && request != null && StringUtils.hasText(request.getItStaffUserId())) {
+            taskInstance.setAssignedUserId(request.getItStaffUserId());
         }
     }
 }

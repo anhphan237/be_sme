@@ -8,5 +8,7 @@ import lombok.Setter;
 public class OnboardingInstanceCreateRequest {
     private String templateId;
     private String employeeId;
-    private String managerId; // optional
+    private String managerId; // optional, for assignee resolution
+    /** Idempotency key: if provided and instance already exists with this requestNo, return existing. */
+    private String requestNo;
 }

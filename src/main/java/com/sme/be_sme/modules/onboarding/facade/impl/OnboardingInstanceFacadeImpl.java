@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.onboarding.facade.impl;
 
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceActivateRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceCancelRequest;
+import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceCompleteRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceCreateRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceGetRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceListRequest;
@@ -11,6 +12,7 @@ import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceResponse
 import com.sme.be_sme.modules.onboarding.facade.OnboardingInstanceFacade;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingInstanceActivateProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingInstanceCancelProcessor;
+import com.sme.be_sme.modules.onboarding.processor.OnboardingInstanceCompleteProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingInstanceCreateProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingInstanceGetProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingInstanceListProcessor;
@@ -27,6 +29,7 @@ public class OnboardingInstanceFacadeImpl extends BaseOperationFacade implements
     private final OnboardingInstanceListProcessor onboardingInstanceListProcessor;
     private final OnboardingInstanceGetProcessor onboardingInstanceGetProcessor;
     private final OnboardingInstanceCancelProcessor onboardingInstanceCancelProcessor;
+    private final OnboardingInstanceCompleteProcessor onboardingInstanceCompleteProcessor;
 
     @Override
     public OnboardingInstanceResponse createOnboardingInstance(OnboardingInstanceCreateRequest request) {
@@ -51,5 +54,10 @@ public class OnboardingInstanceFacadeImpl extends BaseOperationFacade implements
     @Override
     public OnboardingInstanceResponse cancelOnboardingInstance(OnboardingInstanceCancelRequest request) {
         return call(onboardingInstanceCancelProcessor, request, OnboardingInstanceResponse.class);
+    }
+
+    @Override
+    public OnboardingInstanceResponse completeOnboardingInstance(OnboardingInstanceCompleteRequest request) {
+        return call(onboardingInstanceCompleteProcessor, request, OnboardingInstanceResponse.class);
     }
 }

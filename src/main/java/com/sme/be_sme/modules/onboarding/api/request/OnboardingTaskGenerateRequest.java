@@ -7,4 +7,8 @@ import lombok.Setter;
 @Setter
 public class OnboardingTaskGenerateRequest {
     private String instanceId;
+    /** For assignee resolution when template owner_type is MANAGER */
+    private String managerId;
+    /** For assignee resolution when template owner_type is IT_STAFF */
+    private String itStaffUserId;
 }

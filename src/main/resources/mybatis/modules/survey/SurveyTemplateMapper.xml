@@ -16,6 +16,10 @@
     <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+    <result column="description" jdbcType="LONGVARCHAR" property="description" />
+    <result column="version" jdbcType="INTEGER" property="version" />
+    <result column="is_default" jdbcType="BIT" property="isDefault" />
+
   </resultMap>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
     <!--
@@ -34,12 +38,14 @@
     -->
     insert into survey_templates (survey_template_id, company_id, name, 
       stage, manager_only, status, 
-      created_by, created_at, updated_at
-      )
+      created_by, created_at, updated_at, version, is_default, description
+
+    )
     values (#{surveyTemplateId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, 
       #{stage,jdbcType=VARCHAR}, #{managerOnly,jdbcType=BIT}, #{status,jdbcType=VARCHAR}, 
-      #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}
-      )
+      #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, #{version,jdbcType=INTEGER}, #{isDefault,jdbcType=BIT}, #{description,jdbcType=LONGVARCHAR}
+
+    )
   </insert>
   <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyTemplateEntity">
     <!--
@@ -55,7 +61,11 @@
       status = #{status,jdbcType=VARCHAR},
       created_by = #{createdBy,jdbcType=VARCHAR},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
-      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      version = #{version,jdbcType=INTEGER},
+      is_default = #{isDefault,jdbcType=BIT},
+      description = #{description,jdbcType=LONGVARCHAR}
+
     where survey_template_id = #{surveyTemplateId,jdbcType=VARCHAR}
   </update>
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
@@ -65,7 +75,8 @@
       This element was generated on Thu Jan 22 16:08:37 ICT 2026.
     -->
     select survey_template_id, company_id, name, stage, manager_only, status, created_by, 
-    created_at, updated_at
+    created_at, updated_at, version, is_default, description
+
     from survey_templates
     where survey_template_id = #{surveyTemplateId,jdbcType=VARCHAR}
   </select>
@@ -76,7 +87,8 @@
       This element was generated on Thu Jan 22 16:08:37 ICT 2026.
     -->
     select survey_template_id, company_id, name, stage, manager_only, status, created_by, 
-    created_at, updated_at
+    created_at, updated_at , version, is_default, description
+
     from survey_templates
   </select>
 </mapper>

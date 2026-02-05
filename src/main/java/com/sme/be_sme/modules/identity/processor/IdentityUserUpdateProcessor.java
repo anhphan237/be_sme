@@ -7,6 +7,7 @@ import com.sme.be_sme.modules.employee.api.response.UpsertEmployeeProfileRespons
 import com.sme.be_sme.modules.employee.processor.UpsertEmployeeProfileProcessor;
 import com.sme.be_sme.modules.identity.api.request.UpdateUserRequest;
 import com.sme.be_sme.modules.identity.api.response.UpdateUserResponse;
+import com.sme.be_sme.modules.identity.context.IdentityUpdateUserContext;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -17,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
-public class IdentityUserUpdateProcessor extends BaseBizProcessor<BizContext> {
+public class IdentityUserUpdateProcessor extends BaseBizProcessor<IdentityUpdateUserContext> {
 
     private final ObjectMapper objectMapper;
 
@@ -25,13 +26,13 @@ public class IdentityUserUpdateProcessor extends BaseBizProcessor<BizContext> {
     private final UpsertEmployeeProfileProcessor upsertEmployeeProfileProcessor;
 
     @Override
-    protected Object doProcess(BizContext context, JsonNode payload) {
+    public Object doProcess(IdentityUpdateUserContext context, JsonNode payload) {
         UpdateUserRequest req = objectMapper.convertValue(payload, UpdateUserRequest.class);
         return process(context, req);
     }
 
     @Transactional
-    public UpdateUserResponse process(BizContext context, UpdateUserRequest request) {
+    public UpdateUserResponse process(IdentityUpdateUserContext context, UpdateUserRequest request) {
         validate(context, request);
 
         // 1) update users
@@ -64,7 +65,7 @@ public class IdentityUserUpdateProcessor extends BaseBizProcessor<BizContext> {
         UpdateUserResponse res = new UpdateUserResponse();
         res.setUserId(request.getUserId());
         res.setEmployeeId(profile.getEmployeeId());
-        res.setStatus(request.getStatus());
+        res.setStatus(context.getUserStatus());
         return res;
     }
 

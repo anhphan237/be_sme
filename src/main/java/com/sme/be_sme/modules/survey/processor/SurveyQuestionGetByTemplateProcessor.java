@@ -2,9 +2,9 @@ package com.sme.be_sme.modules.survey.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sme.be_sme.modules.survey.api.request.SurveyTemplateGetRequest;
+import com.sme.be_sme.modules.survey.api.request.SurveyQuestionGetByTemplateRequest;
+import com.sme.be_sme.modules.survey.api.response.SurveyQuestionListResponse;
 import com.sme.be_sme.modules.survey.api.response.SurveyQuestionResponse;
-import com.sme.be_sme.modules.survey.api.response.SurveyTemplateDetailResponse;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyQuestionMapper;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyTemplateMapper;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyQuestionEntity;
@@ -21,7 +21,8 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class SurveyTemplateGetProcessor extends BaseBizProcessor<BizContext> {
+public class SurveyQuestionGetByTemplateProcessor
+        extends BaseBizProcessor<BizContext> {
 
     private final ObjectMapper objectMapper;
     private final SurveyTemplateMapper surveyTemplateMapper;
@@ -30,14 +31,18 @@ public class SurveyTemplateGetProcessor extends BaseBizProcessor<BizContext> {
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
 
-        SurveyTemplateGetRequest request =
-                objectMapper.convertValue(payload, SurveyTemplateGetRequest.class);
+        if (context == null || context.getTenantId() == null) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
+        }
+
+        SurveyQuestionGetByTemplateRequest request =
+                objectMapper.convertValue(payload, SurveyQuestionGetByTemplateRequest.class);
 
         if (request == null || request.getTemplateId() == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "templateId is required");
         }
 
-        // 1️⃣ Get template
+
         SurveyTemplateEntity template =
                 surveyTemplateMapper.selectByPrimaryKey(request.getTemplateId());
 
@@ -46,7 +51,7 @@ public class SurveyTemplateGetProcessor extends BaseBizProcessor<BizContext> {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
         }
 
-        // 2️⃣ Get questions
+
         List<SurveyQuestionEntity> entities =
                 surveyQuestionMapper.selectByTemplateId(template.getSurveyTemplateId());
 
@@ -63,20 +68,13 @@ public class SurveyTemplateGetProcessor extends BaseBizProcessor<BizContext> {
             dto.setMeasurable(q.getMeasurable());
             dto.setScaleMin(q.getScaleMin());
             dto.setScaleMax(q.getScaleMax());
+            dto.setTemplateId(q.getSurveyTemplateId());
             questions.add(dto);
         }
 
-        SurveyTemplateDetailResponse response = new SurveyTemplateDetailResponse();
-        response.setTemplateId(template.getSurveyTemplateId());
-        response.setName(template.getName());
-        response.setDescription(template.getDescription());
-        response.setStatus(template.getStatus());
-        response.setStage(template.getStage());
-        response.setManagerOnly(template.getManagerOnly());
-        response.setVersion(template.getVersion());
-        response.setQuestions(questions);
-
-        return response;
+        SurveyQuestionListResponse res = new SurveyQuestionListResponse();
+        res.setTemplateId(template.getSurveyTemplateId());
+        res.setQuestions(questions);
+        return res;
     }
 }
-

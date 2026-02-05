@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.sme.be_sme.modules.identity.infrastructure.persistence.mapper.UserRoleMapperExt">
+<mapper namespace="com.sme.be_sme.modules.identity.infrastructure.mapper.UserRoleMapperExt">
 
     <select id="countByCompanyIdAndUserIdAndRoleCode" resultType="int">
         select count(1)
@@ -14,9 +14,9 @@
 
     <insert id="insert">
         insert into user_roles (
-            user_role_id, company_id, user_id, role_code, created_at, updated_at
+            user_role_id, company_id, user_id, role_id, created_at, updated_at
         ) values (
-                     #{userRoleId}, #{companyId}, #{userId}, #{roleCode}, #{createdAt}, #{updatedAt}
+                     #{userRoleId}, #{companyId}, #{userId}, #{roleId}, #{createdAt}, #{updatedAt}
                  )
     </insert>
 
@@ -33,4 +33,12 @@
         VALUES (#{userRoleId}, #{companyId}, #{userId}, #{roleId}, #{createdAt})
     </insert>
 
+    <update id="updateRoleForUser">
+        UPDATE user_roles
+        SET role_id = #{newRoleId},
+            updated_at = #{updatedAt}
+        WHERE company_id = #{companyId}
+          AND user_id = #{userId}
+          AND role_id = #{oldRoleId}
+    </update>
 </mapper>

@@ -16,7 +16,11 @@ public class SurveyFacadeImpl extends BaseOperationFacade implements SurveyFacad
     private final SurveyScheduleProcessor surveyScheduleProcessor;
     private final SurveySubmitProcessor surveySubmitProcessor;
     private final SurveyQuestionCreateProcessor surveyQuestionCreateProcessor;
-    private final SurveyTemplateGetProcessor surveyTemplateGetProcessor;
+    private final SurveyTemplateGetDetailProcessor surveyTemplateGetDetailProcessor;
+    private final SurveyTemplateGetListProcessor surveyTemplateGetListProcessor;
+    private final SurveyTemplateUpdateProcessor surveyTemplateUpdateProcessor;
+    private final SurveyTemplateArchiveProcessor surveyTemplateArchiveProcessor;
+    private final SurveyQuestionGetByTemplateProcessor surveyQuestionGetByTemplateProcessor;
     @Override
     public SurveyTemplateResponse createSurveyTemplate(SurveyTemplateCreateRequest request) {
         return call(surveyTemplateCreateProcessor, request, SurveyTemplateResponse.class);
@@ -33,17 +37,32 @@ public class SurveyFacadeImpl extends BaseOperationFacade implements SurveyFacad
     }
 
     @Override
-    public SurveyGetResponse getAllSurveys(SurveyGetRequest request) {
-        return null;
-    }
-
-    @Override
     public SurveyQuestionResponse createSurveyQuestion(SurveyQuestionCreateRequest request) {
         return call(surveyQuestionCreateProcessor, request, SurveyQuestionResponse.class);
     }
 
     @Override
-    public SurveyTemplateDetailResponse getSurveyTemplate(SurveyTemplateGetRequest request) {
-        return call(surveyTemplateGetProcessor, request, SurveyTemplateDetailResponse.class);
+    public SurveyQuestionListResponse getSurveyQuestionListByTemplate(SurveyQuestionGetByTemplateRequest request) {
+        return call(surveyQuestionGetByTemplateProcessor, request, SurveyQuestionListResponse.class);
+    }
+
+    @Override
+    public SurveyTemplateDetailResponse getSurveyDetailTemplate(SurveyTemplateGetRequest request) {
+        return call(surveyTemplateGetDetailProcessor, request, SurveyTemplateDetailResponse.class);
+    }
+
+    @Override
+    public SurveyTemplateListResponse listSurveyTemplates(SurveyTemplateGetListRequest request) {
+        return call(surveyTemplateGetListProcessor, request, SurveyTemplateListResponse.class);
+    }
+
+    @Override
+    public SurveyTemplateResponse updateSurveyTemplate(SurveyTemplateUpdateRequest request) {
+        return call(surveyTemplateUpdateProcessor, request, SurveyTemplateResponse.class);
+    }
+
+    @Override
+    public SurveyTemplateArchiveResponse archiveSurveyTemplate(SurveyTemplateArchiveRequest request) {
+        return call(surveyTemplateArchiveProcessor, request, SurveyTemplateArchiveResponse.class);
     }
 }

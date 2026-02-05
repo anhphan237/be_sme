@@ -1,6 +1,7 @@
 package com.sme.be_sme.modules.identity.processor;
 
 import com.sme.be_sme.modules.identity.context.IdentityUserDisableContext;
+import com.sme.be_sme.modules.identity.enums.UserStatusEnum;
 import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
 import com.sme.be_sme.modules.identity.service.UserService;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -25,7 +26,7 @@ public class DisableUserCoreProcessor extends BaseCoreProcessor<IdentityUserDisa
         UserEntity user = userService.findById(companyId, userId)
                 .orElseThrow(() -> AppException.of(ErrorCodes.NOT_FOUND, "user not found"));
 
-        user.setStatus(ctx.getStatus());
+        user.setStatus(UserStatusEnum.INACTIVE.getCode());
         user.setUpdatedAt(new Date());
         userService.updateUser(user);
 

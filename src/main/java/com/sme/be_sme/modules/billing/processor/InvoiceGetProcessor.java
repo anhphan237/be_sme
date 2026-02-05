@@ -43,7 +43,7 @@ public class InvoiceGetProcessor extends BaseBizProcessor<BizContext> {
         response.setStatus(invoice.getStatus());
         response.setIssuedAt(invoice.getIssuedAt());
         response.setDueAt(invoice.getDueAt());
-        response.setEInvoiceUrl(invoice.getEInvoiceUrl());
+        response.setEInvoiceUrl(invoice.geteInvoiceUrl());
         return response;
     }
 
