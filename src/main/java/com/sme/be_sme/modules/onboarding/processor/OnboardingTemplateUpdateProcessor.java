@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateUpdateRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTemplateResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingTemplateMapper;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingTemplateMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingTemplateEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -21,18 +22,18 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
 
     private final ObjectMapper objectMapper;
     private final OnboardingTemplateMapper onboardingTemplateMapper;
+    private final OnboardingTemplateMapperExt onboardingTemplateMapperExt;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
         OnboardingTemplateUpdateRequest request = objectMapper.convertValue(payload, OnboardingTemplateUpdateRequest.class);
         validate(context, request);
 
-        OnboardingTemplateEntity entity = onboardingTemplateMapper.selectByPrimaryKey(request.getTemplateId());
+        String companyId = context.getTenantId();
+        OnboardingTemplateEntity entity = onboardingTemplateMapperExt.selectTemplateByIdAndCompany(
+                request.getTemplateId(), companyId);
         if (entity == null) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "onboarding template not found");
-        }
-        if (!context.getTenantId().equals(entity.getCompanyId())) {
-            throw AppException.of(ErrorCodes.FORBIDDEN, "template does not belong to tenant");
         }
 
         if (request.getName() != null) {
