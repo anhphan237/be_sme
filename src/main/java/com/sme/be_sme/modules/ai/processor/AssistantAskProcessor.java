@@ -11,6 +11,7 @@ import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import dev.langchain4j.model.chat.ChatLanguageModel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -24,31 +25,43 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
 
+    private static final String SYSTEM_PROMPT =
+            "You are an HR assistant for the company. Answer the employee's question strictly based on the provided company documents. "
+                    + "If the information is not in the documents, say you don't know.";
+
     private final ObjectMapper objectMapper;
     private final ContentFacade contentFacade;
+    private final ChatLanguageModel chatModel;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
         AssistantAskRequest request = objectMapper.convertValue(payload, AssistantAskRequest.class);
         validate(context, request);
 
-        String tenantId = context.getTenantId();
-        String userId = StringUtils.hasText(request.getUserId()) ? request.getUserId().trim() : context.getOperatorId();
         String question = request.getQuestion().trim();
 
-        // Query Document Library for this tenant (company-specific)
+        // RAG: Retrieve documents for this tenant (Document Library)
         DocumentListResponse listResponse = contentFacade.listDocuments(new DocumentListRequest());
         List<DocumentListResponse.DocumentItem> allDocs = listResponse.getItems() != null ? listResponse.getItems() : new ArrayList<>();
 
-        // Mock search: filter documents relevant to the question (by keyword in name/description)
-        List<DocumentListResponse.DocumentItem> relevant = searchRelevantDocuments(allDocs, question);
-
-        // Mock LLM: generate answer with personalized context (new employee)
-        String answer = generateMockAnswer(question, relevant, userId);
-
+        // Build context chunks from documents (name + description)
+        List<DocumentListResponse.DocumentItem> relevant = retrieveRelevantChunks(allDocs, question);
+        String documentsContext = buildDocumentsContext(relevant);
         List<String> sourceNames = relevant.stream()
                 .map(DocumentListResponse.DocumentItem::getName)
                 .collect(Collectors.toList());
+
+        String answer;
+        if (!StringUtils.hasText(documentsContext)) {
+            answer = "I don't have access to any company documents for your tenant. Please ask HR to upload relevant documents (e.g. Employee Handbook, WiFi/Parking info) to the Document Library.";
+        } else {
+            String userPrompt = SYSTEM_PROMPT + "\n\nCompany documents (use only this information to answer):\n\n" + documentsContext + "\n\nEmployee question: " + question;
+            try {
+                answer = chatModel.generate(userPrompt);
+            } catch (Exception e) {
+                throw AppException.of(ErrorCodes.INTERNAL_ERROR, "AI assistant failed: " + e.getMessage());
+            }
+        }
 
         AssistantAskResponse response = new AssistantAskResponse();
         response.setAnswer(answer);
@@ -56,7 +69,7 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
         return response;
     }
 
-    private List<DocumentListResponse.DocumentItem> searchRelevantDocuments(
+    private List<DocumentListResponse.DocumentItem> retrieveRelevantChunks(
             List<DocumentListResponse.DocumentItem> docs, String question) {
         if (docs.isEmpty()) return new ArrayList<>();
         String q = question.toLowerCase(Locale.ROOT);
@@ -64,12 +77,10 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
                 .filter(d -> {
                     String name = d.getName() != null ? d.getName().toLowerCase(Locale.ROOT) : "";
                     String desc = d.getDescription() != null ? d.getDescription().toLowerCase(Locale.ROOT) : "";
-                    return name.contains(q) || desc.contains(q)
-                            || matchesTopic(q, name, desc);
+                    return name.contains(q) || desc.contains(q) || matchesTopic(q, name, desc);
                 })
                 .collect(Collectors.toList());
-        if (matched.isEmpty()) return docs;
-        return matched;
+        return matched.isEmpty() ? docs : matched;
     }
 
     private boolean matchesTopic(String question, String name, String desc) {
@@ -80,34 +91,13 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
         return false;
     }
 
-    private String generateMockAnswer(String question, List<DocumentListResponse.DocumentItem> sources, String userId) {
-        String q = question.toLowerCase(Locale.ROOT);
+    private String buildDocumentsContext(List<DocumentListResponse.DocumentItem> items) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Hello");
-        if (StringUtils.hasText(userId)) sb.append(" (as a new employee)");
-        sb.append("! ");
-        if (sources.isEmpty()) {
-            sb.append("I couldn't find company documents matching your question. Please check the Document Library or ask HR. Your question: \"").append(question).append("\"");
-            return sb.toString();
+        for (DocumentListResponse.DocumentItem d : items) {
+            sb.append("- Document: ").append(d.getName() != null ? d.getName() : "(no title)");
+            if (StringUtils.hasText(d.getDescription())) sb.append("\n  Description: ").append(d.getDescription());
+            sb.append("\n");
         }
-        sb.append("Based on your company's documents");
-        if (!sources.isEmpty()) {
-            sb.append(" (e.g. ");
-            sb.append(sources.get(0).getName());
-            for (int i = 1; i < Math.min(sources.size(), 3); i++) sb.append(", ").append(sources.get(i).getName());
-            sb.append(")");
-        }
-        sb.append(": ");
-        if (q.contains("wifi") || q.contains("wi-fi")) {
-            sb.append("WiFi access details are in the internal documents. Connect to the corporate network and refer to the IT or Office Guide document for SSID and password.");
-        } else if (q.contains("parking")) {
-            sb.append("Parking information (locations, permits) is available in the office or facilities documents. Check the Document Library for your site-specific guide.");
-        } else if (q.contains("regulation") || q.contains("policy") || q.contains("handbook")) {
-            sb.append("Internal regulations and policies are in the Employee Handbook and related documents. Please read and acknowledge them in the Document Library.");
-        } else {
-            sb.append("You can find more details in the Document Library. If you need help using the system, go to Onboarding and complete the assigned tasks.");
-        }
-        sb.append(" You can open these documents from the Document Library.");
         return sb.toString();
     }
 
