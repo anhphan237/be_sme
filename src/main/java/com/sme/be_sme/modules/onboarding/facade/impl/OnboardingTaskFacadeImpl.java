@@ -3,12 +3,15 @@ package com.sme.be_sme.modules.onboarding.facade.impl;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskAssignRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskGenerateRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskUpdateStatusRequest;
+import com.sme.be_sme.modules.onboarding.api.request.TaskListByOnboardingRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskGenerationResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
+import com.sme.be_sme.modules.onboarding.api.response.TaskListByOnboardingResponse;
 import com.sme.be_sme.modules.onboarding.facade.OnboardingTaskFacade;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskAssignProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskGenerateProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskUpdateStatusProcessor;
+import com.sme.be_sme.modules.onboarding.processor.TaskListByOnboardingProcessor;
 import com.sme.be_sme.shared.gateway.core.BaseOperationFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -20,6 +23,7 @@ public class OnboardingTaskFacadeImpl extends BaseOperationFacade implements Onb
     private final OnboardingTaskGenerateProcessor onboardingTaskGenerateProcessor;
     private final OnboardingTaskAssignProcessor onboardingTaskAssignProcessor;
     private final OnboardingTaskUpdateStatusProcessor onboardingTaskUpdateStatusProcessor;
+    private final TaskListByOnboardingProcessor taskListByOnboardingProcessor;
 
     @Override
     public OnboardingTaskGenerationResponse generateTasksFromTemplate(OnboardingTaskGenerateRequest request) {
@@ -34,5 +38,10 @@ public class OnboardingTaskFacadeImpl extends BaseOperationFacade implements Onb
     @Override
     public OnboardingTaskResponse updateTaskStatus(OnboardingTaskUpdateStatusRequest request) {
         return call(onboardingTaskUpdateStatusProcessor, request, OnboardingTaskResponse.class);
+    }
+
+    @Override
+    public TaskListByOnboardingResponse listTasksByOnboarding(TaskListByOnboardingRequest request) {
+        return call(taskListByOnboardingProcessor, request, TaskListByOnboardingResponse.class);
     }
 }

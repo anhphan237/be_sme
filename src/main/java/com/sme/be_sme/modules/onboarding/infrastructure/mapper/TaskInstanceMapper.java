@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.onboarding.infrastructure.mapper;
 
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -46,4 +47,9 @@ public interface TaskInstanceMapper {
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
     int updateByPrimaryKey(TaskInstanceEntity row);
+
+    List<TaskInstanceEntity> selectByCompanyIdAndOnboardingId(
+            @Param("companyId") String companyId,
+            @Param("onboardingId") String onboardingId
+    );
 }

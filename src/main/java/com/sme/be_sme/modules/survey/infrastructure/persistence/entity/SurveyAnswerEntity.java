@@ -266,4 +266,32 @@ public class SurveyAnswerEntity {
     public void setCreatedAt(Date createdAt) {
         this.createdAt = createdAt;
     }
+
+    private Object valueChoices;
+    private String questionType;
+    private String dimensionCode;
+
+    public Object getValueChoices() {
+        return valueChoices;
+    }
+
+    public void setValueChoices(Object valueChoices) {
+        this.valueChoices = valueChoices;
+    }
+
+    public String getQuestionType() {
+        return questionType;
+    }
+
+    public void setQuestionType(String questionType) {
+        this.questionType = questionType;
+    }
+
+    public String getDimensionCode() {
+        return dimensionCode;
+    }
+
+    public void setDimensionCode(String dimensionCode) {
+        this.dimensionCode = dimensionCode;
+    }
 }

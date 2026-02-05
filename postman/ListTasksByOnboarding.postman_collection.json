@@ -1,0 +1,665 @@
+{
+	"info": {
+		"_postman_id": "task-list-by-onboarding-collection",
+		"name": "SME - List Tasks by Onboarding Instance",
+		"description": "Postman collection for testing the List Tasks by Onboarding Instance API endpoint",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "1"
+	},
+	"item": [
+		{
+			"name": "List Tasks by Onboarding Instance",
+			"item": [
+				{
+					"name": "1. List All Tasks (Basic)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"onboardingId\": \"{{onboarding_instance_id}}\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "List all tasks for a specific onboarding instance without filters"
+					},
+					"response": []
+				},
+				{
+					"name": "2. List Tasks with Status Filter (TODO)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"onboardingId\": \"{{onboarding_instance_id}}\",\n        \"status\": \"TODO\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Filter tasks by status = TODO"
+					},
+					"response": []
+				},
+				{
+					"name": "3. List Tasks with Status Filter (IN_PROGRESS)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"onboardingId\": \"{{onboarding_instance_id}}\",\n        \"status\": \"IN_PROGRESS\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Filter tasks by status = IN_PROGRESS"
+					},
+					"response": []
+				},
+				{
+					"name": "4. List Tasks with Status Filter (DONE)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"onboardingId\": \"{{onboarding_instance_id}}\",\n        \"status\": \"DONE\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Filter tasks by status = DONE"
+					},
+					"response": []
+				},
+				{
+					"name": "5. List Tasks with Assigned User Filter",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"onboardingId\": \"{{onboarding_instance_id}}\",\n        \"assignedUserId\": \"{{user_id}}\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Filter tasks by assigned user ID"
+					},
+					"response": []
+				},
+				{
+					"name": "6. List Tasks Sort by Due Date (ASC)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"onboardingId\": \"{{onboarding_instance_id}}\",\n        \"sortBy\": \"due_date\",\n        \"sortOrder\": \"ASC\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Sort tasks by due date ascending"
+					},
+					"response": []
+				},
+				{
+					"name": "7. List Tasks Sort by Created Date (DESC)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"onboardingId\": \"{{onboarding_instance_id}}\",\n        \"sortBy\": \"created_at\",\n        \"sortOrder\": \"DESC\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Sort tasks by created date descending (newest first)"
+					},
+					"response": []
+				},
+				{
+					"name": "8. List Tasks with Pagination (Page 1)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"onboardingId\": \"{{onboarding_instance_id}}\",\n        \"page\": 1,\n        \"size\": 10\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Get first page with 10 items per page"
+					},
+					"response": []
+				},
+				{
+					"name": "9. List Tasks with Pagination (Page 2)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"onboardingId\": \"{{onboarding_instance_id}}\",\n        \"page\": 2,\n        \"size\": 10\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Get second page with 10 items per page"
+					},
+					"response": []
+				},
+				{
+					"name": "10. List Tasks - Complex Query",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"onboardingId\": \"{{onboarding_instance_id}}\",\n        \"status\": \"TODO\",\n        \"sortBy\": \"due_date\",\n        \"sortOrder\": \"ASC\",\n        \"page\": 1,\n        \"size\": 20\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Complex query with multiple filters: status + sort + pagination"
+					},
+					"response": []
+				}
+			],
+			"description": "Test cases for listing tasks by onboarding instance with various filters and pagination"
+		},
+		{
+			"name": "Error Cases",
+			"item": [
+				{
+					"name": "ERROR - Missing Onboarding ID",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Should return error: onboardingId is required"
+					},
+					"response": []
+				},
+				{
+					"name": "ERROR - Invalid Status",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"onboardingId\": \"{{onboarding_instance_id}}\",\n        \"status\": \"INVALID_STATUS\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Should return error: invalid status value"
+					},
+					"response": []
+				},
+				{
+					"name": "ERROR - Invalid Sort By",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"onboardingId\": \"{{onboarding_instance_id}}\",\n        \"sortBy\": \"invalid_field\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Should return error: invalid sortBy value"
+					},
+					"response": []
+				},
+				{
+					"name": "ERROR - Onboarding Not Found",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"onboardingId\": \"NONEXISTENT_ID_12345\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Should return error: onboarding instance not found"
+					},
+					"response": []
+				},
+				{
+					"name": "ERROR - Invalid Page Number",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.listByOnboarding\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"onboardingId\": \"{{onboarding_instance_id}}\",\n        \"page\": 0\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Should return error: page must be greater than 0"
+					},
+					"response": []
+				}
+			],
+			"description": "Test cases for error handling and validation"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "YOUR_JWT_TOKEN_HERE",
+			"type": "string"
+		},
+		{
+			"key": "onboarding_instance_id",
+			"value": "YOUR_ONBOARDING_ID_HERE",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "YOUR_USER_ID_HERE",
+			"type": "string"
+		}
+	]
+}

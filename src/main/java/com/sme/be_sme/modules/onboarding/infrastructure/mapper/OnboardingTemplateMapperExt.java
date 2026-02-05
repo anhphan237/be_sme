@@ -11,6 +11,11 @@ import java.util.List;
 @Mapper
 public interface OnboardingTemplateMapperExt {
 
+    List<OnboardingTemplateEntity> selectByCompanyIdAndStatus(
+            @Param("companyId") String companyId,
+            @Param("status") String status
+    );
+
     OnboardingTemplateEntity selectTemplateByIdAndCompany(
             @Param("templateId") String templateId,
             @Param("companyId") String companyId

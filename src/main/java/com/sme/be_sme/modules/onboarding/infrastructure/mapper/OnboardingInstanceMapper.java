@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.onboarding.infrastructure.mapper;
 
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -46,4 +47,16 @@ public interface OnboardingInstanceMapper {
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
     int updateByPrimaryKey(OnboardingInstanceEntity row);
+
+    OnboardingInstanceEntity selectByCompanyIdAndRequestNo(
+            @Param("companyId") String companyId,
+            @Param("requestNo") String requestNo
+    );
+
+    /** Count instances created in the given month (yyyy-MM). Used for usage check. */
+    int countByCompanyIdAndMonth(
+            @Param("companyId") String companyId,
+            @Param("monthStart") java.util.Date monthStart,
+            @Param("monthEnd") java.util.Date monthEnd
+    );
 }

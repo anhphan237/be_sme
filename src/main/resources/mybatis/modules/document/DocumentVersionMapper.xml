@@ -81,4 +81,11 @@
     file_type, file_size_bytes, uploaded_by, uploaded_at
     from document_versions
   </select>
+  <select id="selectByDocumentId" resultMap="BaseResultMap">
+    select document_version_id, company_id, document_id, version_no, file_url, file_name,
+    file_type, file_size_bytes, uploaded_by, uploaded_at
+    from document_versions
+    where document_id = #{documentId,jdbcType=VARCHAR}
+    order by version_no desc
+  </select>
 </mapper>

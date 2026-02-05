@@ -93,4 +93,13 @@
     updated_at
     from task_instances
   </select>
+  <select id="selectByCompanyIdAndOnboardingId" resultMap="BaseResultMap">
+    select ti.task_id, ti.company_id, ti.checklist_id, ti.task_template_id, ti.title, ti.description, ti.status,
+    ti.due_date, ti.assigned_user_id, ti.assigned_department_id, ti.completed_at, ti.created_by, ti.created_at,
+    ti.updated_at
+    from task_instances ti
+    join checklist_instances ci on ci.checklist_id = ti.checklist_id and ci.company_id = ti.company_id
+    where ti.company_id = #{companyId,jdbcType=VARCHAR}
+      and ci.onboarding_id = #{onboardingId,jdbcType=VARCHAR}
+  </select>
 </mapper>

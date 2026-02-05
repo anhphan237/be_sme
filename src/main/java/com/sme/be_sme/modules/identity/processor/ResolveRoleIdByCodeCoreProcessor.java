@@ -6,8 +6,10 @@ import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseCoreProcessor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class ResolveRoleIdByCodeCoreProcessor extends BaseCoreProcessor<IdentityRoleAssignContext> {
@@ -16,6 +18,9 @@ public class ResolveRoleIdByCodeCoreProcessor extends BaseCoreProcessor<Identity
 
     @Override
     protected Object process(IdentityRoleAssignContext ctx) {
+        log.info("Resolving role id {}", ctx.getBiz().getTenantId());
+        log.info("Resolving role code {}", ctx.getRequest().getRoleCode());
+
         String roleId = roleMapperExt.selectRoleIdByCompanyIdAndCode(
                 ctx.getBiz().getTenantId(),
                 ctx.getRequest().getRoleCode()
