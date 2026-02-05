@@ -19,6 +19,9 @@ public interface SurveyFacade extends OperationFacadeProvider {
     @OperationType("com.sme.survey.question.create")
     SurveyQuestionResponse createSurveyQuestion(SurveyQuestionCreateRequest request);
 
+    @OperationType("com.sme.survey.question.list.bytemplate")
+    SurveyQuestionListResponse getSurveyQuestionListByTemplate(SurveyQuestionGetByTemplateRequest request);
+
     @OperationType("com.sme.survey.template.get")
     SurveyTemplateDetailResponse getSurveyDetailTemplate(SurveyTemplateGetRequest request);
 
@@ -27,5 +30,8 @@ public interface SurveyFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.survey.template.update")
     SurveyTemplateResponse updateSurveyTemplate(SurveyTemplateUpdateRequest request);
+
+    @OperationType("com.sme.survey.template.archive")
+    SurveyTemplateArchiveResponse archiveSurveyTemplate(SurveyTemplateArchiveRequest request);
 
 }

@@ -64,7 +64,7 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP},
       version = #{version,jdbcType=INTEGER},
       is_default = #{isDefault,jdbcType=BIT},
-      description = #{description,jdbcType=LONGVARCHAR},
+      description = #{description,jdbcType=LONGVARCHAR}
 
     where survey_template_id = #{surveyTemplateId,jdbcType=VARCHAR}
   </update>
