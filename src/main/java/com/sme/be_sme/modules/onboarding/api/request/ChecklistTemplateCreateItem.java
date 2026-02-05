@@ -7,10 +7,10 @@ import java.util.List;
 
 @Getter
 @Setter
-public class OnboardingTemplateCreateRequest {
+public class ChecklistTemplateCreateItem {
     private String name;
-    private String description;
+    private String stage;
+    private Integer sortOrder;
     private String status;
-    private String createdBy;
-    private List<ChecklistTemplateCreateItem> checklists;
+    private List<TaskTemplateCreateItem> tasks;
 }
