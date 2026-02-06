@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyAnswerMapperExt">
+
+    <select id="selectByCompanyIdAndResponseIds" resultMap="com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyAnswerMapper.BaseResultMap">
+        select survey_answer_id, company_id, survey_response_id, survey_question_id, value_text,
+               value_rating, value_choice, created_at
+        from survey_answers
+        where company_id = #{companyId,jdbcType=VARCHAR}
+        <if test="responseIds != null and responseIds.size() > 0">
+            and survey_response_id in
+            <foreach collection="responseIds" item="id" open="(" separator="," close=")">
+                #{id,jdbcType=VARCHAR}
+            </foreach>
+        </if>
+    </select>
+</mapper>
