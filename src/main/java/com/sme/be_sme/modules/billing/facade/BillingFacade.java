@@ -3,6 +3,7 @@ package com.sme.be_sme.modules.billing.facade;
 import com.sme.be_sme.modules.billing.api.request.InvoiceGenerateRequest;
 import com.sme.be_sme.modules.billing.api.request.InvoiceGetRequest;
 import com.sme.be_sme.modules.billing.api.request.InvoiceListRequest;
+import com.sme.be_sme.modules.billing.api.request.DunningRetryRequest;
 import com.sme.be_sme.modules.billing.api.request.PaymentCreateIntentRequest;
 import com.sme.be_sme.modules.billing.api.request.PlanGetRequest;
 import com.sme.be_sme.modules.billing.api.request.PlanListRequest;
@@ -15,6 +16,7 @@ import com.sme.be_sme.modules.billing.api.request.UsageTrackRequest;
 import com.sme.be_sme.modules.billing.api.response.InvoiceDetailResponse;
 import com.sme.be_sme.modules.billing.api.response.InvoiceGenerateResponse;
 import com.sme.be_sme.modules.billing.api.response.InvoiceListResponse;
+import com.sme.be_sme.modules.billing.api.response.DunningRetryResponse;
 import com.sme.be_sme.modules.billing.api.response.PaymentCreateIntentResponse;
 import com.sme.be_sme.modules.billing.api.response.PlanGetResponse;
 import com.sme.be_sme.modules.billing.api.response.PlanListResponse;
@@ -63,4 +65,7 @@ public interface BillingFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.billing.payment.createIntent")
     PaymentCreateIntentResponse createPaymentIntent(PaymentCreateIntentRequest request);
+
+    @OperationType("com.sme.billing.dunning.retry")
+    DunningRetryResponse dunningRetry(DunningRetryRequest request);
 }
