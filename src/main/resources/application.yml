@@ -18,7 +18,6 @@ spring:
     baseline-on-migrate: true
     locations: classpath:db/migration
 
-  # Mail (Đợt 5 - optional: set SMTP_* or use SendGrid/Mailgun API later)
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:3025}
@@ -38,6 +37,18 @@ app:
   jwt:
     hmacSecret: ${JWT_HMAC_SECRET}
     accessTtlSeconds: 3600
+  # payment gateway: mock | stripe
+  payment:
+    gateway: ${PAYMENT_GATEWAY:mock}
+  # e-invoice provider: mock (replace with real provider when integrating)
+  einvoice:
+    provider: ${EINVOICE_PROVIDER:mock}
+  billing:
+    recurring-invoice:
+      # cron: 1st day of month at 00:00
+      cron: ${RECURRING_INVOICE_CRON:0 0 1 1 * *}
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY:}
 
 google:
   ai:
