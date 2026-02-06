@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapperExt">
+
+    <select id="selectListByCompanyId" resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyInstanceListRow">
+        select
+            si.survey_instance_id as surveyInstanceId,
+            si.survey_template_id as surveyTemplateId,
+            st.name as templateName,
+            si.scheduled_at as scheduledAt,
+            si.status as status,
+            si.created_at as createdAt
+        from survey_instances si
+        join survey_templates st on st.survey_template_id = si.survey_template_id and st.company_id = si.company_id
+        where si.company_id = #{companyId,jdbcType=VARCHAR}
+        <if test="templateId != null and templateId != ''">
+            and si.survey_template_id = #{templateId,jdbcType=VARCHAR}
+        </if>
+        <if test="status != null and status != ''">
+            and si.status = #{status,jdbcType=VARCHAR}
+        </if>
+        <if test="startDate != null">
+            and si.scheduled_at &gt;= #{startDate,jdbcType=TIMESTAMP}
+        </if>
+        <if test="endDate != null">
+            and si.scheduled_at &lt;= #{endDate,jdbcType=TIMESTAMP}
+        </if>
+        order by si.created_at desc
+        limit #{limit,jdbcType=INTEGER}
+        offset #{offset,jdbcType=INTEGER}
+    </select>
+
+    <select id="countByCompanyId" resultType="int">
+        select count(*)
+        from survey_instances si
+        where si.company_id = #{companyId,jdbcType=VARCHAR}
+        <if test="templateId != null and templateId != ''">
+            and si.survey_template_id = #{templateId,jdbcType=VARCHAR}
+        </if>
+        <if test="status != null and status != ''">
+            and si.status = #{status,jdbcType=VARCHAR}
+        </if>
+        <if test="startDate != null">
+            and si.scheduled_at &gt;= #{startDate,jdbcType=TIMESTAMP}
+        </if>
+        <if test="endDate != null">
+            and si.scheduled_at &lt;= #{endDate,jdbcType=TIMESTAMP}
+        </if>
+    </select>
+</mapper>

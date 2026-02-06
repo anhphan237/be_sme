@@ -3,6 +3,8 @@ package com.sme.be_sme.modules.billing.facade.impl;
 import com.sme.be_sme.modules.billing.api.request.InvoiceGenerateRequest;
 import com.sme.be_sme.modules.billing.api.request.InvoiceGetRequest;
 import com.sme.be_sme.modules.billing.api.request.InvoiceListRequest;
+import com.sme.be_sme.modules.billing.api.request.DunningRetryRequest;
+import com.sme.be_sme.modules.billing.api.request.PaymentCreateIntentRequest;
 import com.sme.be_sme.modules.billing.api.request.PlanGetRequest;
 import com.sme.be_sme.modules.billing.api.request.PlanListRequest;
 import com.sme.be_sme.modules.billing.api.request.SubscriptionCreateRequest;
@@ -14,6 +16,8 @@ import com.sme.be_sme.modules.billing.api.request.UsageTrackRequest;
 import com.sme.be_sme.modules.billing.api.response.InvoiceDetailResponse;
 import com.sme.be_sme.modules.billing.api.response.InvoiceGenerateResponse;
 import com.sme.be_sme.modules.billing.api.response.InvoiceListResponse;
+import com.sme.be_sme.modules.billing.api.response.DunningRetryResponse;
+import com.sme.be_sme.modules.billing.api.response.PaymentCreateIntentResponse;
 import com.sme.be_sme.modules.billing.api.response.PlanGetResponse;
 import com.sme.be_sme.modules.billing.api.response.PlanListResponse;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionCurrentResponse;
@@ -26,6 +30,8 @@ import com.sme.be_sme.modules.billing.processor.InvoiceGetProcessor;
 import com.sme.be_sme.modules.billing.processor.InvoiceGenerateProcessor;
 import com.sme.be_sme.modules.billing.processor.InvoiceListProcessor;
 import com.sme.be_sme.modules.billing.processor.PlanGetProcessor;
+import com.sme.be_sme.modules.billing.processor.DunningRetryProcessor;
+import com.sme.be_sme.modules.billing.processor.PaymentCreateIntentProcessor;
 import com.sme.be_sme.modules.billing.processor.PlanListProcessor;
 import com.sme.be_sme.modules.billing.processor.SubscriptionCreateProcessor;
 import com.sme.be_sme.modules.billing.processor.SubscriptionGetCurrentProcessor;
@@ -52,6 +58,8 @@ public class BillingFacadeImpl extends BaseOperationFacade implements BillingFac
     private final InvoiceGetProcessor invoiceGetProcessor;
     private final PlanGetProcessor planGetProcessor;
     private final PlanListProcessor planListProcessor;
+    private final PaymentCreateIntentProcessor paymentCreateIntentProcessor;
+    private final DunningRetryProcessor dunningRetryProcessor;
 
     @Override
     public SubscriptionResponse createSubscription(SubscriptionCreateRequest request) {
@@ -106,5 +114,15 @@ public class BillingFacadeImpl extends BaseOperationFacade implements BillingFac
     @Override
     public PlanListResponse listPlans(PlanListRequest request) {
         return call(planListProcessor, request, PlanListResponse.class);
+    }
+
+    @Override
+    public PaymentCreateIntentResponse createPaymentIntent(PaymentCreateIntentRequest request) {
+        return call(paymentCreateIntentProcessor, request, PaymentCreateIntentResponse.class);
+    }
+
+    @Override
+    public DunningRetryResponse dunningRetry(DunningRetryRequest request) {
+        return call(dunningRetryProcessor, request, DunningRetryResponse.class);
     }
 }

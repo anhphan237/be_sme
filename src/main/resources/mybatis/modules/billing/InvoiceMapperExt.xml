@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapperExt">
+
+    <select id="selectLatestUnpaidBySubscriptionId" resultMap="com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper.BaseResultMap">
+        select invoice_id, company_id, subscription_id, invoice_no, amount_total, currency,
+               status, issued_at, due_at, e_invoice_url, created_at
+        from invoices
+        where company_id = #{companyId,jdbcType=VARCHAR}
+          and subscription_id = #{subscriptionId,jdbcType=VARCHAR}
+          and (status is null or upper(trim(status)) != 'PAID')
+        order by due_at desc nulls last
+        limit 1
+    </select>
+</mapper>

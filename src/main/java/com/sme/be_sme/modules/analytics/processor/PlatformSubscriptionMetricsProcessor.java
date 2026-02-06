@@ -56,24 +56,34 @@ public class PlatformSubscriptionMetricsProcessor extends BaseBizProcessor<BizCo
         List<SubscriptionEntity> subscriptions = subscriptionMapper.selectAll();
         int activeSubscriptions = 0;
         double monthlyRecurringRevenue = 0.0;
+        int activeAtStart = 0;
+        int churnedCount = 0;
 
         for (SubscriptionEntity subscription : subscriptions) {
             if (subscription == null) {
                 continue;
             }
-            if (!isActive(subscription)) {
-                continue;
+            if (isActive(subscription)) {
+                if (isWithinRange(subscription, rangeStart, rangeEnd)) {
+                    activeSubscriptions++;
+                    monthlyRecurringRevenue += resolveMonthlyPrice(subscription, plansById);
+                }
+                if (wasActiveAtPoint(subscription, rangeStart)) {
+                    activeAtStart++;
+                }
+            } else if (isChurnedStatus(subscription.getStatus()) && isUpdatedInRange(subscription.getUpdatedAt(), rangeStart, rangeEnd)) {
+                churnedCount++;
             }
-            if (!isWithinRange(subscription, rangeStart, rangeEnd)) {
-                continue;
-            }
-            activeSubscriptions++;
-            monthlyRecurringRevenue += resolveMonthlyPrice(subscription, plansById);
         }
+
+        Double churnRateValue = activeAtStart > 0 ? (double) churnedCount / activeAtStart : null;
 
         PlatformSubscriptionMetricsResponse response = new PlatformSubscriptionMetricsResponse();
         response.setActiveSubscriptions(activeSubscriptions);
         response.setMonthlyRecurringRevenue(monthlyRecurringRevenue);
+        response.setActiveAtStart(activeAtStart);
+        response.setChurnedCount(churnedCount);
+        response.setChurnRate(churnRateValue);
         return response;
     }
 
@@ -146,5 +156,30 @@ public class PlatformSubscriptionMetricsProcessor extends BaseBizProcessor<BizCo
             return monthly;
         }
         return yearly == null ? 0.0 : yearly / 12.0;
+    }
+
+    /** Subscription was active at the given point in time (period contains that date). */
+    private static boolean wasActiveAtPoint(SubscriptionEntity subscription, Date pointInTime) {
+        Date periodStart = subscription.getCurrentPeriodStart();
+        Date periodEnd = subscription.getCurrentPeriodEnd();
+        if (periodStart != null && periodStart.after(pointInTime)) {
+            return false;
+        }
+        if (periodEnd != null && !periodEnd.after(pointInTime)) {
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean isChurnedStatus(String status) {
+        if (status == null) return false;
+        String s = status.trim().toUpperCase();
+        return "CANCELLED".equals(s) || "SUSPENDED".equals(s);
+    }
+
+    /** updated_at in [start, end) (end exclusive). */
+    private static boolean isUpdatedInRange(Date updatedAt, Date start, Date endExclusive) {
+        if (updatedAt == null) return false;
+        return !updatedAt.before(start) && updatedAt.before(endExclusive);
     }
 }

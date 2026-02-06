@@ -34,4 +34,10 @@ public interface SurveyFacade extends OperationFacadeProvider {
     @OperationType("com.sme.survey.template.archive")
     SurveyTemplateArchiveResponse archiveSurveyTemplate(SurveyTemplateArchiveRequest request);
 
+    @OperationType("com.sme.survey.instance.list")
+    SurveyInstanceListResponse listSurveyInstances(SurveyInstanceListRequest request);
+
+    @OperationType("com.sme.survey.report.satisfaction")
+    SurveySatisfactionReportResponse getSatisfactionReport(SurveySatisfactionReportRequest request);
+
 }

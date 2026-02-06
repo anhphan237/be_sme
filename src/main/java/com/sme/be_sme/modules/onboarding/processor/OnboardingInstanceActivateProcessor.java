@@ -6,6 +6,11 @@ import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceActivateR
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskGenerateRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceResponse;
 import com.sme.be_sme.modules.onboarding.facade.OnboardingTaskFacade;
+import com.sme.be_sme.modules.automation.service.EmailSenderService;
+import com.sme.be_sme.modules.company.infrastructure.mapper.CompanyMapper;
+import com.sme.be_sme.modules.company.infrastructure.persistence.entity.CompanyEntity;
+import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapper;
+import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -13,17 +18,26 @@ import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizContext> {
+
+    private static final String TEMPLATE_WELCOME = "WELCOME_NEW_EMPLOYEE";
 
     private final ObjectMapper objectMapper;
     private final OnboardingInstanceMapper onboardingInstanceMapper;
     private final OnboardingTaskFacade onboardingTaskFacade;
+    private final EmailSenderService emailSenderService;
+    private final EmployeeProfileMapper employeeProfileMapper;
+    private final CompanyMapper companyMapper;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -76,12 +90,31 @@ public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizCon
             OnboardingTaskGenerateRequest genReq = new OnboardingTaskGenerateRequest();
             genReq.setInstanceId(instance.getOnboardingId());
             onboardingTaskFacade.generateTasksFromTemplate(genReq);
+            sendWelcomeEmailIfPossible(companyId, instance);
         }
 
         OnboardingInstanceResponse response = new OnboardingInstanceResponse();
         response.setInstanceId(instance.getOnboardingId());
         response.setStatus(instance.getStatus());
         return response;
+    }
+
+    private void sendWelcomeEmailIfPossible(String companyId, OnboardingInstanceEntity instance) {
+        if (!StringUtils.hasText(instance.getEmployeeId())) return;
+        try {
+            EmployeeProfileEntity employee = employeeProfileMapper.selectByPrimaryKey(instance.getEmployeeId());
+            if (employee == null || !StringUtils.hasText(employee.getEmployeeEmail())) return;
+            String companyName = "";
+            CompanyEntity company = companyMapper.selectByPrimaryKey(companyId);
+            if (company != null && StringUtils.hasText(company.getName())) companyName = company.getName();
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("employeeName", StringUtils.hasText(employee.getEmployeeName()) ? employee.getEmployeeName() : "there");
+            placeholders.put("companyName", companyName);
+            emailSenderService.sendWithTemplate(companyId, TEMPLATE_WELCOME, employee.getEmployeeEmail(),
+                    placeholders, employee.getUserId(), instance.getOnboardingId());
+        } catch (Exception e) {
+            log.warn("Welcome email failed for onboarding {}: {}", instance.getOnboardingId(), e.getMessage());
+        }
     }
 
     private static void validate(BizContext context, OnboardingInstanceActivateRequest request) {

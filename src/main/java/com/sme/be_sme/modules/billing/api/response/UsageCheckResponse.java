@@ -10,4 +10,10 @@ public class UsageCheckResponse {
     private int currentUsage;
     /** yyyy-MM */
     private String month;
+    /** Plan limit for the current subscription (null if no plan) */
+    private Integer employeeLimitPerMonth;
+    /** NONE | APPROACHING (>=80%) | EXCEEDED (>=100%) */
+    private String alertLevel;
+    /** Usage as percent of limit (0-100+), null if no limit */
+    private Integer limitPercent;
 }
