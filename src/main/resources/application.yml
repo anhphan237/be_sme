@@ -49,6 +49,7 @@ app:
       cron: ${RECURRING_INVOICE_CRON:0 0 1 1 * *}
   stripe:
     secret-key: ${STRIPE_SECRET_KEY:}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET}
 
 google:
   ai:
