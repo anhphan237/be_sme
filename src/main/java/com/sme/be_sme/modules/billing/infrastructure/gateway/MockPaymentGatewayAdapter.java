@@ -1,14 +1,15 @@
 package com.sme.be_sme.modules.billing.infrastructure.gateway;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import static com.sme.be_sme.modules.billing.infrastructure.gateway.PaymentGatewayPort.CreateIntentResult;
 
 /**
- * Mock payment gateway for development / single-gateway integration.
- * Returns a fake intent so the API contract works; replace with Stripe (or other) when needed.
+ * Mock payment gateway for development. Used when app.payment.gateway is not "stripe".
  */
 @Component
+@ConditionalOnProperty(name = "app.payment.gateway", havingValue = "mock", matchIfMissing = true)
 public class MockPaymentGatewayAdapter implements PaymentGatewayPort {
 
     @Override

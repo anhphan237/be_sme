@@ -12,4 +12,16 @@
         order by due_at desc nulls last
         limit 1
     </select>
+
+    <select id="selectBySubscriptionIdAndIssuedBetween" resultMap="com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper.BaseResultMap">
+        select invoice_id, company_id, subscription_id, invoice_no, amount_total, currency,
+               status, issued_at, due_at, e_invoice_url, created_at
+        from invoices
+        where company_id = #{companyId,jdbcType=VARCHAR}
+          and subscription_id = #{subscriptionId,jdbcType=VARCHAR}
+          and issued_at &gt;= #{issuedFrom,jdbcType=TIMESTAMP}
+          and issued_at &lt;= #{issuedTo,jdbcType=TIMESTAMP}
+        order by issued_at desc
+        limit 1
+    </select>
 </mapper>
