@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapperExt">
+
+  <select id="selectByStartDateAndActive" resultMap="com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper.BaseResultMap">
+    select onboarding_id, company_id, employee_id, onboarding_template_id, status, start_date,
+           completed_at, created_by, created_at, updated_at, progress_percent, request_no
+    from onboarding_instances
+    where status = 'ACTIVE'
+      and start_date = #{startDate,jdbcType=DATE}
+  </select>
+</mapper>

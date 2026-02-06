@@ -3,10 +3,20 @@ package com.sme.be_sme.modules.onboarding.infrastructure.mapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+
+import java.util.Date;
 import java.util.List;
 
 @Mapper
 public interface TaskInstanceMapperExt {
+
+    /**
+     * Tasks with due_date between fromDate and toDate (inclusive) and status != DONE (for reminder job).
+     */
+    List<TaskInstanceEntity> selectDueBetweenAndStatusNotDone(
+            @Param("fromDate") Date fromDate,
+            @Param("toDate") Date toDate
+    );
 
     /**
      * Select tasks by onboarding instance ID with filters and pagination

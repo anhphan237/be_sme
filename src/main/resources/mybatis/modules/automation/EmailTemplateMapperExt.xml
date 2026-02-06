@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.automation.infrastructure.mapper.EmailTemplateMapperExt">
+
+    <select id="selectByCompanyIdAndName" resultMap="com.sme.be_sme.modules.automation.infrastructure.mapper.EmailTemplateMapper.BaseResultMap">
+        select email_template_id, company_id, name, subject_template, body_template, status,
+               created_by, created_at, updated_at
+        from email_templates
+        where name = #{name,jdbcType=VARCHAR}
+          and (company_id = #{companyId,jdbcType=VARCHAR} or company_id is null)
+          and status = 'ACTIVE'
+        order by case when company_id = #{companyId,jdbcType=VARCHAR} then 0 else 1 end
+        limit 1
+    </select>
+</mapper>

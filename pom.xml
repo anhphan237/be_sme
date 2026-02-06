@@ -146,6 +146,12 @@
 			<version>2.9.2</version>
 		</dependency>
 
+		<!-- Mail (Đợt 5 - Email automation) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+
 	</dependencies>
 
 	<build>
