@@ -2,7 +2,9 @@ package com.sme.be_sme.modules.notification.infrastructure.mapper;
 
 import com.sme.be_sme.modules.notification.infrastructure.persistence.entity.NotificationEntity;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
+import java.util.Date;
 import java.util.List;
 
 @Mapper
@@ -46,4 +48,18 @@ public interface NotificationMapper {
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
     int updateByPrimaryKey(NotificationEntity row);
+
+    List<NotificationEntity> selectByCompanyIdAndUserId(
+            @Param("companyId") String companyId,
+            @Param("userId") String userId,
+            @Param("unreadOnly") Boolean unreadOnly,
+            @Param("offset") int offset,
+            @Param("limit") int limit);
+
+    int countByCompanyIdAndUserId(
+            @Param("companyId") String companyId,
+            @Param("userId") String userId,
+            @Param("unreadOnly") Boolean unreadOnly);
+
+    int updateReadAtByIds(@Param("notificationIds") List<String> notificationIds, @Param("readAt") Date readAt);
 }

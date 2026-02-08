@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.onboarding.context;
 
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceCreateRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceResponse;
+import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingTemplateEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.model.ChecklistTemplateRow;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.model.TaskTemplateRow;
@@ -21,6 +22,8 @@ public class OnboardingInstanceCreateContext {
     private OnboardingTemplateEntity template;
 
     private String instanceId;
+    /** Set when idempotency hit (existing instance with same requestNo). */
+    private OnboardingInstanceEntity existingInstance;
 
     // rows from template
     private List<ChecklistTemplateRow> checklistRows;

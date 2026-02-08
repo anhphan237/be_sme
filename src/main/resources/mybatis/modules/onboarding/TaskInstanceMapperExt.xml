@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapperExt">
+
+  <select id="selectDueBetweenAndStatusNotDone" resultMap="BaseResultMap">
+    SELECT task_id, company_id, checklist_id, task_template_id, title, description, status, due_date,
+           assigned_user_id, assigned_department_id, completed_at, created_by, created_at, updated_at
+    FROM task_instances
+    WHERE due_date &gt;= #{fromDate,jdbcType=DATE}
+      AND due_date &lt;= #{toDate,jdbcType=DATE}
+      AND (status IS NULL OR upper(trim(status)) != 'DONE')
+    ORDER BY due_date ASC
+  </select>
+
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity">
+    <id column="task_id" jdbcType="VARCHAR" property="taskId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="checklist_id" jdbcType="VARCHAR" property="checklistId" />
+    <result column="task_template_id" jdbcType="VARCHAR" property="taskTemplateId" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="due_date" jdbcType="DATE" property="dueDate" />
+    <result column="assigned_user_id" jdbcType="VARCHAR" property="assignedUserId" />
+    <result column="assigned_department_id" jdbcType="VARCHAR" property="assignedDepartmentId" />
+    <result column="completed_at" jdbcType="TIMESTAMP" property="completedAt" />
+    <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <select id="selectByOnboardingId" resultMap="BaseResultMap">
+    SELECT t.task_id, t.company_id, t.checklist_id, t.task_template_id, 
+           t.title, t.description, t.status, t.due_date, 
+           t.assigned_user_id, t.assigned_department_id, 
+           t.completed_at, t.created_by, t.created_at, t.updated_at
+    FROM task_instances t
+    INNER JOIN checklist_instances c ON t.checklist_id = c.checklist_id
+    WHERE t.company_id = #{companyId}
+      AND c.onboarding_id = #{onboardingId}
+      <if test="status != null and status != ''">
+        AND t.status = #{status}
+      </if>
+      <if test="assignedUserId != null and assignedUserId != ''">
+        AND t.assigned_user_id = #{assignedUserId}
+      </if>
+    <choose>
+      <when test="sortBy == 'due_date'">
+        ORDER BY t.due_date
+      </when>
+      <when test="sortBy == 'status'">
+        ORDER BY t.status
+      </when>
+      <otherwise>
+        ORDER BY t.created_at
+      </otherwise>
+    </choose>
+    <if test="sortOrder == 'DESC'">
+      DESC
+    </if>
+    <if test="sortOrder != 'DESC'">
+      ASC
+    </if>
+    LIMIT #{limit} OFFSET #{offset}
+  </select>
+
+  <select id="countByOnboardingId" resultType="java.lang.Integer">
+    SELECT COUNT(*)
+    FROM task_instances t
+    INNER JOIN checklist_instances c ON t.checklist_id = c.checklist_id
+    WHERE t.company_id = #{companyId}
+      AND c.onboarding_id = #{onboardingId}
+      <if test="status != null and status != ''">
+        AND t.status = #{status}
+      </if>
+      <if test="assignedUserId != null and assignedUserId != ''">
+        AND t.assigned_user_id = #{assignedUserId}
+      </if>
+  </select>
+
+</mapper>

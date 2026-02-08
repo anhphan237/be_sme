@@ -5,8 +5,6 @@ import com.sme.be_sme.modules.survey.api.response.*;
 import com.sme.be_sme.shared.gateway.annotation.OperationType;
 import com.sme.be_sme.shared.gateway.core.OperationFacadeProvider;
 
-import java.util.Map;
-
 public interface SurveyFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.survey.template.create")
@@ -36,10 +34,10 @@ public interface SurveyFacade extends OperationFacadeProvider {
     @OperationType("com.sme.survey.template.archive")
     SurveyTemplateArchiveResponse archiveSurveyTemplate(SurveyTemplateArchiveRequest request);
 
-    @OperationType("com.sme.survey.question.update")
-    SurveyQuestionUpdateResponse updateQuestion(SurveyQuestionUpdateRequest request);
+    @OperationType("com.sme.survey.instance.list")
+    SurveyInstanceListResponse listSurveyInstances(SurveyInstanceListRequest request);
 
-    @OperationType("com.sme.survey.question.delete")
-    Map<String, Object>  deleteQuestion(SurveyQuestionDeleteRequest request);
+    @OperationType("com.sme.survey.report.satisfaction")
+    SurveySatisfactionReportResponse getSatisfactionReport(SurveySatisfactionReportRequest request);
 
 }

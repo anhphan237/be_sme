@@ -8,8 +8,6 @@ import com.sme.be_sme.shared.gateway.core.BaseOperationFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-
 @Component
 @RequiredArgsConstructor
 public class SurveyFacadeImpl extends BaseOperationFacade implements SurveyFacade {
@@ -23,8 +21,9 @@ public class SurveyFacadeImpl extends BaseOperationFacade implements SurveyFacad
     private final SurveyTemplateUpdateProcessor surveyTemplateUpdateProcessor;
     private final SurveyTemplateArchiveProcessor surveyTemplateArchiveProcessor;
     private final SurveyQuestionGetByTemplateProcessor surveyQuestionGetByTemplateProcessor;
-    private final SurveyQuestionUpdateProcessor surveyQuestionUpdateProcessor;
-    private final SurveyQuestionDeleteProcessor surveyQuestionDeleteProcessor;
+    private final SurveyInstanceListProcessor surveyInstanceListProcessor;
+    private final SurveySatisfactionReportProcessor surveySatisfactionReportProcessor;
+
     @Override
     public SurveyTemplateResponse createSurveyTemplate(SurveyTemplateCreateRequest request) {
         return call(surveyTemplateCreateProcessor, request, SurveyTemplateResponse.class);
@@ -71,14 +70,12 @@ public class SurveyFacadeImpl extends BaseOperationFacade implements SurveyFacad
     }
 
     @Override
-    public SurveyQuestionUpdateResponse updateQuestion(SurveyQuestionUpdateRequest request) {
-        return call(surveyQuestionUpdateProcessor, request, SurveyQuestionUpdateResponse.class);
-
+    public SurveyInstanceListResponse listSurveyInstances(SurveyInstanceListRequest request) {
+        return call(surveyInstanceListProcessor, request, SurveyInstanceListResponse.class);
     }
 
     @Override
-    public Map<String, Object> deleteQuestion(SurveyQuestionDeleteRequest request) {
-        return call(surveyQuestionDeleteProcessor, request, Map.class);
+    public SurveySatisfactionReportResponse getSatisfactionReport(SurveySatisfactionReportRequest request) {
+        return call(surveySatisfactionReportProcessor, request, SurveySatisfactionReportResponse.class);
     }
-
 }

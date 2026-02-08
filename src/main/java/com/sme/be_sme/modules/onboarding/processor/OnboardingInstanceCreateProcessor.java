@@ -19,7 +19,10 @@ public class OnboardingInstanceCreateProcessor
     private final ObjectMapper objectMapper;
 
     private final OnboardingInstanceCreateValidateCoreProcessor validate;
+    private final OnboardingInstanceCreateIdempotencyCoreProcessor idempotency;
     private final OnboardingInstanceCreateLoadTemplateCoreProcessor loadTemplate;
+    private final OnboardingInstanceCreateUsageCheckCoreProcessor usageCheck;
+    private final OnboardingInstanceCreateSubscriptionTrackCoreProcessor subscriptionTrack;
     private final OnboardingInstanceCreateCloneCoreProcessor clone;
     private final OnboardingInstanceCreateBuildResponseCoreProcessor buildRes;
 
@@ -39,7 +42,14 @@ public class OnboardingInstanceCreateProcessor
     @Transactional
     protected Object process(OnboardingInstanceCreateContext ctx) {
         validate.processWith(ctx);
+        idempotency.processWith(ctx);
+        if (ctx.getExistingInstance() != null) {
+            buildRes.processWith(ctx);
+            return ctx.getResponse();
+        }
         loadTemplate.processWith(ctx);
+        usageCheck.processWith(ctx);
+        subscriptionTrack.processWith(ctx);
         clone.processWith(ctx);
         buildRes.processWith(ctx);
         return ctx.getResponse();

@@ -11,24 +11,55 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
 
   flyway:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
 
-app:
-  jwt:
-    hmacSecret: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET_32+"
-    accessTtlSeconds: 3600
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:3025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_STARTTLS:false}
 
 mybatis:
   mapper-locations: classpath*:mybatis/**/*.xml
 
+app:
+  jwt:
+    hmacSecret: ${JWT_HMAC_SECRET}
+    accessTtlSeconds: 3600
+  # payment gateway: mock | stripe
+  payment:
+    gateway: ${PAYMENT_GATEWAY:mock}
+  # e-invoice provider: mock (replace with real provider when integrating)
+  einvoice:
+    provider: ${EINVOICE_PROVIDER:mock}
+  billing:
+    recurring-invoice:
+      # cron: 1st day of month at 00:00
+      cron: ${RECURRING_INVOICE_CRON:0 0 1 1 * *}
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY:}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET}
+
+google:
+  ai:
+    gemini:
+      api-key: ${GEMINI_API_KEY}
+
 logging:
   level:
-    org.apache.ibatis: DEBUG
-    org.mybatis: DEBUG
+    org.apache.ibatis: INFO
+    org.mybatis: INFO
 
-
+server:
+  port: ${PORT:8080}
