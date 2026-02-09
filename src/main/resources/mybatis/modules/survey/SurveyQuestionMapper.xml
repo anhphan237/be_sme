@@ -62,7 +62,10 @@
     #{content, jdbcType=VARCHAR},
     #{required, jdbcType=BOOLEAN},
     #{sortOrder, jdbcType=INTEGER},
-    #{optionsJson, jdbcType=OTHER},
+    CASE
+    WHEN #{optionsJson} IS NULL THEN NULL
+    ELSE CAST(#{optionsJson} AS jsonb)
+    END,
     #{dimensionCode, jdbcType=VARCHAR},
     #{measurable, jdbcType=BOOLEAN},
     #{scaleMin, jdbcType=INTEGER},
@@ -78,15 +81,20 @@
       This element was generated on Thu Jan 22 16:08:37 ICT 2026.
     -->
     update survey_questions
-    set company_id = #{companyId,jdbcType=VARCHAR},
-      survey_template_id = #{surveyTemplateId,jdbcType=VARCHAR},
-      type = #{type,jdbcType=VARCHAR},
-      content = #{content,jdbcType=VARCHAR},
-      required = #{required,jdbcType=BIT},
-      sort_order = #{sortOrder,jdbcType=INTEGER},
-      options_json = #{optionsJson,jdbcType=OTHER},
-      created_at = #{createdAt,jdbcType=TIMESTAMP},
-      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    set
+    content = #{content,jdbcType=VARCHAR},
+    required = #{required,jdbcType=BIT},
+    sort_order = #{sortOrder,jdbcType=INTEGER},
+    options_json = CASE
+    WHEN #{optionsJson} IS NULL THEN NULL
+    ELSE CAST(#{optionsJson} AS jsonb)
+    END,
+
+    dimension_code = #{dimensionCode,jdbcType=VARCHAR},
+    measurable = #{measurable,jdbcType=BIT},
+    scale_min = #{scaleMin,jdbcType=INTEGER},
+    scale_max = #{scaleMax,jdbcType=INTEGER},
+    updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where survey_question_id = #{surveyQuestionId,jdbcType=VARCHAR}
   </update>
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
