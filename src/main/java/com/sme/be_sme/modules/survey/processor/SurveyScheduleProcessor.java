@@ -28,22 +28,37 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
-        SurveyScheduleRequest request = objectMapper.convertValue(payload, SurveyScheduleRequest.class);
+        SurveyScheduleRequest request =
+                objectMapper.convertValue(payload, SurveyScheduleRequest.class);
         validate(context, request);
 
-        SurveyTemplateEntity template = surveyTemplateMapper.selectByPrimaryKey(request.getTemplateId().trim());
+        SurveyTemplateEntity template =
+                surveyTemplateMapper.selectByPrimaryKey(request.getTemplateId().trim());
+
         if (template == null || !context.getTenantId().equals(template.getCompanyId())) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
         }
 
         Date now = new Date();
-        Date scheduledAt = computeScheduledAt(now, request.getMilestoneDays());
+
+        Date baseDate = request.getJoinDate() != null
+                ? request.getJoinDate()
+                : now;
+
+
+        Date scheduledAt = plusDays(baseDate, request.getMilestoneDays());
+
+        int dueDays = request.getDueDays() != null ? request.getDueDays() : 3;
+        Date closedAt = plusDays(scheduledAt, dueDays);
 
         SurveyInstanceEntity entity = new SurveyInstanceEntity();
         entity.setSurveyInstanceId(UuidGenerator.generate());
         entity.setCompanyId(context.getTenantId());
+        entity.setOnboardingId(request.getOnboardingId());
         entity.setSurveyTemplateId(template.getSurveyTemplateId());
-        entity.setScheduledAt(scheduledAt);
+
+        entity.setScheduledAt(scheduledAt); // openAt
+        entity.setClosedAt(closedAt);       // dueAt
         entity.setStatus("SCHEDULED");
         entity.setCreatedAt(now);
 
@@ -58,6 +73,9 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         return response;
     }
 
+    private static Date plusDays(Date start, int days) {
+        return new Date(start.getTime() + (long) days * 24 * 60 * 60 * 1000);
+    }
     private static void validate(BizContext context, SurveyScheduleRequest request) {
         if (context == null || !StringUtils.hasText(context.getTenantId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
@@ -68,21 +86,12 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         if (!StringUtils.hasText(request.getTemplateId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "templateId is required");
         }
-        if (request.getMilestoneDays() == null) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "milestoneDays is required");
+        if (!StringUtils.hasText(request.getOnboardingId())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "onboardingId is required");
         }
-        if (request.getMilestoneDays() < 0) {
+        if (request.getMilestoneDays() == null || request.getMilestoneDays() < 0) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "milestoneDays must be >= 0");
         }
     }
 
-    private static Date computeScheduledAt(Date start, Integer milestoneDays) {
-        if (start == null) {
-            return null;
-        }
-        if (milestoneDays == null || milestoneDays <= 0) {
-            return start;
-        }
-        return new Date(start.getTime() + (long) milestoneDays * 24 * 60 * 60 * 1000);
-    }
 }
