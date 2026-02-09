@@ -23,7 +23,7 @@ public class SurveyFacadeImpl extends BaseOperationFacade implements SurveyFacad
     private final SurveyQuestionGetByTemplateProcessor surveyQuestionGetByTemplateProcessor;
     private final SurveyInstanceListProcessor surveyInstanceListProcessor;
     private final SurveySatisfactionReportProcessor surveySatisfactionReportProcessor;
-
+    private final SurveyInstanceSendProcessor surveyInstanceSendProcessor;
     @Override
     public SurveyTemplateResponse createSurveyTemplate(SurveyTemplateCreateRequest request) {
         return call(surveyTemplateCreateProcessor, request, SurveyTemplateResponse.class);
@@ -78,4 +78,10 @@ public class SurveyFacadeImpl extends BaseOperationFacade implements SurveyFacad
     public SurveySatisfactionReportResponse getSatisfactionReport(SurveySatisfactionReportRequest request) {
         return call(surveySatisfactionReportProcessor, request, SurveySatisfactionReportResponse.class);
     }
+
+    @Override
+    public SurveySendResponse sendSurvey(SurveySendRequest request) {
+        return call(surveyInstanceSendProcessor, request, SurveySendResponse.class);
+    }
+
 }
