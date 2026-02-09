@@ -79,4 +79,27 @@
     sent_at, closed_at, status, created_at
     from survey_instances
   </select>
+  <select id="selectResponses"
+          resultType="com.sme.be_sme.modules.survey.api.response.SurveyResponseItem">
+    select
+    survey_instance_id  as "surveyInstanceId",
+    survey_template_id  as "surveyTemplateId",
+    onboarding_id       as "onboardingId",
+    status              as "status",
+    sent_at             as "sentAt",
+    closed_at           as "closedAt"
+    from survey_instances
+    where company_id = #{companyId}
+    <if test="templateId != null">
+      and survey_template_id = #{templateId}
+    </if>
+    <if test="onboardingId != null">
+      and onboarding_id = #{onboardingId}
+    </if>
+    <if test="status != null">
+      and status = #{status}
+    </if>
+    order by sent_at desc
+  </select>
+
 </mapper>

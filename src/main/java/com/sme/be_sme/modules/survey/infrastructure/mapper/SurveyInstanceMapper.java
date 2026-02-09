@@ -1,7 +1,9 @@
 package com.sme.be_sme.modules.survey.infrastructure.mapper;
 
+import com.sme.be_sme.modules.survey.api.response.SurveyResponseItem;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyInstanceEntity;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -46,4 +48,12 @@ public interface SurveyInstanceMapper {
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
     int updateByPrimaryKey(SurveyInstanceEntity row);
+
+    List<SurveyResponseItem> selectResponses(
+            @Param("companyId") String companyId,
+            @Param("templateId") String templateId,
+            @Param("onboardingId") String onboardingId,
+            @Param("status") String status
+    );
+
 }
