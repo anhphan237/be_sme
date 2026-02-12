@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.identity.api.request.LoginRequest;
 import com.sme.be_sme.modules.identity.api.response.LoginResponse;
+import com.sme.be_sme.modules.identity.api.response.LoginUserInfo;
 import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
 import com.sme.be_sme.modules.identity.infrastructure.repository.UserRoleRepository;
 import com.sme.be_sme.modules.identity.service.UserService;
@@ -67,10 +68,17 @@ public class IdentityLoginProcessor extends BaseBizProcessor<BizContext> {
         user.setUpdatedAt(new Date());
         userService.updateUser(user);
 
+        LoginUserInfo userInfo = new LoginUserInfo();
+        userInfo.setId(user.getUserId());
+        userInfo.setFullName(user.getFullName());
+        userInfo.setEmail(user.getEmail());
+        userInfo.setRoleCode(roles.isEmpty() ? null : roles.iterator().next());
+
         LoginResponse response = new LoginResponse();
         response.setAccessToken(token);
         response.setTokenType("Bearer");
         response.setExpiresInSeconds(jwtProperties.getAccessTtlSeconds());
+        response.setUser(userInfo);
         return response;
     }
 
