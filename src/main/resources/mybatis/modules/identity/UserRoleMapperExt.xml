@@ -41,6 +41,14 @@
         LIMIT 1
     </select>
 
+    <select id="selectRoleCodesByCompanyAndUser" resultType="java.lang.String">
+        SELECT r.code
+        FROM user_roles ur
+        JOIN roles r ON ur.role_id = r.role_id AND ur.company_id = r.company_id
+        WHERE ur.company_id = #{companyId}
+          AND ur.user_id = #{userId}
+    </select>
+
     <update id="updateRoleForUser">
         UPDATE user_roles
         SET role_id = #{newRoleId},
