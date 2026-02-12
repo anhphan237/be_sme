@@ -18,11 +18,20 @@ public class InsertUserRoleCoreProcessor extends BaseCoreProcessor<IdentityRoleA
 
     @Override
     protected Object process(IdentityRoleAssignContext ctx) {
+        String companyId = ctx.getBiz().getTenantId();
+        String userId = ctx.getRequest().getUserId();
+        String newRoleId = ctx.getRoleId();
+
+        String oldRoleId = userRoleMapperExt.selectOneRoleIdByCompanyAndUser(companyId, userId);
+        if (oldRoleId == null || oldRoleId.isBlank()) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "user has no role to update");
+        }
 
         int updated = userRoleMapperExt.updateRoleForUser(
-                ctx.getBiz().getTenantId(),
-                ctx.getRequest().getUserId(),
-                ctx.getRoleId(),
+                companyId,
+                userId,
+                oldRoleId,
+                newRoleId,
                 new Date()
         );
 

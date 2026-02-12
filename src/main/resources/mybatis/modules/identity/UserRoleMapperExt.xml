@@ -33,6 +33,14 @@
         VALUES (#{userRoleId}, #{companyId}, #{userId}, #{roleId}, #{createdAt})
     </insert>
 
+    <select id="selectOneRoleIdByCompanyAndUser" resultType="java.lang.String">
+        SELECT role_id
+        FROM user_roles
+        WHERE company_id = #{companyId}
+          AND user_id = #{userId}
+        LIMIT 1
+    </select>
+
     <update id="updateRoleForUser">
         UPDATE user_roles
         SET role_id = #{newRoleId},
