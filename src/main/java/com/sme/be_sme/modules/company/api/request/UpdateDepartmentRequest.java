@@ -7,8 +7,10 @@ import lombok.Setter;
 @Setter
 public class UpdateDepartmentRequest {
     private String departmentId; // required
-    private String companyId;    // required (validate vs BizContext)
-    private String name;         // optional
-    private String type;         // optional
-    private String status;       // optional
+    private String companyId;    // optional, tenant from JWT
+    private String name;        // required for update
+    private String type;        // optional
+    private String status;      // optional
+    /** Assign head of department (user_id). Send null or blank to clear. */
+    private String managerUserId;
 }

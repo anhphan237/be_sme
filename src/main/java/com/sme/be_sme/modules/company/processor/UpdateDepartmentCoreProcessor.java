@@ -44,6 +44,9 @@ public class UpdateDepartmentCoreProcessor extends BaseCoreProcessor<UpdateDepar
 
         String type = normalizeOrDefault(req.getType(), existing.getType() == null ? DEFAULT_TYPE : existing.getType());
         String status = normalizeOrDefault(req.getStatus(), existing.getStatus());
+        String managerUserId = req.getManagerUserId() != null
+                ? (req.getManagerUserId().isBlank() ? null : req.getManagerUserId().trim())
+                : existing.getManagerUserId();
 
         DepartmentEntity toUpdate = new DepartmentEntity();
         toUpdate.setDepartmentId(departmentId);
@@ -51,6 +54,7 @@ public class UpdateDepartmentCoreProcessor extends BaseCoreProcessor<UpdateDepar
         toUpdate.setName(name);
         toUpdate.setType(type);
         toUpdate.setStatus(status);
+        toUpdate.setManagerUserId(managerUserId);
 
         if (departmentMapper.updateByPrimaryKeySelective(toUpdate) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "update department failed");
@@ -60,6 +64,7 @@ public class UpdateDepartmentCoreProcessor extends BaseCoreProcessor<UpdateDepar
         ctx.setName(name);
         ctx.setType(type);
         ctx.setStatus(status);
+        ctx.setManagerUserId(managerUserId);
         return null;
     }
 

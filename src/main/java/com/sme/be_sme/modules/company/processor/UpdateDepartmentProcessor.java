@@ -44,6 +44,7 @@ public class UpdateDepartmentProcessor extends BaseCoreProcessor<UpdateDepartmen
         res.setName(ctx.getName());
         res.setType(ctx.getType());
         res.setStatus(ctx.getStatus());
+        res.setManagerUserId(ctx.getManagerUserId());
         return res;
     }
 

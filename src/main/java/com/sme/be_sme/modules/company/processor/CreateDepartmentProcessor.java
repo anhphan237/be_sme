@@ -45,6 +45,7 @@ public class CreateDepartmentProcessor extends BaseCoreProcessor<CreateDepartmen
         ctx.getResponse().setDepartmentId(departmentId);
         ctx.getResponse().setCompanyId(ctx.getBiz().getTenantId());
         ctx.getResponse().setName(ctx.getRequest().getName());
+        ctx.getResponse().setManagerUserId(null);
         return ctx.getResponse();
     }
 

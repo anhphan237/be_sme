@@ -32,6 +32,7 @@ public class ListDepartmentCoreProcessor
             i.setDepartmentId(e.getDepartmentId());
             i.setName(e.getName());
             i.setType(e.getType());
+            i.setManagerUserId(e.getManagerUserId());
             return i;
         }).toList();
 
