@@ -12,6 +12,6 @@ public interface AuthFacade extends OperationFacadeProvider {
     @OperationType("com.sme.identity.auth.login")
     LoginResponse login(LoginRequest request);
 
-    @OperationType("com.sme.identity.auth.checkEmail")
+    @OperationType("com.sme.identity.auth.checkEmailExists")
     CheckEmailResponse checkEmailExists(CheckEmailRequest request);
 }
