@@ -11,17 +11,25 @@ import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterCrea
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterCreateCompanyCoreProcessor;
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterCreateDefaultRolesCoreProcessor;
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterValidateCoreProcessor;
+import com.sme.be_sme.modules.identity.infrastructure.repository.UserRoleRepository;
 import com.sme.be_sme.shared.gateway.core.BaseCoreProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import com.sme.be_sme.shared.security.JwtProperties;
+import com.sme.be_sme.shared.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
 public class CompanyRegisterProcessor extends BaseCoreProcessor<CompanyRegisterContext> {
 
     private final ObjectMapper objectMapper;
+    private final JwtService jwtService;
+    private final JwtProperties jwtProperties;
+    private final UserRoleRepository userRoleRepository;
 
     private final CompanyRegisterValidateCoreProcessor validate;
     private final CompanyRegisterCheckDupCoreProcessor checkDup;
@@ -53,8 +61,18 @@ public class CompanyRegisterProcessor extends BaseCoreProcessor<CompanyRegisterC
         seedRolePermissions.processWith(ctx);
         assignAdminRole.processWith(ctx);
 
-        ctx.getResponse().setCompanyId(ctx.getCompany().getCompanyId());
-        ctx.getResponse().setAdminUserId(ctx.getAdminUser().getUserId());
+        String companyId = ctx.getCompany().getCompanyId();
+        String adminUserId = ctx.getAdminUser().getUserId();
+
+        ctx.getResponse().setCompanyId(companyId);
+        ctx.getResponse().setAdminUserId(adminUserId);
+
+        Set<String> roles = userRoleRepository.findRoles(companyId, adminUserId);
+        String token = jwtService.issueAccessToken(adminUserId, companyId, roles);
+        ctx.getResponse().setAccessToken(token);
+        ctx.getResponse().setTokenType("Bearer");
+        ctx.getResponse().setExpiresInSeconds(jwtProperties.getAccessTtlSeconds());
+
         return ctx.getResponse();
     }
 }

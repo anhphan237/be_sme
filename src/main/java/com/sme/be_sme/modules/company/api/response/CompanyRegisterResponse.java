@@ -8,4 +8,7 @@ import lombok.Setter;
 public class CompanyRegisterResponse {
     private String companyId;
     private String adminUserId;
+    private String accessToken;
+    private String tokenType;
+    private Long expiresInSeconds;
 }
