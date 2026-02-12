@@ -51,9 +51,6 @@ public class CreateDepartmentProcessor extends BaseCoreProcessor<CreateDepartmen
         if (ctx.getRequest() == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "payload is required");
         }
-        if (ctx.getRequest().getCompanyId() == null || ctx.getRequest().getCompanyId().isBlank()) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "companyId is required");
-        }
         if (ctx.getRequest().getName() == null || ctx.getRequest().getName().isBlank()) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "name is required");
         }
