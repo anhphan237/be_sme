@@ -18,4 +18,5 @@ public class UpdateDepartmentContext {
     private String name;
     private String type;
     private String status;
+    private String managerUserId;
 }

@@ -9,4 +9,5 @@ public class CreateDepartmentResponse {
     private String departmentId;
     private String companyId;
     private String name;
+    private String managerUserId;
 }
