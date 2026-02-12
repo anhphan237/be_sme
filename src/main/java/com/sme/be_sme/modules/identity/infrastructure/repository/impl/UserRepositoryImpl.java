@@ -7,6 +7,7 @@ import com.sme.be_sme.modules.identity.infrastructure.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -15,6 +16,11 @@ public class UserRepositoryImpl implements UserRepository {
 
     private final UserMapper userMapper;       // gen (insert/update)
     private final UserMapperExt userMapperExt; // manual (select theo company)
+
+    @Override
+    public List<UserEntity> findByCompanyId(String companyId) {
+        return userMapperExt.selectByCompanyId(companyId);
+    }
 
     @Override
     public Optional<UserEntity> findById(String companyId, String userId) {

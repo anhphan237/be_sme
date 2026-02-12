@@ -34,6 +34,13 @@
           AND status = 'ACTIVE'
     </select>
 
+    <select id="selectByCompanyId" resultMap="BaseResultMap">
+        select *
+        from users
+        where company_id = #{companyId}
+        order by full_name nulls last, created_at desc
+    </select>
+
     <select id="selectByCompanyIdAndEmail" resultMap="BaseResultMap">
         select *
         from users

@@ -5,6 +5,7 @@ import com.sme.be_sme.modules.identity.infrastructure.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -12,6 +13,10 @@ import java.util.Optional;
 public class UserHandler {
 
     private final UserRepository userRepository;
+
+    public List<UserEntity> listByCompanyId(String companyId) {
+        return userRepository.findByCompanyId(companyId);
+    }
 
     public Optional<UserEntity> findByEmail(String companyId, String email) {
         return userRepository.findByCompanyIdAndEmail(companyId, email);
