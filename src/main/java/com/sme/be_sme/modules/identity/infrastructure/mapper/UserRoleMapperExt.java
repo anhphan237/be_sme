@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Date;
+import java.util.List;
 
 @Mapper
 public interface UserRoleMapperExt {
@@ -23,6 +24,11 @@ public interface UserRoleMapperExt {
     );
 
     String selectOneRoleIdByCompanyAndUser(
+            @Param("companyId") String companyId,
+            @Param("userId") String userId
+    );
+
+    List<String> selectRoleCodesByCompanyAndUser(
             @Param("companyId") String companyId,
             @Param("userId") String userId
     );
