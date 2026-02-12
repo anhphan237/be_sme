@@ -9,6 +9,7 @@ public class OperationPermissionPolicy {
 
     private static final Set<String> PUBLIC_OPS = Set.of(
             "com.sme.identity.auth.login",
+            "com.sme.identity.auth.checkEmail",
             "com.sme.onboarding.company.setup",
             "com.sme.company.register",
             // TEMPORARY: Allow testing without auth
