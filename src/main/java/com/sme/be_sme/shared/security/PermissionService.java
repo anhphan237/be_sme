@@ -10,9 +10,15 @@ public class PermissionService {
     public boolean allow(Set<String> roles, String requiredPerm) {
         if (roles.contains("ADMIN")) return true;
 
-        // ví dụ HR/HR_ADMIN được tạo user
+        // HR/HR_ADMIN: create user
         if ("com.sme.identity.user.create".equals(requiredPerm)
                 && (roles.contains("HR") || roles.contains("HR_ADMIN"))) {
+            return true;
+        }
+
+        // user.list: only ADMIN, STAFF (platform), HR (tenant) can view list
+        if ("com.sme.identity.user.list".equals(requiredPerm)
+                && (roles.contains("HR") || roles.contains("HR_ADMIN") || roles.contains("STAFF"))) {
             return true;
         }
 

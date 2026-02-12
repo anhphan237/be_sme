@@ -5,6 +5,7 @@ import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEnt
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -12,6 +13,10 @@ import java.util.Optional;
 public class UserService {
 
     private final UserHandler userHandler;
+
+    public List<UserEntity> listByCompanyId(String companyId) {
+        return userHandler.listByCompanyId(companyId);
+    }
 
     public Optional<UserEntity> findByCompanyIdAndEmail(String companyId, String email) {
         return userHandler.findByEmail(companyId, email);

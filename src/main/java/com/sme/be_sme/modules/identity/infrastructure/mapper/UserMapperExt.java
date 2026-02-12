@@ -4,10 +4,14 @@ import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEnt
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 @Mapper
 public interface UserMapperExt {
     UserEntity selectByCompanyIdAndUserId(@Param("companyId") String companyId,
                                           @Param("userId") String userId);
+
+    List<UserEntity> selectByCompanyId(@Param("companyId") String companyId);
 
     UserEntity selectByCompanyIdAndEmail(@Param("companyId") String companyId,
                                          @Param("email") String email);
