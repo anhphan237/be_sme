@@ -22,9 +22,15 @@ public interface UserRoleMapperExt {
             @Param("createdAt") Date createdAt
     );
 
+    String selectOneRoleIdByCompanyAndUser(
+            @Param("companyId") String companyId,
+            @Param("userId") String userId
+    );
+
     int updateRoleForUser(
             @Param("companyId") String companyId,
             @Param("userId") String userId,
+            @Param("oldRoleId") String oldRoleId,
             @Param("newRoleId") String newRoleId,
             @Param("updatedAt") Date updatedAt
     );
