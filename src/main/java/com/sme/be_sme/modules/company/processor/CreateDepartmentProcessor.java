@@ -38,7 +38,11 @@ public class CreateDepartmentProcessor extends BaseCoreProcessor<CreateDepartmen
 
         createDepartmentCoreProcessor.processWith(ctx);
 
-        ctx.getResponse().setDepartmentId(ctx.getDepartmentId());
+        String departmentId = ctx.getDepartmentId();
+        if (departmentId == null || departmentId.isBlank()) {
+            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "departmentId not set after create");
+        }
+        ctx.getResponse().setDepartmentId(departmentId);
         ctx.getResponse().setCompanyId(ctx.getBiz().getTenantId());
         ctx.getResponse().setName(ctx.getRequest().getName());
         return ctx.getResponse();
