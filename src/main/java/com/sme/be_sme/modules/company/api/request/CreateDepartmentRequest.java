@@ -9,4 +9,5 @@ public class CreateDepartmentRequest {
     private String companyId;
     private String name;
     private String type;
+    private String managerId;
 }

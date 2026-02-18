@@ -45,7 +45,7 @@ public class CreateDepartmentProcessor extends BaseCoreProcessor<CreateDepartmen
         ctx.getResponse().setDepartmentId(departmentId);
         ctx.getResponse().setCompanyId(ctx.getBiz().getTenantId());
         ctx.getResponse().setName(ctx.getRequest().getName());
-        ctx.getResponse().setManagerUserId(null);
+        ctx.getResponse().setManagerUserId(ctx.getRequest().getManagerId());
         return ctx.getResponse();
     }
 
@@ -58,6 +58,9 @@ public class CreateDepartmentProcessor extends BaseCoreProcessor<CreateDepartmen
         }
         if (ctx.getRequest().getName() == null || ctx.getRequest().getName().isBlank()) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "name is required");
+        }
+        if (ctx.getRequest().getManagerId() == null || ctx.getRequest().getManagerId().isBlank()) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "Cannot create department: manager is required");
         }
     }
 }
