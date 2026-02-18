@@ -78,6 +78,7 @@ public class IdentityLoginProcessor extends BaseBizProcessor<BizContext> {
         response.setAccessToken(token);
         response.setTokenType("Bearer");
         response.setExpiresInSeconds(jwtProperties.getAccessTtlSeconds());
+        response.setTenantId(companyId);
         response.setUser(userInfo);
         return response;
     }
