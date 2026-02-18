@@ -73,12 +73,12 @@ public class IdentityLoginProcessor extends BaseBizProcessor<BizContext> {
         userInfo.setFullName(user.getFullName());
         userInfo.setEmail(user.getEmail());
         userInfo.setRoleCode(roles.isEmpty() ? null : roles.iterator().next());
+        userInfo.setTenantId(companyId);
 
         LoginResponse response = new LoginResponse();
         response.setAccessToken(token);
         response.setTokenType("Bearer");
         response.setExpiresInSeconds(jwtProperties.getAccessTtlSeconds());
-        response.setTenantId(companyId);
         response.setUser(userInfo);
         return response;
     }

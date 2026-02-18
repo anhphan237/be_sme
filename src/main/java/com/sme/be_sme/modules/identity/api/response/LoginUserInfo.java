@@ -10,4 +10,5 @@ public class LoginUserInfo {
     private String fullName;
     private String email;
     private String roleCode;
+    private String tenantId;
 }

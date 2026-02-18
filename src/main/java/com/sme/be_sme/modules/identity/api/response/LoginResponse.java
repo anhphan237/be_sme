@@ -9,6 +9,5 @@ public class LoginResponse {
     private String accessToken;
     private String tokenType;
     private Long expiresInSeconds;
-    private String tenantId;
     private LoginUserInfo user;
 }
