@@ -42,6 +42,7 @@ public class CreateDepartmentCoreProcessor extends BaseCoreProcessor<CreateDepar
         e.setName(name);
         e.setType(type);
         e.setStatus(DEFAULT_STATUS);
+        e.setManagerUserId(req.getManagerId());
 
         if (departmentMapper.insert(e) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create department failed");
