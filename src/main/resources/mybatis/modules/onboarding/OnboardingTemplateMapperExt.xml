@@ -31,6 +31,7 @@
         select
             checklist_template_id as checklistTemplateId,
             name                 as name,
+            stage                as stage,
             sort_order           as orderNo,
             status               as status
         from checklist_templates
@@ -47,6 +48,10 @@
             tt.checklist_template_id  as checklistTemplateId,
             tt.title                  as name,
             tt.description           as description,
+            tt.owner_type            as ownerType,
+            tt.owner_ref_id          as ownerRefId,
+            tt.due_days_offset       as dueDaysOffset,
+            tt.require_ack           as requireAck,
             tt.sort_order            as orderNo,
             tt.status                as status
         from task_templates tt

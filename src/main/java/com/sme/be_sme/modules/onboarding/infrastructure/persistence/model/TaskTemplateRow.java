@@ -10,6 +10,10 @@ public class TaskTemplateRow {
     private String checklistTemplateId;
     private String name;
     private String description;
+    private String ownerType;
+    private String ownerRefId;
+    private Integer dueDaysOffset;
+    private Boolean requireAck;
     private Integer orderNo;
     private String status;
 }

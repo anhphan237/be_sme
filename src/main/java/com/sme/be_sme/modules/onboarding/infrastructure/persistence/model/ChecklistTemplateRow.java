@@ -8,7 +8,7 @@ import lombok.Setter;
 public class ChecklistTemplateRow {
     private String checklistTemplateId;
     private String name;
-    private String description;
+    private String stage;
     private Integer orderNo;
     private String status;
 }
