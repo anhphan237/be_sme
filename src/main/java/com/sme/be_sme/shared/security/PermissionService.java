@@ -22,6 +22,12 @@ public class PermissionService {
             return true;
         }
 
+        // onboarding/survey template create: HR (tenant) can create templates
+        if (("com.sme.onboarding.template.create".equals(requiredPerm) || "com.sme.survey.template.create".equals(requiredPerm))
+                && (roles.contains("HR") || roles.contains("HR_ADMIN"))) {
+            return true;
+        }
+
         return false;
     }
 }
