@@ -24,7 +24,6 @@ public class FacadeRegistry {
         for (OperationFacadeProvider facade : facades) {
             registerFacadeMethods(facade);
         }
-        registerAliases();
     }
 
     private void registerFacadeMethods(OperationFacadeProvider facade) {
