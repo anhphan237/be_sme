@@ -15,4 +15,6 @@ public class UserListItem {
     private String status;
     /** Role codes (e.g. ADMIN, HR, EMPLOYEE) */
     private List<String> roles;
+    private String departmentId;
+    private String departmentName;
 }

@@ -2,6 +2,10 @@ package com.sme.be_sme.modules.identity.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.company.infrastructure.mapper.DepartmentMapper;
+import com.sme.be_sme.modules.company.infrastructure.persistence.entity.DepartmentEntity;
+import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
+import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.identity.api.request.UserListRequest;
 import com.sme.be_sme.modules.identity.api.response.UserListItem;
 import com.sme.be_sme.modules.identity.api.response.UserListResponse;
@@ -26,6 +30,8 @@ public class IdentityUserListProcessor extends BaseBizProcessor<BizContext> {
     private final ObjectMapper objectMapper;
     private final UserService userService;
     private final UserRoleRepository userRoleRepository;
+    private final EmployeeProfileMapperExt employeeProfileMapperExt;
+    private final DepartmentMapper departmentMapper;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -55,6 +61,15 @@ public class IdentityUserListProcessor extends BaseBizProcessor<BizContext> {
             item.setPhone(u.getPhone());
             item.setStatus(u.getStatus());
             item.setRoles(roles);
+
+            EmployeeProfileEntity profile = employeeProfileMapperExt.selectByCompanyIdAndUserId(companyId, u.getUserId());
+            if (profile != null && profile.getDepartmentId() != null && !profile.getDepartmentId().isBlank()) {
+                item.setDepartmentId(profile.getDepartmentId());
+                DepartmentEntity dept = departmentMapper.selectByPrimaryKey(profile.getDepartmentId());
+                if (dept != null) {
+                    item.setDepartmentName(dept.getName());
+                }
+            }
             items.add(item);
         }
 
