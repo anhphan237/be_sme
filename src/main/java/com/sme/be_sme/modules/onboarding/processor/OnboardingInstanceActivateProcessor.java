@@ -77,6 +77,7 @@ public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizCon
             instance.setStartDate(now);
         }
         instance.setUpdatedAt(now);
+        instance.setUpdatedBy(context.getOperatorId());
         if (StringUtils.hasText(request.getRequestNo())) {
             instance.setRequestNo(request.getRequestNo().trim());
         }

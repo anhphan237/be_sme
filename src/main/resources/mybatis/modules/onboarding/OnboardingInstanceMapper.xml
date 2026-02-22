@@ -14,9 +14,11 @@
     <result column="status" jdbcType="VARCHAR" property="status" />
     <result column="start_date" jdbcType="DATE" property="startDate" />
     <result column="completed_at" jdbcType="TIMESTAMP" property="completedAt" />
+    <result column="completed_by" jdbcType="VARCHAR" property="completedBy" />
     <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+    <result column="updated_by" jdbcType="VARCHAR" property="updatedBy" />
     <result column="progress_percent" jdbcType="INTEGER" property="progressPercent" />
     <result column="request_no" jdbcType="VARCHAR" property="requestNo" />
   </resultMap>
@@ -37,12 +39,12 @@
     -->
     insert into onboarding_instances (onboarding_id, company_id, employee_id, 
       onboarding_template_id, status, start_date, 
-      completed_at, created_by, created_at, 
-      updated_at, progress_percent, request_no)
+      completed_at, completed_by, created_by, 
+      created_at, updated_at, updated_by, progress_percent, request_no)
     values (#{onboardingId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{employeeId,jdbcType=VARCHAR}, 
       #{onboardingTemplateId,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR}, #{startDate,jdbcType=DATE}, 
-      #{completedAt,jdbcType=TIMESTAMP}, #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, 
-      #{updatedAt,jdbcType=TIMESTAMP}, #{progressPercent,jdbcType=INTEGER}, #{requestNo,jdbcType=VARCHAR})
+      #{completedAt,jdbcType=TIMESTAMP}, #{completedBy,jdbcType=VARCHAR}, #{createdBy,jdbcType=VARCHAR}, 
+      #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, #{updatedBy,jdbcType=VARCHAR}, #{progressPercent,jdbcType=INTEGER}, #{requestNo,jdbcType=VARCHAR})
   </insert>
   <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity">
     <!--
@@ -57,9 +59,11 @@
       status = #{status,jdbcType=VARCHAR},
       start_date = #{startDate,jdbcType=DATE},
       completed_at = #{completedAt,jdbcType=TIMESTAMP},
+      completed_by = #{completedBy,jdbcType=VARCHAR},
       created_by = #{createdBy,jdbcType=VARCHAR},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
       updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      updated_by = #{updatedBy,jdbcType=VARCHAR},
       progress_percent = #{progressPercent,jdbcType=INTEGER},
       request_no = #{requestNo,jdbcType=VARCHAR}
     where onboarding_id = #{onboardingId,jdbcType=VARCHAR}
@@ -71,18 +75,18 @@
       This element was generated on Thu Jan 22 16:08:37 ICT 2026.
     -->
     select onboarding_id, company_id, employee_id, onboarding_template_id, status, start_date, 
-    completed_at, created_by, created_at, updated_at, progress_percent, request_no
+    completed_at, completed_by, created_by, created_at, updated_at, updated_by, progress_percent, request_no
     from onboarding_instances
     where onboarding_id = #{onboardingId,jdbcType=VARCHAR}
   </select>
   <select id="selectAll" resultMap="BaseResultMap">
     select onboarding_id, company_id, employee_id, onboarding_template_id, status, start_date, 
-    completed_at, created_by, created_at, updated_at, progress_percent, request_no
+    completed_at, completed_by, created_by, created_at, updated_at, updated_by, progress_percent, request_no
     from onboarding_instances
   </select>
   <select id="selectByCompanyIdAndRequestNo" resultMap="BaseResultMap">
     select onboarding_id, company_id, employee_id, onboarding_template_id, status, start_date, 
-    completed_at, created_by, created_at, updated_at, progress_percent, request_no
+    completed_at, completed_by, created_by, created_at, updated_at, updated_by, progress_percent, request_no
     from onboarding_instances
     where company_id = #{companyId,jdbcType=VARCHAR}
       and request_no = #{requestNo,jdbcType=VARCHAR}

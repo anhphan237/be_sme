@@ -40,6 +40,7 @@ public class OnboardingInstanceCancelProcessor extends BaseBizProcessor<BizConte
             instance.setStatus("CANCELLED");
         }
         instance.setUpdatedAt(now);
+        instance.setUpdatedBy(context.getOperatorId());
 
         int updated = onboardingInstanceMapper.updateByPrimaryKey(instance);
         if (updated != 1) {

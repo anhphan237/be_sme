@@ -44,7 +44,9 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
         Date now = new Date();
         instance.setStatus("DONE");
         instance.setCompletedAt(now);
+        instance.setCompletedBy(context.getOperatorId());
         instance.setUpdatedAt(now);
+        instance.setUpdatedBy(context.getOperatorId());
         int updated = onboardingInstanceMapper.updateByPrimaryKey(instance);
         if (updated != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "complete onboarding instance failed");
