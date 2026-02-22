@@ -24,10 +24,11 @@ public class GatewayAuthGuard {
             JsonNode payload,
             String authorizationHeader
     ) {
-        BizContext ctx = BizContext.of(requestId, operationType, payload);
+        String op = StringUtils.hasText(operationType) ? operationType.trim() : operationType;
+        BizContext ctx = BizContext.of(requestId, op, payload);
 
-        // public operation
-        if (policy.isPublic(operationType)) {
+        // public operation (normalized: trim + case-insensitive in policy)
+        if (policy.isPublic(op)) {
             ctx.setRoles(Set.of());
             return ctx;
         }
@@ -46,8 +47,8 @@ public class GatewayAuthGuard {
         ctx.setOperatorId(principal.getUserId());
         ctx.setRoles(principal.getRoles());
 
-        // permission check (giữ nguyên)
-        String requiredPerm = policy.requiredPermission(operationType);
+        // permission check (use normalized operationType)
+        String requiredPerm = policy.requiredPermission(op);
         if (!permissionService.allow(principal.getRoles(), requiredPerm)) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "no permission");
         }
