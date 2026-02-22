@@ -7,44 +7,32 @@ import java.util.Set;
 @Component
 public class PermissionService {
 
+    /** Platform-only permissions: not granted to company HR. */
+    private static final String PLATFORM_PREFIX = "com.sme.analytics.platform.";
+
     public boolean allow(Set<String> roles, String requiredPerm) {
+        if (roles == null) return false;
+
         if (roles.contains("ADMIN")) return true;
 
-        // HR/HR_ADMIN: create user
-        if ("com.sme.identity.user.create".equals(requiredPerm)
-                && (roles.contains("HR") || roles.contains("HR_ADMIN"))) {
+        // Platform-only: reserved for platform admin (e.g. subscription metrics)
+        if (requiredPerm != null && requiredPerm.startsWith(PLATFORM_PREFIX)) {
+            return false;
+        }
+
+        // HR: almost all company (tenant) permissions
+        if ((roles.contains("HR") || roles.contains("HR_ADMIN"))
+                && requiredPerm != null && requiredPerm.startsWith("com.sme.")) {
             return true;
         }
 
-        // user.list: only ADMIN, STAFF (platform), HR (tenant) can view list
-        if ("com.sme.identity.user.list".equals(requiredPerm)
-                && (roles.contains("HR") || roles.contains("HR_ADMIN") || roles.contains("STAFF"))) {
-            return true;
-        }
-
-        // onboarding/survey template create: HR (tenant) can create templates
-        if (("com.sme.onboarding.template.create".equals(requiredPerm) || "com.sme.survey.template.create".equals(requiredPerm))
-                && (roles.contains("HR") || roles.contains("HR_ADMIN"))) {
-            return true;
-        }
-
-        // onboarding/survey template list & get: HR (tenant) can list and get templates
-        if ((requiredPerm != null && (requiredPerm.equals("com.sme.onboarding.template.list")
-                || requiredPerm.equals("com.sme.onboarding.template.get")
-                || requiredPerm.equals("com.sme.survey.template.list")
-                || requiredPerm.equals("com.sme.survey.template.get")))
-                && (roles.contains("HR") || roles.contains("HR_ADMIN"))) {
-            return true;
-        }
-
-        // survey: HR (tenant) can manage templates, instances, questions, responses, reports
-        if (requiredPerm != null && requiredPerm.startsWith("com.sme.survey.")
-                && (roles.contains("HR") || roles.contains("HR_ADMIN"))) {
+        // user.list: STAFF (platform) can view list
+        if ("com.sme.identity.user.list".equals(requiredPerm) && roles.contains("STAFF")) {
             return true;
         }
 
         // survey response submit: any authenticated user (e.g. employee filling survey)
-        if ("com.sme.survey.response.submit".equals(requiredPerm) && roles != null && !roles.isEmpty()) {
+        if ("com.sme.survey.response.submit".equals(requiredPerm) && !roles.isEmpty()) {
             return true;
         }
 
