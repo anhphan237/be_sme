@@ -10,10 +10,7 @@ import lombok.Setter;
 public class OnboardingInstanceDetailResponse {
     private String instanceId;
     private String employeeId;
-    private String employeeName;
-    private String employeeEmail;
-    private String managerName;
-    private String managerUserId;
+    private String employeeUserId;
     private String templateId;
     private String status;
     private Date startDate;

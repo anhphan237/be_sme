@@ -2,8 +2,6 @@ package com.sme.be_sme.modules.onboarding.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
-import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceListRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceDetailResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceListResponse;
@@ -34,7 +32,6 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
     private final OnboardingInstanceMapper onboardingInstanceMapper;
     private final EmployeeProfileMapper employeeProfileMapper;
     private final EmployeeProfileMapperExt employeeProfileMapperExt;
-    private final UserMapperExt userMapperExt;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -53,9 +50,7 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
                 : requestedEmployeeId;
         String status = request == null ? null : request.getStatus();
         final String statusNormalized = status == null ? null : status.trim().toLowerCase(Locale.ROOT);
-        final Map<String, EmployeeProfileEntity> employeeProfileByEmployeeId = new HashMap<>();
-        final Map<String, EmployeeProfileEntity> employeeProfileByUserId = new HashMap<>();
-        final Map<String, String> managerNameByUserId = new HashMap<>();
+        final Map<String, String> employeeUserIdByOnboardingEmployeeId = new HashMap<>();
 
         List<OnboardingInstanceDetailResponse> instances = onboardingInstanceMapper.selectAll().stream()
                 .filter(row -> Objects.equals(companyId, row.getCompanyId()))
@@ -71,13 +66,7 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
                 })
                 .filter(row -> !StringUtils.hasText(statusNormalized)
                         || (row.getStatus() != null && row.getStatus().trim().toLowerCase(Locale.ROOT).equals(statusNormalized)))
-                .map(row -> toDetailResponse(
-                        row,
-                        companyId,
-                        employeeProfileByEmployeeId,
-                        employeeProfileByUserId,
-                        managerNameByUserId
-                ))
+                .map(row -> toDetailResponse(row, companyId, employeeUserIdByOnboardingEmployeeId))
                 .collect(Collectors.toList());
 
         OnboardingInstanceListResponse response = new OnboardingInstanceListResponse();
@@ -113,26 +102,16 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
     private OnboardingInstanceDetailResponse toDetailResponse(
             OnboardingInstanceEntity entity,
             String companyId,
-            Map<String, EmployeeProfileEntity> employeeProfileByEmployeeId,
-            Map<String, EmployeeProfileEntity> employeeProfileByUserId,
-            Map<String, String> managerNameByUserId
+            Map<String, String> employeeUserIdByOnboardingEmployeeId
     ) {
         OnboardingInstanceDetailResponse response = new OnboardingInstanceDetailResponse();
         response.setInstanceId(entity.getOnboardingId());
         response.setEmployeeId(entity.getEmployeeId());
-        EmployeeProfileEntity employeeProfile = resolveEmployeeProfile(
+        response.setEmployeeUserId(resolveEmployeeUserId(
                 companyId,
                 entity.getEmployeeId(),
-                employeeProfileByEmployeeId,
-                employeeProfileByUserId
-        );
-        if (employeeProfile != null) {
-            response.setEmployeeName(normalize(employeeProfile.getEmployeeName()));
-            response.setEmployeeEmail(normalize(employeeProfile.getEmployeeEmail()));
-            String managerUserId = normalize(employeeProfile.getManagerUserId());
-            response.setManagerUserId(managerUserId);
-            response.setManagerName(resolveManagerName(companyId, managerUserId, managerNameByUserId));
-        }
+                employeeUserIdByOnboardingEmployeeId
+        ));
         response.setTemplateId(entity.getOnboardingTemplateId());
         response.setStatus(entity.getStatus());
         response.setStartDate(entity.getStartDate());
@@ -140,47 +119,35 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
         return response;
     }
 
-    private EmployeeProfileEntity resolveEmployeeProfile(
+    private String resolveEmployeeUserId(
             String companyId,
             String onboardingEmployeeId,
-            Map<String, EmployeeProfileEntity> employeeProfileByEmployeeId,
-            Map<String, EmployeeProfileEntity> employeeProfileByUserId
+            Map<String, String> employeeUserIdByOnboardingEmployeeId
     ) {
         String normalizedId = normalize(onboardingEmployeeId);
-        if (!StringUtils.hasText(normalizedId)) return null;
-
-        EmployeeProfileEntity profile = employeeProfileByEmployeeId.computeIfAbsent(
-                normalizedId,
-                employeeProfileMapper::selectByPrimaryKey
-        );
-        if (profile == null) {
-            profile = employeeProfileByUserId.computeIfAbsent(
-                    normalizedId,
-                    userId -> employeeProfileMapperExt.selectByCompanyIdAndUserId(companyId, userId)
-            );
+        if (!StringUtils.hasText(normalizedId)) {
+            return null;
         }
-        if (profile != null) {
-            String profileEmployeeId = normalize(profile.getEmployeeId());
-            String profileUserId = normalize(profile.getUserId());
-            if (StringUtils.hasText(profileEmployeeId)) {
-                employeeProfileByEmployeeId.put(profileEmployeeId, profile);
-            }
-            if (StringUtils.hasText(profileUserId)) {
-                employeeProfileByUserId.put(profileUserId, profile);
-            }
+        if (employeeUserIdByOnboardingEmployeeId.containsKey(normalizedId)) {
+            return employeeUserIdByOnboardingEmployeeId.get(normalizedId);
         }
-        return profile;
-    }
 
-    private String resolveManagerName(
-            String companyId,
-            String managerUserId,
-            Map<String, String> managerNameByUserId
-    ) {
-        if (!StringUtils.hasText(managerUserId)) return null;
-        return managerNameByUserId.computeIfAbsent(managerUserId, userId -> {
-            UserEntity manager = userMapperExt.selectByCompanyIdAndUserId(companyId, userId);
-            return manager == null ? null : normalize(manager.getFullName());
-        });
+        EmployeeProfileEntity profileByEmployeeId = employeeProfileMapper.selectByPrimaryKey(normalizedId);
+        if (profileByEmployeeId != null && StringUtils.hasText(profileByEmployeeId.getUserId())) {
+            String employeeUserId = normalize(profileByEmployeeId.getUserId());
+            employeeUserIdByOnboardingEmployeeId.put(normalizedId, employeeUserId);
+            return employeeUserId;
+        }
+
+        EmployeeProfileEntity profileByUserId = employeeProfileMapperExt.selectByCompanyIdAndUserId(companyId, normalizedId);
+        if (profileByUserId != null && StringUtils.hasText(profileByUserId.getUserId())) {
+            String employeeUserId = normalize(profileByUserId.getUserId());
+            employeeUserIdByOnboardingEmployeeId.put(normalizedId, employeeUserId);
+            return employeeUserId;
+        }
+
+        // Compatibility: old onboarding_instances.employee_id may already store identity user_id.
+        employeeUserIdByOnboardingEmployeeId.put(normalizedId, normalizedId);
+        return normalizedId;
     }
 }

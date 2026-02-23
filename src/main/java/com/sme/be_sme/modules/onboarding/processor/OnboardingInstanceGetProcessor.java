@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.onboarding.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapper;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceGetRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceDetailResponse;
 import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
@@ -32,6 +33,7 @@ public class OnboardingInstanceGetProcessor extends BaseBizProcessor<BizContext>
     private final OnboardingInstanceMapper onboardingInstanceMapper;
     private final ChecklistInstanceMapper checklistInstanceMapper;
     private final TaskInstanceMapper taskInstanceMapper;
+    private final EmployeeProfileMapper employeeProfileMapper;
     private final EmployeeProfileMapperExt employeeProfileMapperExt;
 
     @Override
@@ -52,6 +54,7 @@ public class OnboardingInstanceGetProcessor extends BaseBizProcessor<BizContext>
         OnboardingInstanceDetailResponse response = new OnboardingInstanceDetailResponse();
         response.setInstanceId(instance.getOnboardingId());
         response.setEmployeeId(instance.getEmployeeId());
+        response.setEmployeeUserId(resolveEmployeeUserId(companyId, instance.getEmployeeId()));
         response.setTemplateId(instance.getOnboardingTemplateId());
         response.setStatus(instance.getStatus());
         response.setStartDate(instance.getStartDate());
@@ -132,5 +135,25 @@ public class OnboardingInstanceGetProcessor extends BaseBizProcessor<BizContext>
     private boolean isEmployeeRole(BizContext context) {
         if (context == null || context.getRoles() == null) return false;
         return context.getRoles().stream().anyMatch(r -> "EMPLOYEE".equalsIgnoreCase(r));
+    }
+
+    private String resolveEmployeeUserId(String companyId, String onboardingEmployeeId) {
+        if (!StringUtils.hasText(onboardingEmployeeId)) {
+            return null;
+        }
+        String normalizedId = onboardingEmployeeId.trim();
+
+        EmployeeProfileEntity profileByEmployeeId = employeeProfileMapper.selectByPrimaryKey(normalizedId);
+        if (profileByEmployeeId != null && StringUtils.hasText(profileByEmployeeId.getUserId())) {
+            return profileByEmployeeId.getUserId().trim();
+        }
+
+        EmployeeProfileEntity profileByUserId = employeeProfileMapperExt.selectByCompanyIdAndUserId(companyId, normalizedId);
+        if (profileByUserId != null && StringUtils.hasText(profileByUserId.getUserId())) {
+            return profileByUserId.getUserId().trim();
+        }
+
+        // Compatibility: old onboarding_instances.employee_id may already store identity user_id.
+        return normalizedId;
     }
 }
