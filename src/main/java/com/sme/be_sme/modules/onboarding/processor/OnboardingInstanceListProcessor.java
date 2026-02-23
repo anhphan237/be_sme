@@ -35,13 +35,12 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
         validate(context);
 
         String companyId = context.getTenantId();
-        String employeeId = request == null ? null : request.getEmployeeId();
-        if (isEmployeeRole(context)) {
-            // EMPLOYEE can only query own onboarding instances
-            employeeId = resolveEmployeeIdForOperator(context);
-        }
+        String requestedEmployeeId = request == null ? null : request.getEmployeeId();
+        final String employeeId = isEmployeeRole(context)
+                ? resolveEmployeeIdForOperator(context) // EMPLOYEE can only query own onboarding instances
+                : requestedEmployeeId;
         String status = request == null ? null : request.getStatus();
-        String statusNormalized = status == null ? null : status.trim().toLowerCase(Locale.ROOT);
+        final String statusNormalized = status == null ? null : status.trim().toLowerCase(Locale.ROOT);
 
         List<OnboardingInstanceDetailResponse> instances = onboardingInstanceMapper.selectAll().stream()
                 .filter(row -> Objects.equals(companyId, row.getCompanyId()))
