@@ -11,6 +11,8 @@ public class OnboardingInstanceDetailResponse {
     private String instanceId;
     private String employeeId;
     private String employeeUserId;
+    private String managerUserId;
+    private String managerName;
     private String templateId;
     private String status;
     private Date startDate;

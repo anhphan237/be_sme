@@ -2,6 +2,8 @@ package com.sme.be_sme.modules.onboarding.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
+import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceListRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceDetailResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceListResponse;
@@ -32,6 +34,7 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
     private final OnboardingInstanceMapper onboardingInstanceMapper;
     private final EmployeeProfileMapper employeeProfileMapper;
     private final EmployeeProfileMapperExt employeeProfileMapperExt;
+    private final UserMapperExt userMapperExt;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -50,7 +53,8 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
                 : requestedEmployeeId;
         String status = request == null ? null : request.getStatus();
         final String statusNormalized = status == null ? null : status.trim().toLowerCase(Locale.ROOT);
-        final Map<String, String> employeeUserIdByOnboardingEmployeeId = new HashMap<>();
+        final Map<String, EmployeeLinkInfo> employeeLinkByOnboardingEmployeeId = new HashMap<>();
+        final Map<String, String> managerNameByUserId = new HashMap<>();
 
         List<OnboardingInstanceDetailResponse> instances = onboardingInstanceMapper.selectAll().stream()
                 .filter(row -> Objects.equals(companyId, row.getCompanyId()))
@@ -66,7 +70,12 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
                 })
                 .filter(row -> !StringUtils.hasText(statusNormalized)
                         || (row.getStatus() != null && row.getStatus().trim().toLowerCase(Locale.ROOT).equals(statusNormalized)))
-                .map(row -> toDetailResponse(row, companyId, employeeUserIdByOnboardingEmployeeId))
+                .map(row -> toDetailResponse(
+                        row,
+                        companyId,
+                        employeeLinkByOnboardingEmployeeId,
+                        managerNameByUserId
+                ))
                 .collect(Collectors.toList());
 
         OnboardingInstanceListResponse response = new OnboardingInstanceListResponse();
@@ -102,16 +111,21 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
     private OnboardingInstanceDetailResponse toDetailResponse(
             OnboardingInstanceEntity entity,
             String companyId,
-            Map<String, String> employeeUserIdByOnboardingEmployeeId
+            Map<String, EmployeeLinkInfo> employeeLinkByOnboardingEmployeeId,
+            Map<String, String> managerNameByUserId
     ) {
         OnboardingInstanceDetailResponse response = new OnboardingInstanceDetailResponse();
         response.setInstanceId(entity.getOnboardingId());
         response.setEmployeeId(entity.getEmployeeId());
-        response.setEmployeeUserId(resolveEmployeeUserId(
+        EmployeeLinkInfo employeeLinkInfo = resolveEmployeeLinkInfo(
                 companyId,
                 entity.getEmployeeId(),
-                employeeUserIdByOnboardingEmployeeId
-        ));
+                employeeLinkByOnboardingEmployeeId,
+                managerNameByUserId
+        );
+        response.setEmployeeUserId(employeeLinkInfo.employeeUserId);
+        response.setManagerUserId(employeeLinkInfo.managerUserId);
+        response.setManagerName(employeeLinkInfo.managerName);
         response.setTemplateId(entity.getOnboardingTemplateId());
         response.setStatus(entity.getStatus());
         response.setStartDate(entity.getStartDate());
@@ -119,35 +133,72 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
         return response;
     }
 
-    private String resolveEmployeeUserId(
+    private EmployeeLinkInfo resolveEmployeeLinkInfo(
             String companyId,
             String onboardingEmployeeId,
-            Map<String, String> employeeUserIdByOnboardingEmployeeId
+            Map<String, EmployeeLinkInfo> employeeLinkByOnboardingEmployeeId,
+            Map<String, String> managerNameByUserId
     ) {
         String normalizedId = normalize(onboardingEmployeeId);
         if (!StringUtils.hasText(normalizedId)) {
-            return null;
+            return EmployeeLinkInfo.empty();
         }
-        if (employeeUserIdByOnboardingEmployeeId.containsKey(normalizedId)) {
-            return employeeUserIdByOnboardingEmployeeId.get(normalizedId);
+        if (employeeLinkByOnboardingEmployeeId.containsKey(normalizedId)) {
+            return employeeLinkByOnboardingEmployeeId.get(normalizedId);
         }
 
         EmployeeProfileEntity profileByEmployeeId = employeeProfileMapper.selectByPrimaryKey(normalizedId);
         if (profileByEmployeeId != null && StringUtils.hasText(profileByEmployeeId.getUserId())) {
             String employeeUserId = normalize(profileByEmployeeId.getUserId());
-            employeeUserIdByOnboardingEmployeeId.put(normalizedId, employeeUserId);
-            return employeeUserId;
+            String managerUserId = normalize(profileByEmployeeId.getManagerUserId());
+            String managerName = resolveManagerName(companyId, managerUserId, managerNameByUserId);
+            EmployeeLinkInfo link = new EmployeeLinkInfo(employeeUserId, managerUserId, managerName);
+            employeeLinkByOnboardingEmployeeId.put(normalizedId, link);
+            return link;
         }
 
         EmployeeProfileEntity profileByUserId = employeeProfileMapperExt.selectByCompanyIdAndUserId(companyId, normalizedId);
         if (profileByUserId != null && StringUtils.hasText(profileByUserId.getUserId())) {
             String employeeUserId = normalize(profileByUserId.getUserId());
-            employeeUserIdByOnboardingEmployeeId.put(normalizedId, employeeUserId);
-            return employeeUserId;
+            String managerUserId = normalize(profileByUserId.getManagerUserId());
+            String managerName = resolveManagerName(companyId, managerUserId, managerNameByUserId);
+            EmployeeLinkInfo link = new EmployeeLinkInfo(employeeUserId, managerUserId, managerName);
+            employeeLinkByOnboardingEmployeeId.put(normalizedId, link);
+            return link;
         }
 
         // Compatibility: old onboarding_instances.employee_id may already store identity user_id.
-        employeeUserIdByOnboardingEmployeeId.put(normalizedId, normalizedId);
-        return normalizedId;
+        EmployeeLinkInfo link = new EmployeeLinkInfo(normalizedId, null, null);
+        employeeLinkByOnboardingEmployeeId.put(normalizedId, link);
+        return link;
+    }
+
+    private String resolveManagerName(String companyId, String managerUserId, Map<String, String> managerNameByUserId) {
+        if (!StringUtils.hasText(managerUserId)) {
+            return null;
+        }
+        if (managerNameByUserId.containsKey(managerUserId)) {
+            return managerNameByUserId.get(managerUserId);
+        }
+        UserEntity manager = userMapperExt.selectByCompanyIdAndUserId(companyId, managerUserId);
+        String managerName = manager == null ? null : normalize(manager.getFullName());
+        managerNameByUserId.put(managerUserId, managerName);
+        return managerName;
+    }
+
+    private static class EmployeeLinkInfo {
+        private final String employeeUserId;
+        private final String managerUserId;
+        private final String managerName;
+
+        private EmployeeLinkInfo(String employeeUserId, String managerUserId, String managerName) {
+            this.employeeUserId = employeeUserId;
+            this.managerUserId = managerUserId;
+            this.managerName = managerName;
+        }
+
+        private static EmployeeLinkInfo empty() {
+            return new EmployeeLinkInfo(null, null, null);
+        }
     }
 }
