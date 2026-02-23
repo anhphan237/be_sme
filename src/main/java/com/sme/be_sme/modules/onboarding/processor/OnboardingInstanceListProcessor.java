@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceListRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceDetailResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceListResponse;
+import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
+import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -25,6 +27,7 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
 
     private final ObjectMapper objectMapper;
     private final OnboardingInstanceMapper onboardingInstanceMapper;
+    private final EmployeeProfileMapperExt employeeProfileMapperExt;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -33,6 +36,10 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
 
         String companyId = context.getTenantId();
         String employeeId = request == null ? null : request.getEmployeeId();
+        if (isEmployeeRole(context)) {
+            // EMPLOYEE can only query own onboarding instances
+            employeeId = resolveEmployeeIdForOperator(context);
+        }
         String status = request == null ? null : request.getStatus();
         String statusNormalized = status == null ? null : status.trim().toLowerCase(Locale.ROOT);
 
@@ -53,6 +60,25 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
         if (context == null || !StringUtils.hasText(context.getTenantId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
         }
+    }
+
+    private boolean isEmployeeRole(BizContext context) {
+        if (context == null || context.getRoles() == null) return false;
+        return context.getRoles().stream().anyMatch(r -> "EMPLOYEE".equalsIgnoreCase(r));
+    }
+
+    private String resolveEmployeeIdForOperator(BizContext context) {
+        if (context == null || !StringUtils.hasText(context.getOperatorId())) {
+            throw AppException.of(ErrorCodes.FORBIDDEN, "employee context is required");
+        }
+        EmployeeProfileEntity me = employeeProfileMapperExt.selectByCompanyIdAndUserId(
+                context.getTenantId(),
+                context.getOperatorId()
+        );
+        if (me == null || !StringUtils.hasText(me.getEmployeeId())) {
+            throw AppException.of(ErrorCodes.FORBIDDEN, "employee profile not found");
+        }
+        return me.getEmployeeId().trim();
     }
 
     private OnboardingInstanceDetailResponse toDetailResponse(OnboardingInstanceEntity entity) {

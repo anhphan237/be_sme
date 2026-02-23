@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceGetRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceDetailResponse;
+import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
+import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
@@ -30,6 +32,7 @@ public class OnboardingInstanceGetProcessor extends BaseBizProcessor<BizContext>
     private final OnboardingInstanceMapper onboardingInstanceMapper;
     private final ChecklistInstanceMapper checklistInstanceMapper;
     private final TaskInstanceMapper taskInstanceMapper;
+    private final EmployeeProfileMapperExt employeeProfileMapperExt;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -44,6 +47,7 @@ public class OnboardingInstanceGetProcessor extends BaseBizProcessor<BizContext>
         if (!companyId.equals(instance.getCompanyId())) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "instance does not belong to tenant");
         }
+        enforceEmployeeOwnInstanceOnly(context, instance);
 
         OnboardingInstanceDetailResponse response = new OnboardingInstanceDetailResponse();
         response.setInstanceId(instance.getOnboardingId());
@@ -102,5 +106,27 @@ public class OnboardingInstanceGetProcessor extends BaseBizProcessor<BizContext>
         if (!StringUtils.hasText(request.getInstanceId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "instanceId is required");
         }
+    }
+
+    private void enforceEmployeeOwnInstanceOnly(BizContext context, OnboardingInstanceEntity instance) {
+        if (!isEmployeeRole(context)) return;
+        if (context == null || !StringUtils.hasText(context.getOperatorId())) {
+            throw AppException.of(ErrorCodes.FORBIDDEN, "employee context is required");
+        }
+        EmployeeProfileEntity me = employeeProfileMapperExt.selectByCompanyIdAndUserId(
+                context.getTenantId(),
+                context.getOperatorId()
+        );
+        if (me == null || !StringUtils.hasText(me.getEmployeeId())) {
+            throw AppException.of(ErrorCodes.FORBIDDEN, "employee profile not found");
+        }
+        if (!me.getEmployeeId().trim().equals(instance.getEmployeeId())) {
+            throw AppException.of(ErrorCodes.FORBIDDEN, "employee can only access own onboarding instance");
+        }
+    }
+
+    private boolean isEmployeeRole(BizContext context) {
+        if (context == null || context.getRoles() == null) return false;
+        return context.getRoles().stream().anyMatch(r -> "EMPLOYEE".equalsIgnoreCase(r));
     }
 }
