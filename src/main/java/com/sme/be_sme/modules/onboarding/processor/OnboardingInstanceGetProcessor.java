@@ -120,7 +120,11 @@ public class OnboardingInstanceGetProcessor extends BaseBizProcessor<BizContext>
         if (me == null || !StringUtils.hasText(me.getEmployeeId())) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "employee profile not found");
         }
-        if (!me.getEmployeeId().trim().equals(instance.getEmployeeId())) {
+        String instanceEmployeeId = StringUtils.hasText(instance.getEmployeeId()) ? instance.getEmployeeId().trim() : null;
+        String myEmployeeId = me.getEmployeeId().trim();
+        String myUserId = context.getOperatorId().trim();
+        // Compatibility: old data may store userId in onboarding_instances.employee_id
+        if (!myEmployeeId.equals(instanceEmployeeId) && !myUserId.equals(instanceEmployeeId)) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "employee can only access own onboarding instance");
         }
     }

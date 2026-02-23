@@ -35,16 +35,27 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
         validate(context);
 
         String companyId = context.getTenantId();
+        final boolean employeeScope = isEmployeeRole(context);
         String requestedEmployeeId = request == null ? null : request.getEmployeeId();
-        final String employeeId = isEmployeeRole(context)
+        final String employeeId = employeeScope
                 ? resolveEmployeeIdForOperator(context) // EMPLOYEE can only query own onboarding instances
                 : requestedEmployeeId;
+        final String operatorId = context.getOperatorId();
         String status = request == null ? null : request.getStatus();
         final String statusNormalized = status == null ? null : status.trim().toLowerCase(Locale.ROOT);
 
         List<OnboardingInstanceDetailResponse> instances = onboardingInstanceMapper.selectAll().stream()
                 .filter(row -> Objects.equals(companyId, row.getCompanyId()))
-                .filter(row -> !StringUtils.hasText(employeeId) || employeeId.trim().equals(row.getEmployeeId()))
+                .filter(row -> {
+                    if (employeeScope) {
+                        if (!StringUtils.hasText(row.getEmployeeId())) return false;
+                        String rowEmployeeId = row.getEmployeeId().trim();
+                        // Compatibility: old data may store userId in onboarding_instances.employee_id
+                        return employeeId.equals(rowEmployeeId)
+                                || (StringUtils.hasText(operatorId) && operatorId.trim().equals(rowEmployeeId));
+                    }
+                    return !StringUtils.hasText(employeeId) || employeeId.trim().equals(row.getEmployeeId());
+                })
                 .filter(row -> !StringUtils.hasText(statusNormalized)
                         || (row.getStatus() != null && row.getStatus().trim().toLowerCase(Locale.ROOT).equals(statusNormalized)))
                 .map(this::toDetailResponse)
