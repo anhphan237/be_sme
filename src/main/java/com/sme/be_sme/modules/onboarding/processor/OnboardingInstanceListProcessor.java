@@ -37,10 +37,13 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
         String companyId = context.getTenantId();
         final boolean employeeScope = isEmployeeRole(context);
         String requestedEmployeeId = request == null ? null : request.getEmployeeId();
+        final String operatorId = normalize(context == null ? null : context.getOperatorId());
+        if (employeeScope && !StringUtils.hasText(operatorId)) {
+            throw AppException.of(ErrorCodes.FORBIDDEN, "employee context is required");
+        }
         final String employeeId = employeeScope
                 ? resolveEmployeeIdForOperator(context) // EMPLOYEE can only query own onboarding instances
                 : requestedEmployeeId;
-        final String operatorId = context.getOperatorId();
         String status = request == null ? null : request.getStatus();
         final String statusNormalized = status == null ? null : status.trim().toLowerCase(Locale.ROOT);
 
@@ -49,12 +52,12 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
                 .filter(row -> {
                     if (employeeScope) {
                         if (!StringUtils.hasText(row.getEmployeeId())) return false;
-                        String rowEmployeeId = row.getEmployeeId().trim();
+                        String rowEmployeeId = normalize(row.getEmployeeId());
                         // Compatibility: old data may store userId in onboarding_instances.employee_id
-                        return employeeId.equals(rowEmployeeId)
-                                || (StringUtils.hasText(operatorId) && operatorId.trim().equals(rowEmployeeId));
+                        return Objects.equals(employeeId, rowEmployeeId)
+                                || Objects.equals(operatorId, rowEmployeeId);
                     }
-                    return !StringUtils.hasText(employeeId) || employeeId.trim().equals(row.getEmployeeId());
+                    return !StringUtils.hasText(employeeId) || employeeId.trim().equals(normalize(row.getEmployeeId()));
                 })
                 .filter(row -> !StringUtils.hasText(statusNormalized)
                         || (row.getStatus() != null && row.getStatus().trim().toLowerCase(Locale.ROOT).equals(statusNormalized)))
@@ -78,17 +81,17 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
     }
 
     private String resolveEmployeeIdForOperator(BizContext context) {
-        if (context == null || !StringUtils.hasText(context.getOperatorId())) {
-            throw AppException.of(ErrorCodes.FORBIDDEN, "employee context is required");
-        }
+        if (context == null || !StringUtils.hasText(context.getOperatorId())) return null;
         EmployeeProfileEntity me = employeeProfileMapperExt.selectByCompanyIdAndUserId(
                 context.getTenantId(),
                 context.getOperatorId()
         );
-        if (me == null || !StringUtils.hasText(me.getEmployeeId())) {
-            throw AppException.of(ErrorCodes.FORBIDDEN, "employee profile not found");
-        }
-        return me.getEmployeeId().trim();
+        if (me == null || !StringUtils.hasText(me.getEmployeeId())) return null;
+        return normalize(me.getEmployeeId());
+    }
+
+    private String normalize(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
     }
 
     private OnboardingInstanceDetailResponse toDetailResponse(OnboardingInstanceEntity entity) {
