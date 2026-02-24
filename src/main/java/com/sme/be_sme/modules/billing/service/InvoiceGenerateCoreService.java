@@ -1,5 +1,6 @@
 package com.sme.be_sme.modules.billing.service;
 
+import com.sme.be_sme.modules.billing.enums.InvoiceStatus;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
@@ -76,7 +77,7 @@ public class InvoiceGenerateCoreService {
         invoice.setInvoiceNo(buildInvoiceNo(invoiceId));
         invoice.setAmountTotal(amountTotal);
         invoice.setCurrency("VND");
-        invoice.setStatus("ISSUED");
+        invoice.setStatus(InvoiceStatus.ISSUED.getCode());
         invoice.setIssuedAt(now);
         invoice.setDueAt(addDays(now, 7));
         invoice.setCreatedAt(now);

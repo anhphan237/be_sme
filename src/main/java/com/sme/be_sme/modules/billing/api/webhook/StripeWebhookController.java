@@ -2,6 +2,8 @@ package com.sme.be_sme.modules.billing.api.webhook;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.billing.enums.InvoiceStatus;
+import com.sme.be_sme.modules.billing.enums.PaymentTransactionStatus;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PaymentTransactionMapperExt;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.InvoiceEntity;
@@ -80,15 +82,15 @@ public class StripeWebhookController {
         }
 
         Date now = new Date();
-        txn.setStatus("succeeded");
+        txn.setStatus(PaymentTransactionStatus.SUCCEEDED.getCode());
         txn.setPaidAt(now);
         // Use the base mapper for update via selectByPrimaryKey pattern
         updateTransaction(txn);
 
         if (StringUtils.hasText(txn.getInvoiceId())) {
             InvoiceEntity invoice = invoiceMapper.selectByPrimaryKey(txn.getInvoiceId());
-            if (invoice != null && !"PAID".equalsIgnoreCase(invoice.getStatus())) {
-                invoice.setStatus("PAID");
+            if (invoice != null && !InvoiceStatus.PAID.getCode().equalsIgnoreCase(invoice.getStatus())) {
+                invoice.setStatus(InvoiceStatus.PAID.getCode());
                 invoiceMapper.updateByPrimaryKey(invoice);
                 log.info("Invoice {} marked as PAID via Stripe webhook", invoice.getInvoiceId());
             }
@@ -110,7 +112,7 @@ public class StripeWebhookController {
                 ? piNode.path("last_payment_error").path("message").asText("unknown")
                 : "unknown";
 
-        txn.setStatus("failed");
+        txn.setStatus(PaymentTransactionStatus.FAILED.getCode());
         txn.setFailureReason(failureMessage.length() > 255 ? failureMessage.substring(0, 255) : failureMessage);
         updateTransaction(txn);
         log.warn("PaymentIntent {} failed: {}", paymentIntentId, failureMessage);

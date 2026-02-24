@@ -3,6 +3,8 @@ package com.sme.be_sme.modules.billing.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.billing.api.request.PaymentCreateIntentRequest;
+import com.sme.be_sme.modules.billing.enums.InvoiceStatus;
+import com.sme.be_sme.modules.billing.enums.PaymentTransactionStatus;
 import com.sme.be_sme.modules.billing.api.response.PaymentCreateIntentResponse;
 import com.sme.be_sme.modules.billing.infrastructure.gateway.PaymentGatewayPort;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper;
@@ -24,8 +26,6 @@ import java.util.Date;
 @RequiredArgsConstructor
 public class PaymentCreateIntentProcessor extends BaseBizProcessor<BizContext> {
 
-    private static final String INVOICE_STATUS_PAID = "PAID";
-
     private final ObjectMapper objectMapper;
     private final InvoiceMapper invoiceMapper;
     private final PaymentTransactionMapper paymentTransactionMapper;
@@ -46,7 +46,7 @@ public class PaymentCreateIntentProcessor extends BaseBizProcessor<BizContext> {
         if (!companyId.equals(invoice.getCompanyId())) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "invoice does not belong to tenant");
         }
-        if (INVOICE_STATUS_PAID.equalsIgnoreCase(invoice.getStatus())) {
+        if (InvoiceStatus.PAID.getCode().equalsIgnoreCase(invoice.getStatus())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "invoice already paid");
         }
 
@@ -66,7 +66,8 @@ public class PaymentCreateIntentProcessor extends BaseBizProcessor<BizContext> {
         txn.setProviderTxnId(result.getPaymentIntentId());
         txn.setAmount(amount);
         txn.setCurrency(currency);
-        txn.setStatus(result.getStatus());
+        PaymentTransactionStatus txnStatus = PaymentTransactionStatus.fromCode(result.getStatus());
+        txn.setStatus(txnStatus != null ? txnStatus.getCode() : PaymentTransactionStatus.PENDING.getCode());
         txn.setCreatedAt(now);
         paymentTransactionMapper.insert(txn);
 
