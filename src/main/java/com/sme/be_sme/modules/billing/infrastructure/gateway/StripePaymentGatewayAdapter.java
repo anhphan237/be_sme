@@ -29,6 +29,8 @@ import static com.sme.be_sme.modules.billing.infrastructure.gateway.PaymentGatew
 public class StripePaymentGatewayAdapter implements PaymentGatewayPort {
 
     private static final String STRIPE_API = "https://api.stripe.com/v1/payment_intents";
+    /** Stripe min ~50 cents USD; for VND use 20,000 to be safe */
+    private static final long MIN_AMOUNT_VND = 20_000;
 
     @Value("${app.stripe.secret-key:}")
     private String secretKey;
@@ -46,6 +48,10 @@ public class StripePaymentGatewayAdapter implements PaymentGatewayPort {
         long amount = amountMinor == null ? 0 : amountMinor.longValue();
         if (amount <= 0) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "Invoice amount must be positive");
+        }
+        if ("vnd".equals(currencyLower) && amount < MIN_AMOUNT_VND) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST,
+                    "Amount must be at least " + MIN_AMOUNT_VND + " VND (Stripe minimum)");
         }
         try {
             HttpHeaders headers = new HttpHeaders();
