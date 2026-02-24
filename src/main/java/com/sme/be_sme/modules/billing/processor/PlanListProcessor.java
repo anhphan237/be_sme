@@ -11,6 +11,7 @@ import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -40,6 +41,7 @@ public class PlanListProcessor extends BaseBizProcessor<BizContext> {
                 .filter(plan -> companyId.equals(plan.getCompanyId()) || plan.getCompanyId() == null)
                 .filter(plan -> !StringUtils.hasText(statusNormalized)
                         || (plan.getStatus() != null && plan.getStatus().trim().toLowerCase(Locale.ROOT).equals(statusNormalized)))
+                .sorted(Comparator.comparing(p -> p.getPriceVndMonthly() == null ? Integer.MAX_VALUE : p.getPriceVndMonthly()))
                 .map(this::toSummary)
                 .collect(Collectors.toList());
 
