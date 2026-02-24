@@ -17,6 +17,9 @@ spring:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
+    # Repair updates flyway_schema_history checksums when migration files were modified after apply.
+    # Use when you get "Migration checksum mismatch" (e.g. V24, V25). Safe to leave on.
+    repair-on-migrate: true
 
   mail:
     host: ${MAIL_HOST:localhost}
