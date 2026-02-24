@@ -4,7 +4,11 @@ import com.sme.be_sme.modules.billing.api.request.InvoiceGenerateRequest;
 import com.sme.be_sme.modules.billing.api.request.InvoiceGetRequest;
 import com.sme.be_sme.modules.billing.api.request.InvoiceListRequest;
 import com.sme.be_sme.modules.billing.api.request.DunningRetryRequest;
+import com.sme.be_sme.modules.billing.api.request.PaymentConnectRequest;
 import com.sme.be_sme.modules.billing.api.request.PaymentCreateIntentRequest;
+import com.sme.be_sme.modules.billing.api.request.PaymentProvidersRequest;
+import com.sme.be_sme.modules.billing.api.request.PaymentStatusRequest;
+import com.sme.be_sme.modules.billing.api.request.PaymentTransactionsRequest;
 import com.sme.be_sme.modules.billing.api.request.PlanGetRequest;
 import com.sme.be_sme.modules.billing.api.request.PlanListRequest;
 import com.sme.be_sme.modules.billing.api.request.SubscriptionCreateRequest;
@@ -17,7 +21,11 @@ import com.sme.be_sme.modules.billing.api.response.InvoiceDetailResponse;
 import com.sme.be_sme.modules.billing.api.response.InvoiceGenerateResponse;
 import com.sme.be_sme.modules.billing.api.response.InvoiceListResponse;
 import com.sme.be_sme.modules.billing.api.response.DunningRetryResponse;
+import com.sme.be_sme.modules.billing.api.response.PaymentConnectResponse;
 import com.sme.be_sme.modules.billing.api.response.PaymentCreateIntentResponse;
+import com.sme.be_sme.modules.billing.api.response.PaymentProvidersResponse;
+import com.sme.be_sme.modules.billing.api.response.PaymentStatusResponse;
+import com.sme.be_sme.modules.billing.api.response.PaymentTransactionsResponse;
 import com.sme.be_sme.modules.billing.api.response.PlanGetResponse;
 import com.sme.be_sme.modules.billing.api.response.PlanListResponse;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionCurrentResponse;
@@ -65,6 +73,18 @@ public interface BillingFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.billing.payment.createIntent")
     PaymentCreateIntentResponse createPaymentIntent(PaymentCreateIntentRequest request);
+
+    @OperationType("com.sme.billing.payment.connect")
+    PaymentConnectResponse connectPaymentProvider(PaymentConnectRequest request);
+
+    @OperationType("com.sme.billing.payment.providers")
+    PaymentProvidersResponse listPaymentProviders(PaymentProvidersRequest request);
+
+    @OperationType("com.sme.billing.payment.status")
+    PaymentStatusResponse getPaymentStatus(PaymentStatusRequest request);
+
+    @OperationType("com.sme.billing.payment.transactions")
+    PaymentTransactionsResponse listPaymentTransactions(PaymentTransactionsRequest request);
 
     @OperationType("com.sme.billing.dunning.retry")
     DunningRetryResponse dunningRetry(DunningRetryRequest request);

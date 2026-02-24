@@ -65,6 +65,7 @@ public class PaymentCreateIntentProcessor extends BaseBizProcessor<BizContext> {
         txn.setProvider(result.getGatewayName());
         txn.setProviderTxnId(result.getPaymentIntentId());
         txn.setAmount(amount);
+        txn.setCurrency(currency);
         txn.setStatus(result.getStatus());
         txn.setCreatedAt(now);
         paymentTransactionMapper.insert(txn);
@@ -77,6 +78,7 @@ public class PaymentCreateIntentProcessor extends BaseBizProcessor<BizContext> {
         response.setAmount(amount);
         response.setCurrency(currency);
         response.setStatus(result.getStatus());
+        response.setInvoiceId(invoiceId);
         return response;
     }
 

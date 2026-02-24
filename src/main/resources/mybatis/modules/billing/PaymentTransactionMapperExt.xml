@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.billing.infrastructure.mapper.PaymentTransactionMapperExt">
+
+    <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PaymentTransactionEntity">
+        <id column="payment_transaction_id" property="paymentTransactionId"/>
+        <result column="company_id" property="companyId"/>
+        <result column="subscription_id" property="subscriptionId"/>
+        <result column="invoice_id" property="invoiceId"/>
+        <result column="provider" property="provider"/>
+        <result column="provider_txn_id" property="providerTxnId"/>
+        <result column="amount" property="amount"/>
+        <result column="currency" property="currency"/>
+        <result column="status" property="status"/>
+        <result column="failure_reason" property="failureReason"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="paid_at" property="paidAt"/>
+    </resultMap>
+
+    <select id="selectByCompanyId" resultMap="BaseResultMap">
+        SELECT * FROM payment_transactions
+        WHERE company_id = #{companyId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByProviderTxnId" resultMap="BaseResultMap">
+        SELECT * FROM payment_transactions
+        WHERE provider_txn_id = #{providerTxnId}
+        LIMIT 1
+    </select>
+
+    <update id="updateStatusByProviderTxnId">
+        UPDATE payment_transactions
+        SET status = #{status},
+            failure_reason = #{failureReason},
+            paid_at = #{paidAt}
+        WHERE provider_txn_id = #{providerTxnId}
+    </update>
+</mapper>

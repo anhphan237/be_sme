@@ -20,4 +20,6 @@ public class PaymentCreateIntentResponse {
     private String currency;
     /** Intent status (e.g. REQUIRES_PAYMENT_METHOD, REQUIRES_CONFIRMATION) */
     private String status;
+    /** Invoice being paid */
+    private String invoiceId;
 }

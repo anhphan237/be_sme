@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.billing.infrastructure.mapper.PaymentProviderMapper">
+
+    <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PaymentProviderEntity">
+        <id column="payment_provider_id" property="paymentProviderId"/>
+        <result column="company_id" property="companyId"/>
+        <result column="provider_name" property="providerName"/>
+        <result column="status" property="status"/>
+        <result column="account_id" property="accountId"/>
+        <result column="last_sync_at" property="lastSyncAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO payment_providers (payment_provider_id, company_id, provider_name, status,
+                                      account_id, last_sync_at, created_at, updated_at)
+        VALUES (#{paymentProviderId}, #{companyId}, #{providerName}, #{status},
+                #{accountId}, #{lastSyncAt}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+        SELECT * FROM payment_providers WHERE payment_provider_id = #{paymentProviderId}
+    </select>
+
+    <select id="selectByCompanyId" resultMap="BaseResultMap">
+        SELECT * FROM payment_providers
+        WHERE company_id = #{companyId}
+        ORDER BY provider_name
+    </select>
+
+    <select id="selectByCompanyIdAndProviderName" resultMap="BaseResultMap">
+        SELECT * FROM payment_providers
+        WHERE company_id = #{companyId} AND lower(provider_name) = lower(#{providerName})
+        LIMIT 1
+    </select>
+
+    <update id="updateByPrimaryKey">
+        UPDATE payment_providers
+        SET company_id = #{companyId},
+            provider_name = #{providerName},
+            status = #{status},
+            account_id = #{accountId},
+            last_sync_at = #{lastSyncAt},
+            updated_at = #{updatedAt}
+        WHERE payment_provider_id = #{paymentProviderId}
+    </update>
+</mapper>
