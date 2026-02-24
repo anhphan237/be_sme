@@ -3,6 +3,6 @@
 UPDATE plans
 SET price_vnd_monthly = 20000,
     price_vnd_yearly = 200000,
-    name = 'Test 20K (Real Payment)',
+    name = 'Base',
     updated_at = now()
 WHERE code = 'TEST_10K' AND company_id IS NULL;
