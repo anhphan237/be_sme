@@ -14,7 +14,7 @@
     <result column="status" jdbcType="VARCHAR" property="status" />
     <result column="current_period_start" jdbcType="DATE" property="currentPeriodStart" />
     <result column="current_period_end" jdbcType="DATE" property="currentPeriodEnd" />
-    <result column="auto_renew" jdbcType="BIT" property="autoRenew" />
+    <result column="auto_renew" jdbcType="BOOLEAN" property="autoRenew" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
   </resultMap>
@@ -39,7 +39,7 @@
       updated_at)
     values (#{subscriptionId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{planId,jdbcType=VARCHAR}, 
       #{billingCycle,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR}, #{currentPeriodStart,jdbcType=DATE}, 
-      #{currentPeriodEnd,jdbcType=DATE}, #{autoRenew,jdbcType=BIT}, #{createdAt,jdbcType=TIMESTAMP}, 
+      #{currentPeriodEnd,jdbcType=DATE}, #{autoRenew,jdbcType=BOOLEAN}, #{createdAt,jdbcType=TIMESTAMP}, 
       #{updatedAt,jdbcType=TIMESTAMP})
   </insert>
   <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity">
@@ -55,7 +55,7 @@
       status = #{status,jdbcType=VARCHAR},
       current_period_start = #{currentPeriodStart,jdbcType=DATE},
       current_period_end = #{currentPeriodEnd,jdbcType=DATE},
-      auto_renew = #{autoRenew,jdbcType=BIT},
+      auto_renew = #{autoRenew,jdbcType=BOOLEAN},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where subscription_id = #{subscriptionId,jdbcType=VARCHAR}

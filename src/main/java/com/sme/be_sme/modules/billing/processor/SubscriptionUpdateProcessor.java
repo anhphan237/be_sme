@@ -60,16 +60,22 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
             if (StringUtils.hasText(request.getStatus())) {
                 entity.setStatus(request.getStatus().trim());
             }
+            String statusToUpdate = entity.getStatus() != null ? entity.getStatus() : "ACTIVE";
             Date updatedAt = new Date();
             entity.setUpdatedAt(updatedAt);
 
             int updated = subscriptionMapperExt.updatePlanAndStatus(
                     entity.getSubscriptionId(),
                     entity.getPlanId(),
-                    entity.getStatus(),
+                    statusToUpdate,
                     updatedAt);
             if (updated != 1) {
-                log.error("SubscriptionUpdateProcessor: updateByPrimaryKey returned {} for subscriptionId={}", updated, subscriptionId);
+                log.warn("SubscriptionUpdateProcessor: selective update returned {}, trying full update for subscriptionId={}", updated, subscriptionId);
+                entity.setStatus(statusToUpdate);
+                updated = subscriptionMapper.updateByPrimaryKey(entity);
+            }
+            if (updated != 1) {
+                log.error("SubscriptionUpdateProcessor: update failed (returned {}) for subscriptionId={}", updated, subscriptionId);
                 throw AppException.of(ErrorCodes.INTERNAL_ERROR, "update subscription failed");
             }
 
