@@ -66,6 +66,10 @@ public class SubscriptionCreateProcessor extends BaseBizProcessor<BizContext> {
         response.setSubscriptionId(entity.getSubscriptionId());
         response.setPlanCode(plan.getCode());
         response.setStatus(entity.getStatus());
+        response.setBillingCycle(entity.getBillingCycle());
+        response.setCurrentPeriodStart(entity.getCurrentPeriodStart());
+        response.setCurrentPeriodEnd(entity.getCurrentPeriodEnd());
+        response.setAutoRenew(entity.getAutoRenew());
         return response;
     }
 

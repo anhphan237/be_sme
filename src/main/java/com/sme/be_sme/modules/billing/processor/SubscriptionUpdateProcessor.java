@@ -14,6 +14,7 @@ import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -21,6 +22,7 @@ import java.util.Date;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
 
     private final ObjectMapper objectMapper;
@@ -30,41 +32,62 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
-        SubscriptionUpdateRequest request = objectMapper.convertValue(payload, SubscriptionUpdateRequest.class);
-        validate(context, request);
+        try {
+            SubscriptionUpdateRequest request = objectMapper.convertValue(payload, SubscriptionUpdateRequest.class);
+            validate(context, request);
 
-        SubscriptionEntity entity = subscriptionMapper.selectByPrimaryKey(request.getSubscriptionId().trim());
-        if (entity == null || !context.getTenantId().trim().equals(entity.getCompanyId())) {
-            throw AppException.of(ErrorCodes.NOT_FOUND, "subscription not found");
-        }
-
-        PlanEntity oldPlan = null;
-        if (StringUtils.hasText(entity.getPlanId())) {
-            oldPlan = planMapper.selectByPrimaryKey(entity.getPlanId());
-        }
-
-        if (StringUtils.hasText(request.getPlanCode())) {
-            PlanEntity newPlan = findPlanByCode(context.getTenantId().trim(), request.getPlanCode().trim());
-            if (newPlan == null) {
-                throw AppException.of(ErrorCodes.NOT_FOUND, "plan not found");
+            String subscriptionId = request.getSubscriptionId().trim();
+            SubscriptionEntity entity = subscriptionMapper.selectByPrimaryKey(subscriptionId);
+            if (entity == null || !context.getTenantId().trim().equals(entity.getCompanyId())) {
+                throw AppException.of(ErrorCodes.NOT_FOUND, "subscription not found");
             }
-            entity.setPlanId(newPlan.getPlanId());
-        }
 
-        if (StringUtils.hasText(request.getStatus())) {
-            entity.setStatus(request.getStatus().trim());
-        }
+            PlanEntity oldPlan = null;
+            if (StringUtils.hasText(entity.getPlanId())) {
+                oldPlan = planMapper.selectByPrimaryKey(entity.getPlanId());
+            }
 
-        entity.setUpdatedAt(new Date());
-        int updated = subscriptionMapper.updateByPrimaryKey(entity);
-        if (updated != 1) {
-            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "update subscription failed");
-        }
+            if (StringUtils.hasText(request.getPlanCode())) {
+                PlanEntity newPlan = findPlanByCode(context.getTenantId().trim(), request.getPlanCode().trim());
+                if (newPlan == null) {
+                    throw AppException.of(ErrorCodes.NOT_FOUND, "plan not found: " + request.getPlanCode());
+                }
+                entity.setPlanId(newPlan.getPlanId());
+            }
 
+            if (StringUtils.hasText(request.getStatus())) {
+                entity.setStatus(request.getStatus().trim());
+            }
+
+            entity.setUpdatedAt(new Date());
+            int updated = subscriptionMapper.updateByPrimaryKey(entity);
+            if (updated != 1) {
+                log.error("SubscriptionUpdateProcessor: updateByPrimaryKey returned {} for subscriptionId={}", updated, subscriptionId);
+                throw AppException.of(ErrorCodes.INTERNAL_ERROR, "update subscription failed");
+            }
+
+            SubscriptionResponse response = buildResponse(entity, request, oldPlan);
+
+            log.info("SubscriptionUpdateProcessor: updated subscription {} to plan {}", subscriptionId, resolvePlanCode(entity.getPlanId()));
+            return response;
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("SubscriptionUpdateProcessor: unexpected error - {}", e.getMessage(), e);
+            throw AppException.of(ErrorCodes.INTERNAL_ERROR,
+                    e.getMessage() != null && !e.getMessage().isBlank() ? e.getMessage() : "Failed to update subscription");
+        }
+    }
+
+    private SubscriptionResponse buildResponse(SubscriptionEntity entity, SubscriptionUpdateRequest request, PlanEntity oldPlan) {
         SubscriptionResponse response = new SubscriptionResponse();
         response.setSubscriptionId(entity.getSubscriptionId());
         response.setStatus(entity.getStatus());
         response.setPlanCode(resolvePlanCode(entity.getPlanId()));
+        response.setBillingCycle(entity.getBillingCycle());
+        response.setCurrentPeriodStart(entity.getCurrentPeriodStart());
+        response.setCurrentPeriodEnd(entity.getCurrentPeriodEnd());
+        response.setAutoRenew(entity.getAutoRenew());
 
         if (oldPlan != null && StringUtils.hasText(request.getPlanCode())) {
             PlanEntity newPlan = planMapper.selectByPrimaryKey(entity.getPlanId());

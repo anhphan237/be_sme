@@ -2,6 +2,8 @@ package com.sme.be_sme.modules.billing.infrastructure.gateway;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.shared.constant.ErrorCodes;
+import com.sme.be_sme.shared.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,11 +16,11 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import static com.sme.be_sme.modules.billing.infrastructure.gateway.PaymentGatewayPort.CreateIntentResult;
-import static com.sme.be_sme.modules.billing.infrastructure.gateway.PaymentGatewayPort.GATEWAY_MOCK;
 
 /**
  * Stripe payment gateway adapter. Creates PaymentIntent via Stripe API.
  * Set app.payment.gateway=stripe and app.stripe.secret-key=sk_xxx to enable.
+ * Does NOT fallback to mock - throws AppException when Stripe is unavailable.
  */
 @Component
 @ConditionalOnProperty(name = "app.payment.gateway", havingValue = "stripe")
@@ -37,19 +39,13 @@ public class StripePaymentGatewayAdapter implements PaymentGatewayPort {
     @Override
     public CreateIntentResult createIntent(String companyId, String invoiceId, Integer amountMinor, String currency) {
         if (!StringUtils.hasText(secretKey)) {
-            log.warn("Stripe secret key not set; returning mock result");
-            return mockResult(invoiceId);
+            log.error("Stripe secret key not set - cannot create payment intent. Set STRIPE_SECRET_KEY env var.");
+            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "Stripe is not configured. Set STRIPE_SECRET_KEY.");
         }
         String currencyLower = currency == null ? "vnd" : currency.trim().toLowerCase();
-        // Stripe amount is in cents (smallest unit). For VND, amount is already in VND units.
         long amount = amountMinor == null ? 0 : amountMinor.longValue();
         if (amount <= 0) {
-            return CreateIntentResult.builder()
-                    .gatewayName("stripe")
-                    .paymentIntentId(null)
-                    .clientSecret(null)
-                    .status("invalid_amount")
-                    .build();
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "Invoice amount must be positive");
         }
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -70,6 +66,10 @@ public class StripePaymentGatewayAdapter implements PaymentGatewayPort {
                 String piId = root.has("id") ? root.path("id").asText() : null;
                 String clientSecret = root.has("client_secret") ? root.path("client_secret").asText() : null;
                 String status = root.has("status") ? root.path("status").asText() : "unknown";
+                if (!StringUtils.hasText(clientSecret)) {
+                    log.error("Stripe returned no client_secret for invoice {}", invoiceId);
+                    throw AppException.of(ErrorCodes.INTERNAL_ERROR, "Stripe did not return client secret");
+                }
                 return CreateIntentResult.builder()
                         .gatewayName("stripe")
                         .paymentIntentId(piId)
@@ -77,19 +77,13 @@ public class StripePaymentGatewayAdapter implements PaymentGatewayPort {
                         .status(status)
                         .build();
             }
+            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "Stripe API returned " + response.getStatusCode());
+        } catch (AppException e) {
+            throw e;
         } catch (Exception e) {
-            log.warn("Stripe createIntent failed: {}", e.getMessage());
+            log.error("Stripe createIntent failed for invoice {}: {}", invoiceId, e.getMessage(), e);
+            throw AppException.of(ErrorCodes.INTERNAL_ERROR,
+                    "Stripe payment failed: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
         }
-        return mockResult(invoiceId);
-    }
-
-    private CreateIntentResult mockResult(String invoiceId) {
-        String fakeId = "pi_mock_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 24);
-        return CreateIntentResult.builder()
-                .gatewayName(GATEWAY_MOCK)
-                .paymentIntentId(fakeId)
-                .clientSecret("mock_secret_" + fakeId)
-                .status("REQUIRES_PAYMENT_METHOD")
-                .build();
     }
 }
