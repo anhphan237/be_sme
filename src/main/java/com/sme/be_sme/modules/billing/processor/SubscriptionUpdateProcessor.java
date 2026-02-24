@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.billing.api.request.SubscriptionUpdateRequest;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionResponse;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapperExt;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
 import com.sme.be_sme.modules.billing.service.ProrateService;
@@ -27,6 +28,7 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
 
     private final ObjectMapper objectMapper;
     private final SubscriptionMapper subscriptionMapper;
+    private final SubscriptionMapperExt subscriptionMapperExt;
     private final PlanMapper planMapper;
     private final ProrateService prorateService;
 
@@ -58,9 +60,14 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
             if (StringUtils.hasText(request.getStatus())) {
                 entity.setStatus(request.getStatus().trim());
             }
+            Date updatedAt = new Date();
+            entity.setUpdatedAt(updatedAt);
 
-            entity.setUpdatedAt(new Date());
-            int updated = subscriptionMapper.updateByPrimaryKey(entity);
+            int updated = subscriptionMapperExt.updatePlanAndStatus(
+                    entity.getSubscriptionId(),
+                    entity.getPlanId(),
+                    entity.getStatus(),
+                    updatedAt);
             if (updated != 1) {
                 log.error("SubscriptionUpdateProcessor: updateByPrimaryKey returned {} for subscriptionId={}", updated, subscriptionId);
                 throw AppException.of(ErrorCodes.INTERNAL_ERROR, "update subscription failed");

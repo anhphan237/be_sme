@@ -37,9 +37,9 @@ app:
   jwt:
     hmacSecret: ${JWT_HMAC_SECRET}
     accessTtlSeconds: 3600
-  # payment gateway: mock | stripe
+  # payment gateway: stripe | mock (default stripe for real payments; set mock for local dev)
   payment:
-    gateway: ${PAYMENT_GATEWAY:mock}
+    gateway: ${PAYMENT_GATEWAY:stripe}
   # e-invoice provider: mock (replace with real provider when integrating)
   einvoice:
     provider: ${EINVOICE_PROVIDER:mock}
