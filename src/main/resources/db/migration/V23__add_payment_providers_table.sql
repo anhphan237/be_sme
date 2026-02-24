@@ -16,10 +16,10 @@ CREATE INDEX IF NOT EXISTS idx_payment_providers_company ON payment_providers(co
 ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS currency VARCHAR(10);
 
 -- Seed default permission rows for new payment operations
-INSERT INTO permissions (permission_id, code, description, module, created_at)
+INSERT INTO permissions (permission_id, code, description, created_at)
 VALUES
-    (gen_random_uuid()::text, 'com.sme.billing.payment.connect', 'Connect payment provider', 'billing', now()),
-    (gen_random_uuid()::text, 'com.sme.billing.payment.providers', 'List payment providers', 'billing', now()),
-    (gen_random_uuid()::text, 'com.sme.billing.payment.status', 'Get payment status', 'billing', now()),
-    (gen_random_uuid()::text, 'com.sme.billing.payment.transactions', 'List payment transactions', 'billing', now())
+    (gen_random_uuid()::text, 'com.sme.billing.payment.connect', 'Connect payment provider', now()),
+    (gen_random_uuid()::text, 'com.sme.billing.payment.providers', 'List payment providers', now()),
+    (gen_random_uuid()::text, 'com.sme.billing.payment.status', 'Get payment status', now()),
+    (gen_random_uuid()::text, 'com.sme.billing.payment.transactions', 'List payment transactions', now())
 ON CONFLICT DO NOTHING;
