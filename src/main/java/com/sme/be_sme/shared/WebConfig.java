@@ -32,8 +32,10 @@ public class WebConfig implements WebMvcConfigurer {
             patterns = List.of("http://localhost:5173", "http://localhost:3000", "https://*.vercel.app");
         }
 
+        // "*" = allow any origin (useful for dev/staging)
+        String[] patternArr = patterns.toArray(new String[0]);
         registry.addMapping("/api/**")
-                .allowedOriginPatterns(patterns.toArray(new String[0]))
+                .allowedOriginPatterns(patternArr.length > 0 ? patternArr : new String[]{"*"})
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                 .allowedHeaders("Authorization", "Content-Type", "Accept")
                 .exposedHeaders("Authorization")

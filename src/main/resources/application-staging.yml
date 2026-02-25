@@ -1,0 +1,4 @@
+# Staging profile - permissive CORS for frontend (Vercel preview, etc.)
+app:
+  cors:
+    allowed-origins: "*"
