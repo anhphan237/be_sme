@@ -37,9 +37,9 @@ mybatis:
   mapper-locations: classpath*:mybatis/**/*.xml
 
 app:
-  # CORS: comma-separated origins. Include exact Vercel URL + pattern.
+  # CORS: use * for dev/staging (allow all). Set CORS_ALLOWED_ORIGINS to restrict in prod.
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,https://fe-sme.vercel.app,https://*.vercel.app}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
   jwt:
     hmacSecret: ${JWT_HMAC_SECRET}
     accessTtlSeconds: 3600
