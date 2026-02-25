@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.onboarding.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.billing.service.CompanyRegistrationSubscriptionService;
 import com.sme.be_sme.modules.company.context.CompanySetupContext;
 import com.sme.be_sme.modules.onboarding.api.request.CompanySetupRequest;
 import com.sme.be_sme.modules.onboarding.api.response.CompanySetupResponse;
@@ -25,6 +26,7 @@ public class CompanySetupProcessor extends BaseCoreProcessor<CompanySetupContext
     private final CompanySetupCreateAdminUserCoreProcessor createAdminUser;
     private final CompanySetupUpsertAdminProfileCoreProcessor upsertProfile;
     private final CompanySetupAssignAdminRoleCoreProcessor assignRole;
+    private final CompanyRegistrationSubscriptionService subscriptionService;
 
     @Override
     protected CompanySetupContext buildContext(BizContext biz, JsonNode payload) {
@@ -43,6 +45,7 @@ public class CompanySetupProcessor extends BaseCoreProcessor<CompanySetupContext
         validate.processWith(ctx);
 
         createCompany.processWith(ctx);
+        subscriptionService.createFreeSubscriptionForCompany(ctx.getCompany().getCompanyId());
         createDepartment.processWith(ctx);
         createAdminUser.processWith(ctx);
         upsertProfile.processWith(ctx);

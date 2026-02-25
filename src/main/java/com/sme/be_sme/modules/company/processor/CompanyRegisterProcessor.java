@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.company.api.request.CompanyRegisterRequest;
 import com.sme.be_sme.modules.company.api.response.CompanyRegisterResponse;
 import com.sme.be_sme.modules.company.context.CompanyRegisterContext;
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterAssignAdminRoleCoreProcessor;
+import com.sme.be_sme.modules.billing.service.CompanyRegistrationSubscriptionService;
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterCheckDupCoreProcessor;
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterCreateAdminUserCoreProcessor;
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterCreateCompanyCoreProcessor;
@@ -38,6 +39,7 @@ public class CompanyRegisterProcessor extends BaseCoreProcessor<CompanyRegisterC
     private final CompanyRegisterCreateDefaultRolesCoreProcessor createDefaultRoles;
     private final CompanyRegisterSeedRolePermissionsCoreProcessor seedRolePermissions;
     private final CompanyRegisterAssignAdminRoleCoreProcessor assignAdminRole;
+    private final CompanyRegistrationSubscriptionService subscriptionService;
 
     @Override
     protected CompanyRegisterContext buildContext(BizContext biz, JsonNode payload) {
@@ -56,6 +58,7 @@ public class CompanyRegisterProcessor extends BaseCoreProcessor<CompanyRegisterC
         validate.processWith(ctx);
         checkDup.processWith(ctx);
         createCompany.processWith(ctx);
+        subscriptionService.createFreeSubscriptionForCompany(ctx.getCompanyId());
         createAdminUser.processWith(ctx);
         createDefaultRoles.processWith(ctx);
         seedRolePermissions.processWith(ctx);
