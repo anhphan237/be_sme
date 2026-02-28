@@ -21,6 +21,9 @@ public class CompanyRegisterValidateCoreProcessor extends BaseCoreProcessor<Comp
         if (req.getAdmin() == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "admin is required");
         }
+        if (req.getPlanCode() == null || req.getPlanCode().isBlank()) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "planCode is required");
+        }
 
         CompanyRegisterRequest.CompanyInfo company = req.getCompany();
         company.setName(normalize(company.getName()));

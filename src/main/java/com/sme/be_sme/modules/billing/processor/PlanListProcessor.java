@@ -7,8 +7,6 @@ import com.sme.be_sme.modules.billing.api.response.PlanListResponse;
 import com.sme.be_sme.modules.billing.api.response.PlanSummaryResponse;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
-import com.sme.be_sme.shared.constant.ErrorCodes;
-import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import java.util.Comparator;
@@ -30,15 +28,16 @@ public class PlanListProcessor extends BaseBizProcessor<BizContext> {
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
         PlanListRequest request = objectMapper.convertValue(payload, PlanListRequest.class);
-        validate(context);
 
-        String companyId = context.getTenantId().trim();
+        String companyId = context != null && StringUtils.hasText(context.getTenantId()) ? context.getTenantId().trim() : null;
         String status = request == null ? null : request.getStatus();
-        String statusNormalized = status == null ? null : status.trim().toLowerCase(Locale.ROOT);
+        String statusNormalized = (status == null || status.isBlank()) ? null : status.trim().toLowerCase(Locale.ROOT);
 
         List<PlanSummaryResponse> plans = planMapper.selectAll().stream()
                 .filter(Objects::nonNull)
-                .filter(plan -> companyId.equals(plan.getCompanyId()) || plan.getCompanyId() == null)
+                .filter(plan -> companyId == null
+                        ? !StringUtils.hasText(plan.getCompanyId())
+                        : (companyId.equals(plan.getCompanyId()) || !StringUtils.hasText(plan.getCompanyId())))
                 .filter(plan -> !StringUtils.hasText(statusNormalized)
                         || (plan.getStatus() != null && plan.getStatus().trim().toLowerCase(Locale.ROOT).equals(statusNormalized)))
                 .sorted(Comparator.comparing(p -> p.getPriceVndMonthly() == null ? Integer.MAX_VALUE : p.getPriceVndMonthly()))
@@ -48,12 +47,6 @@ public class PlanListProcessor extends BaseBizProcessor<BizContext> {
         PlanListResponse response = new PlanListResponse();
         response.setPlans(plans);
         return response;
-    }
-
-    private static void validate(BizContext context) {
-        if (context == null || !StringUtils.hasText(context.getTenantId())) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
-        }
     }
 
     private PlanSummaryResponse toSummary(PlanEntity entity) {

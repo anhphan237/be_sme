@@ -103,7 +103,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"operationType\": \"com.sme.company.register\",\n    \"requestId\": \"req-company-register-001\",\n    \"tenantId\": null,\n    \"payload\": {\n        \"company\": {\n            \"name\": \"Acme Corporation 004\",\n            \"taxCode\": \"ACME-004\",\n            \"address\": \"123 Main Street\",\n            \"timezone\": \"Asia/Ho_Chi_Minh\"\n        },\n        \"admin\": {\n            \"username\": \"admin004@acme.com\",\n            \"password\": \"123\",\n            \"fullName\": \"Acme Admin\",\n            \"phone\": \"0900000000\"\n        }\n    }\n}",
+              "raw": "{\n    \"operationType\": \"com.sme.company.register\",\n    \"requestId\": \"req-company-register-001\",\n    \"tenantId\": null,\n    \"payload\": {\n        \"company\": {\n            \"name\": \"Acme Corporation 004\",\n            \"taxCode\": \"ACME-004\",\n            \"address\": \"123 Main Street\",\n            \"timezone\": \"Asia/Ho_Chi_Minh\"\n        },\n        \"admin\": {\n            \"username\": \"admin004@acme.com\",\n            \"password\": \"123\",\n            \"fullName\": \"Acme Admin\",\n            \"phone\": \"0900000000\"\n        },\n        \"planCode\": \"FREE\"\n    }\n}",
               "options": {
                 "raw": {
                   "language": "json"

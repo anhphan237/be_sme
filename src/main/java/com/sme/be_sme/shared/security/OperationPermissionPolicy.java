@@ -13,6 +13,7 @@ public class OperationPermissionPolicy {
             "com.sme.identity.auth.checkEmailExists",
             "com.sme.onboarding.company.setup",
             "com.sme.company.register",
+            "com.sme.billing.plan.list",
             // Allow task list for employees (also checked in PermissionService for EMPLOYEE)
             "com.sme.onboarding.task.listByOnboarding"
     );
