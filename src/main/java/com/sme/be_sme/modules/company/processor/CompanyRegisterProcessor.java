@@ -58,7 +58,7 @@ public class CompanyRegisterProcessor extends BaseCoreProcessor<CompanyRegisterC
         validate.processWith(ctx);
         checkDup.processWith(ctx);
         createCompany.processWith(ctx);
-        subscriptionService.createFreeSubscriptionForCompany(ctx.getCompanyId());
+        subscriptionService.createSubscriptionForCompany(ctx.getCompanyId(), ctx.getRequest().getPlanCode());
         createAdminUser.processWith(ctx);
         createDefaultRoles.processWith(ctx);
         seedRolePermissions.processWith(ctx);

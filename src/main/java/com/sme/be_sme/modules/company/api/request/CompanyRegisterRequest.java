@@ -8,6 +8,8 @@ import lombok.Setter;
 public class CompanyRegisterRequest {
     private CompanyInfo company;
     private AdminInfo admin;
+    /** Plan code for initial subscription (e.g. FREE, BASIC). Must be a valid global plan from plan list. */
+    private String planCode;
 
     @Getter
     @Setter
