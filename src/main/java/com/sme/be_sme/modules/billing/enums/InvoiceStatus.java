@@ -11,7 +11,6 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum InvoiceStatus {
 
-    DRAFT("DRAFT", "Draft, not yet issued"),
     ISSUED("ISSUED", "Issued, awaiting payment"),
     PAID("PAID", "Payment successful"),
     VOID("VOID", "Voided / cancelled");
