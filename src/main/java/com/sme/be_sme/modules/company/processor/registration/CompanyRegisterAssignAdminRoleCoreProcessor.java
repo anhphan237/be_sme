@@ -17,7 +17,7 @@ import com.sme.be_sme.shared.util.UuidGenerator;
 @RequiredArgsConstructor
 public class CompanyRegisterAssignAdminRoleCoreProcessor extends BaseCoreProcessor<CompanyRegisterContext> {
 
-    private static final String ADMIN_ROLE_CODE = "ADMIN";
+    private static final String ADMIN_ROLE_CODE = "HR";
 
     private final RoleMapper roleMapper;
     private final UserRoleMapper userRoleMapper;
