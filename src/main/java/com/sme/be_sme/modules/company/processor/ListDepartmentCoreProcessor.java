@@ -20,7 +20,7 @@ public class ListDepartmentCoreProcessor
     @Override
     protected Object process(ListDepartmentContext ctx) {
         String tenantId = ctx.getBiz().getTenantId();
-        String status = ctx.getRequest().getStatus();
+        String status = ctx.getRequest() != null ? ctx.getRequest().getStatus() : null;
 
         List<DepartmentEntity> entities =
                 (status == null || status.isBlank())

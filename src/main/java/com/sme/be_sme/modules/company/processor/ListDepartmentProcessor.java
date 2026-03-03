@@ -22,8 +22,12 @@ public class ListDepartmentProcessor extends BaseCoreProcessor<ListDepartmentCon
     @Override
     protected ListDepartmentContext buildContext(BizContext biz, JsonNode payload) {
         ListDepartmentRequest req =
-                payload == null ? new ListDepartmentRequest()
+                (payload == null || payload.isNull())
+                        ? new ListDepartmentRequest()
                         : objectMapper.convertValue(payload, ListDepartmentRequest.class);
+        if (req == null) {
+            req = new ListDepartmentRequest();
+        }
 
         ListDepartmentContext ctx = new ListDepartmentContext();
         ctx.setBiz(biz);
