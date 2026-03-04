@@ -8,8 +8,12 @@ import java.util.Optional;
 public interface UserRepository {
     List<UserEntity> findByCompanyId(String companyId);
     Optional<UserEntity> findById(String companyId, String userId);
+
+    Optional<UserEntity> findByUserId(String userId);
     Optional<UserEntity> findByCompanyIdAndEmail(String companyId, String email);
     Optional<UserEntity> findByEmail(String email);
+
+    Optional<UserEntity> findByLowerEmail(String email);
     void insert(UserEntity entity);
     void update(UserEntity entity);
 }

@@ -4,6 +4,7 @@ import com.sme.be_sme.modules.employee.api.request.UpsertEmployeeProfileRequest;
 import com.sme.be_sme.modules.employee.api.response.UpsertEmployeeProfileResponse;
 import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
+import com.sme.be_sme.modules.employee.service.EmployeeCodeGeneratorService;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BizContext;
@@ -18,6 +19,7 @@ import java.util.Date;
 public class UpsertEmployeeProfileProcessor {
 
     private final EmployeeProfileMapperExt employeeProfileMapperExt;
+    private final EmployeeCodeGeneratorService employeeCodeGeneratorService;
 
     public UpsertEmployeeProfileResponse process(BizContext ctx, UpsertEmployeeProfileRequest req) {
         if (ctx == null || ctx.getTenantId() == null || ctx.getTenantId().isBlank()) {
@@ -35,13 +37,17 @@ public class UpsertEmployeeProfileProcessor {
                 employeeProfileMapperExt.selectByCompanyIdAndUserId(companyId, req.getUserId());
 
         if (existing == null) {
+            String employeeCode = (req.getEmployeeCode() != null && !req.getEmployeeCode().isBlank())
+                    ? req.getEmployeeCode().trim()
+                    : employeeCodeGeneratorService.generate(companyId);
+
             EmployeeProfileEntity e = new EmployeeProfileEntity();
             e.setEmployeeId(UuidGenerator.generate());
             e.setCompanyId(companyId);
             e.setUserId(req.getUserId());
 
             e.setDepartmentId(req.getDepartmentId());
-            e.setEmployeeCode(req.getEmployeeCode());
+            e.setEmployeeCode(employeeCode);
             e.setEmployeeName(req.getEmployeeName());
             e.setEmployeeEmail(req.getEmployeeEmail());
             e.setEmployeePhone(req.getEmployeePhone());

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.identity.invite.infrastructure.mapper.UserInviteTokenMapper">
+
+    <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.identity.invite.infrastructure.entity.UserInviteTokenEntity">
+        <id column="invite_token_id" jdbcType="VARCHAR" property="inviteTokenId"/>
+        <result column="user_id" jdbcType="VARCHAR" property="userId"/>
+        <result column="token_hash" jdbcType="VARCHAR" property="tokenHash"/>
+        <result column="expires_at" jdbcType="TIMESTAMP" property="expiresAt"/>
+        <result column="created_at" jdbcType="TIMESTAMP" property="createdAt"/>
+        <result column="used_at" jdbcType="TIMESTAMP" property="usedAt"/>
+    </resultMap>
+
+    <insert id="insert">
+        insert into user_invite_tokens (invite_token_id, user_id, token_hash, expires_at, created_at, used_at)
+        values (#{inviteTokenId}, #{userId}, #{tokenHash}, #{expiresAt}, #{createdAt}, #{usedAt})
+    </insert>
+
+    <select id="selectByTokenHash" resultMap="BaseResultMap">
+        select invite_token_id, user_id, token_hash, expires_at, created_at, used_at
+        from user_invite_tokens
+        where token_hash = #{tokenHash}
+        limit 1
+    </select>
+
+    <update id="markUsed">
+        update user_invite_tokens
+        set used_at = #{usedAt}
+        where invite_token_id = #{inviteTokenId}
+    </update>
+</mapper>

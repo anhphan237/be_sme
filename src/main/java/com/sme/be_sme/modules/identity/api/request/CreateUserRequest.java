@@ -23,6 +23,11 @@ public class CreateUserRequest {
      * User (users table)
      * ========================= */
     private String email;
+
+    /**
+     * Optional. If provided: user is created ACTIVE with this password.
+     * If omitted: user is created PENDING, invite email with set-password link is sent.
+     */
     private String password;
 
     private String fullName;

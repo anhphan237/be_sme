@@ -38,11 +38,14 @@ public class CreateCompanyProcessor extends BaseBizProcessor<BizContext> {
                 ? request.getCompanyId()
                 : UUID.randomUUID().toString();
 
+        String companyCode = deriveCompanyCode(request.getCode(), request.getName(), companyId);
+
         Date now = new Date();
         CompanyEntity entity = new CompanyEntity();
         entity.setCompanyId(companyId);
         entity.setName(request.getName());
         entity.setTaxCode(request.getTaxCode());
+        entity.setCode(companyCode);
         entity.setAddress(request.getAddress());
         entity.setTimezone(request.getTimezone() == null ? "Asia/Ho_Chi_Minh" : request.getTimezone());
         entity.setStatus(request.getStatus() == null ? "ACTIVE" : request.getStatus());
@@ -56,6 +59,24 @@ public class CreateCompanyProcessor extends BaseBizProcessor<BizContext> {
         res.setName(entity.getName());
         res.setStatus(entity.getStatus());
         return res;
+    }
+
+    private static String deriveCompanyCode(String code, String name, String companyId) {
+        String raw = null;
+        if (code != null && !code.isBlank()) {
+            raw = code.replaceAll("[^a-zA-Z0-9]", "").toUpperCase();
+        }
+        if ((raw == null || raw.isEmpty()) && name != null && !name.isBlank()) {
+            raw = name.replaceAll("[^a-zA-Z0-9]", "").toUpperCase();
+        }
+        if ((raw == null || raw.isEmpty()) && companyId != null && companyId.length() >= 3) {
+            raw = companyId.substring(0, 3).toUpperCase().replaceAll("[^A-Z0-9]", "");
+        }
+        if (raw == null || raw.isEmpty()) {
+            raw = "CMP";
+        }
+        return String.format("%-3s", raw.length() >= 3 ? raw.substring(0, 3) : raw)
+                .replace(' ', 'A').substring(0, 3);
     }
 
 }

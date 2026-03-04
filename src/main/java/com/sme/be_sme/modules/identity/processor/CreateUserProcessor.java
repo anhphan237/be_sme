@@ -35,27 +35,28 @@ public class CreateUserProcessor extends BaseBizProcessor<BizContext> {
         if (request == null || request.getEmail() == null || request.getEmail().isBlank()) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "email is required");
         }
-        if (request.getPassword() == null || request.getPassword().isBlank()) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "password is required");
-        }
 
         BizContext safeContext = context == null ? BizContext.of(null, null, null) : context;
         String companyId = resolveCompanyId(safeContext.getTenantId(), request);
 
-        userService.findByCompanyIdAndEmail(companyId, request.getEmail())
+        // Check global uniqueness (DB constraint uq_users_lower_email is case-insensitive)
+        userService.findByLowerEmail(request.getEmail().trim())
                 .ifPresent(user -> {
-                    throw AppException.of(ErrorCodes.BAD_REQUEST, "email already exists");
+                    throw AppException.of(ErrorCodes.DUPLICATED, "Email đã tồn tại trong hệ thống");
                 });
 
+        boolean hasPassword = request.getPassword() != null && !request.getPassword().isBlank();
         Date now = new Date();
         UserEntity entity = new UserEntity();
         entity.setUserId(UuidGenerator.generate());
         entity.setCompanyId(companyId);
         entity.setEmail(request.getEmail());
-        entity.setPasswordHash(passwordHasher.hash(request.getPassword()));
+        entity.setPasswordHash(hasPassword ? passwordHasher.hash(request.getPassword()) : null);
         entity.setFullName(request.getFullName());
         entity.setPhone(request.getPhone());
-        entity.setStatus(request.getStatus() == null ? "ACTIVE" : request.getStatus());
+        entity.setStatus(
+                request.getStatus() != null ? request.getStatus()
+                        : (hasPassword ? "ACTIVE" : "PENDING"));
         entity.setLastLoginAt(null);
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);

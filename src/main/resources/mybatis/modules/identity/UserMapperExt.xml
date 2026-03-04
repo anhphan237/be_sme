@@ -56,6 +56,13 @@
             limit 1
     </select>
 
+    <select id="selectByLowerEmail" resultMap="BaseResultMap">
+        select *
+        from users
+        where lower(email) = lower(#{email})
+        limit 1
+    </select>
+
     <select id="countByEmail" resultType="int">
         select count(1)
         from users

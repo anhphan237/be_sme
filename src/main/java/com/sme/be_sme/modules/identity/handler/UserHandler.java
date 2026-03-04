@@ -26,8 +26,16 @@ public class UserHandler {
         return userRepository.findByEmail(email);
     }
 
+    public Optional<UserEntity> findByLowerEmail(String email) {
+        return userRepository.findByLowerEmail(email);
+    }
+
     public Optional<UserEntity> findById(String companyId, String userId) {
         return userRepository.findById(companyId, userId);
+    }
+
+    public Optional<UserEntity> findByUserId(String userId) {
+        return userRepository.findByUserId(userId);
     }
 
     public void create(UserEntity entity) {

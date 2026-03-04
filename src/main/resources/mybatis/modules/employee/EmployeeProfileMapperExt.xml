@@ -71,4 +71,16 @@
         WHERE company_id = #{companyId}
           AND user_id = #{userId}
     </update>
+
+    <select id="getNextEmployeeSequence" resultType="int">
+        SELECT COALESCE(MAX(
+            CASE
+                WHEN employee_code ~ '^\[.+\]\d+$' THEN
+                    CAST(SUBSTRING(employee_code FROM '(\d+)$') AS INTEGER)
+                ELSE 0
+            END
+        ), 0) + 1
+        FROM employee_profiles
+        WHERE company_id = #{companyId}
+    </select>
 </mapper>

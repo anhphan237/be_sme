@@ -9,6 +9,8 @@ public class CreateCompanyRequest {
     private String companyId;
     private String name;
     private String taxCode;
+    /** Company code (3 chars) for employee format [ABC]000001. Optional. */
+    private String code;
     private String address;
     private String timezone;
     private String status;

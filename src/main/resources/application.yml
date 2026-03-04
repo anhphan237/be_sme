@@ -43,6 +43,9 @@ app:
   jwt:
     hmacSecret: ${JWT_HMAC_SECRET}
     accessTtlSeconds: 3600
+  invite:
+    base-url: ${INVITE_BASE_URL:http://localhost:3000}
+    token-ttl-hours: ${INVITE_TOKEN_TTL_HOURS:72}
   # payment gateway: stripe | mock (default stripe for real payments; set mock for local dev)
   payment:
     gateway: ${PAYMENT_GATEWAY:stripe}
