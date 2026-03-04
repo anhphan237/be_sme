@@ -1,0 +1,448 @@
+{
+	"info": {
+		"_postman_id": "task-detail-collection",
+		"name": "SME - Get Task Detail",
+		"description": "Postman collection for testing the Get Task Detail API endpoint",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "1"
+	},
+	"item": [
+		{
+			"name": "Get Task Detail",
+			"item": [
+				{
+					"name": "1. Get Task Detail (Basic - All Includes)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.detail\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"taskId\": \"{{task_instance_id}}\",\n        \"includeComments\": true,\n        \"includeAttachments\": true,\n        \"includeActivityLogs\": true\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Get full task detail including comments, attachments, and activity logs"
+					},
+					"response": []
+				},
+				{
+					"name": "2. Get Task Detail (Only Task Info)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.detail\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"taskId\": \"{{task_instance_id}}\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Get task detail without comments, attachments, or activity logs (default behavior)"
+					},
+					"response": []
+				},
+				{
+					"name": "3. Get Task Detail (Comments Only)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.detail\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"taskId\": \"{{task_instance_id}}\",\n        \"includeComments\": true\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Get task detail with comments only"
+					},
+					"response": []
+				},
+				{
+					"name": "4. Get Task Detail (Attachments Only)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.detail\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"taskId\": \"{{task_instance_id}}\",\n        \"includeAttachments\": true\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Get task detail with attachments only"
+					},
+					"response": []
+				},
+				{
+					"name": "5. Get Task Detail (Activity Logs Only)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.detail\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"taskId\": \"{{task_instance_id}}\",\n        \"includeActivityLogs\": true\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Get task detail with activity logs only"
+					},
+					"response": []
+				},
+				{
+					"name": "6. Get Task Detail (Comments and Attachments)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.detail\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"taskId\": \"{{task_instance_id}}\",\n        \"includeComments\": true,\n        \"includeAttachments\": true\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Get task detail with comments and attachments"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Error Cases",
+			"item": [
+				{
+					"name": "Task Not Found",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.detail\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"taskId\": \"non-existent-task-id\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Test error case: task ID does not exist"
+					},
+					"response": []
+				},
+				{
+					"name": "Missing taskId",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.detail\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {\n        \"includeComments\": true\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Test error case: taskId is missing (should fail validation)"
+					},
+					"response": []
+				},
+				{
+					"name": "Empty Payload",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operationType\": \"com.sme.onboarding.task.detail\",\n    \"requestId\": \"{{$randomUUID}}\",\n    \"payload\": {}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/gateway",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"gateway"
+							]
+						},
+						"description": "Test error case: empty payload (should fail validation)"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"pm.test(\"Response is JSON\", function () {",
+					"    pm.response.to.be.json;",
+					"});",
+					"",
+					"pm.test(\"Response has success property\", function () {",
+					"    var jsonData = pm.response.json();",
+					"    pm.expect(jsonData).to.have.property('success');",
+					"});",
+					"",
+					"// Store task instance ID for chaining tests",
+					"pm.test(\"Store task data\", function () {",
+					"    var jsonData = pm.response.json();",
+					"    if (jsonData.success && jsonData.payload) {",
+					"        pm.collectionVariables.set(\"task_title\", jsonData.payload.title);",
+					"        pm.collectionVariables.set(\"task_status\", jsonData.payload.status);",
+					"    }",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "task_instance_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "task_title",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "task_status",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
