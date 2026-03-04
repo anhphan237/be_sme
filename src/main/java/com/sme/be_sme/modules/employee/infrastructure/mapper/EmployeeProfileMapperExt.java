@@ -22,5 +22,11 @@ public interface EmployeeProfileMapperExt {
             @Param("status") String status,
             @Param("updatedAt") Date updatedAt
     );
+
+    /**
+     * Returns next employee sequence (1-based) for format [XXX]NNNNNN.
+     * Scans existing employee_code values ending with digits after ']'.
+     */
+    int getNextEmployeeSequence(@Param("companyId") String companyId);
 }
 

@@ -50,6 +50,10 @@ public class IdentityLoginProcessor extends BaseBizProcessor<BizContext> {
         String companyId = user.getCompanyId();
 
         if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            if ("PENDING".equalsIgnoreCase(user.getStatus())) {
+                throw AppException.of(ErrorCodes.FORBIDDEN,
+                        "Account not activated. Please use the invite link in your email to set your password.");
+            }
             throw AppException.of(ErrorCodes.FORBIDDEN, "user is inactive");
         }
 

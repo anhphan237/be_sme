@@ -38,6 +38,16 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    public Optional<UserEntity> findByLowerEmail(String email) {
+        return Optional.ofNullable(userMapperExt.selectByLowerEmail(email));
+    }
+
+    @Override
+    public Optional<UserEntity> findByUserId(String userId) {
+        return Optional.ofNullable(userMapper.selectByPrimaryKey(userId));
+    }
+
+    @Override
     public void insert(UserEntity entity) {
         userMapper.insert(entity);
     }

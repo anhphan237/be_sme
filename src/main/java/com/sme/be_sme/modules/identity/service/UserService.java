@@ -26,12 +26,20 @@ public class UserService {
         return userHandler.findByEmail(email);
     }
 
+    public Optional<UserEntity> findByLowerEmail(String email) {
+        return userHandler.findByLowerEmail(email);
+    }
+
     public void createUser(UserEntity entity) {
         userHandler.create(entity);
     }
 
     public Optional<UserEntity> findById(String companyId, String userId) {
         return userHandler.findById(companyId, userId);
+    }
+
+    public Optional<UserEntity> findByUserId(String userId) {
+        return userHandler.findByUserId(userId);
     }
 
     public void updateUser(UserEntity entity) {

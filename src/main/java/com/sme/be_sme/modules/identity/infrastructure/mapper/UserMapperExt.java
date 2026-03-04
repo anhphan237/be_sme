@@ -18,6 +18,8 @@ public interface UserMapperExt {
 
     UserEntity selectByEmail(@Param("email") String email);
 
+    UserEntity selectByLowerEmail(@Param("email") String email);
+
     int countActiveByCompanyIdAndUserId(
             @Param("companyId") String companyId,
             @Param("userId") String userId
