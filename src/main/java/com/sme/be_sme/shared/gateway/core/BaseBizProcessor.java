@@ -6,6 +6,7 @@ public abstract class BaseBizProcessor<C extends BizContext> implements Operatio
 
     @Override
     public Object execute(BizContext context) {
+        BizContext previous = BizContextHolder.get();
         BizContextHolder.set(context);
         try {
             @SuppressWarnings("unchecked")
@@ -20,7 +21,7 @@ public abstract class BaseBizProcessor<C extends BizContext> implements Operatio
 
             return result;
         } finally {
-            BizContextHolder.clear();
+            BizContextHolder.set(previous);
         }
     }
 
