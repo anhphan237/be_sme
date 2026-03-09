@@ -42,7 +42,7 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
   jwt:
     hmacSecret: ${JWT_HMAC_SECRET}
-    accessTtlSeconds: 3600
+    accessTtlSeconds: 86400  # 1 day
   invite:
     base-url: ${INVITE_BASE_URL:http://localhost:3000}
     token-ttl-hours: ${INVITE_TOKEN_TTL_HOURS:72}
