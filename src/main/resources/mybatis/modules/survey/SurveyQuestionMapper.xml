@@ -62,10 +62,7 @@
     #{content, jdbcType=VARCHAR},
     #{required, jdbcType=BOOLEAN},
     #{sortOrder, jdbcType=INTEGER},
-    CASE
-    WHEN #{optionsJson} IS NULL THEN NULL
-    ELSE CAST(#{optionsJson} AS jsonb)
-    END,
+    CAST(#{optionsJson, jdbcType=VARCHAR} AS jsonb),
     #{dimensionCode, jdbcType=VARCHAR},
     #{measurable, jdbcType=BOOLEAN},
     #{scaleMin, jdbcType=INTEGER},
