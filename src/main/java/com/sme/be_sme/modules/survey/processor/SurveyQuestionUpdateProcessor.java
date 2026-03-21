@@ -3,7 +3,7 @@ package com.sme.be_sme.modules.survey.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.survey.api.request.SurveyQuestionUpdateRequest;
-import com.sme.be_sme.modules.survey.api.response.SurveyQuestionUpdateResponse;
+import com.sme.be_sme.modules.survey.api.response.SurveyQuestionResponse;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyQuestionMapper;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyQuestionEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -24,7 +24,6 @@ public class SurveyQuestionUpdateProcessor extends BaseBizProcessor<BizContext> 
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
-
         SurveyQuestionUpdateRequest req =
                 objectMapper.convertValue(payload, SurveyQuestionUpdateRequest.class);
 
@@ -34,17 +33,21 @@ public class SurveyQuestionUpdateProcessor extends BaseBizProcessor<BizContext> 
         if (existed == null || !context.getTenantId().equals(existed.getCompanyId())) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey question not found");
         }
-
         if (StringUtils.hasText(req.getContent())) existed.setContent(req.getContent().trim());
         if (req.getRequired() != null) existed.setRequired(req.getRequired());
         if (req.getSortOrder() != null) existed.setSortOrder(req.getSortOrder());
-
         if (req.getDimensionCode() != null) existed.setDimensionCode(req.getDimensionCode());
         if (req.getMeasurable() != null) existed.setMeasurable(req.getMeasurable());
         if (req.getScaleMin() != null) existed.setScaleMin(req.getScaleMin());
         if (req.getScaleMax() != null) existed.setScaleMax(req.getScaleMax());
 
-        if (req.getOptionsJson() != null) existed.setOptionsJson(req.getOptionsJson());
+        try {
+            if (req.getOptionsJson() != null) {
+                existed.setOptionsJson(objectMapper.writeValueAsString(req.getOptionsJson()));
+            }
+        } catch (Exception e) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid optionsJson");
+        }
 
         existed.setUpdatedAt(new Date());
 
@@ -53,7 +56,7 @@ public class SurveyQuestionUpdateProcessor extends BaseBizProcessor<BizContext> 
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "update survey question failed");
         }
 
-        SurveyQuestionUpdateResponse res = new SurveyQuestionUpdateResponse();
+        SurveyQuestionResponse res = new SurveyQuestionResponse();
         res.setQuestionId(existed.getSurveyQuestionId());
         res.setTemplateId(existed.getSurveyTemplateId());
         res.setType(existed.getType());
