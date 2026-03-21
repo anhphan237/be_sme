@@ -35,7 +35,6 @@ public class SurveyQuestionUpdateProcessor extends BaseBizProcessor<BizContext> 
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey question not found");
         }
 
-        // Update only fields you allow (giữ templateId/type như cũ)
         if (StringUtils.hasText(req.getContent())) existed.setContent(req.getContent().trim());
         if (req.getRequired() != null) existed.setRequired(req.getRequired());
         if (req.getSortOrder() != null) existed.setSortOrder(req.getSortOrder());
@@ -45,7 +44,6 @@ public class SurveyQuestionUpdateProcessor extends BaseBizProcessor<BizContext> 
         if (req.getScaleMin() != null) existed.setScaleMin(req.getScaleMin());
         if (req.getScaleMax() != null) existed.setScaleMax(req.getScaleMax());
 
-        // optionsJson: nên là JSON STRING để insert/update vào jsonb ổn định
         if (req.getOptionsJson() != null) existed.setOptionsJson(req.getOptionsJson());
 
         existed.setUpdatedAt(new Date());
@@ -66,7 +64,7 @@ public class SurveyQuestionUpdateProcessor extends BaseBizProcessor<BizContext> 
         res.setMeasurable(existed.getMeasurable());
         res.setScaleMin(existed.getScaleMin());
         res.setScaleMax(existed.getScaleMax());
-        res.setOptionsJson((String) existed.getOptionsJson());
+        res.setOptionsJson(existed.getOptionsJson() == null ? null : existed.getOptionsJson().toString());
         return res;
     }
 
