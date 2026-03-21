@@ -73,7 +73,7 @@ public class SurveyQuestionEntity {
      *
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
-    private Object optionsJson;
+    private String optionsJson;
 
     /**
      *
@@ -269,7 +269,7 @@ public class SurveyQuestionEntity {
      *
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
-    public Object getOptionsJson() {
+    public String getOptionsJson() {
         return optionsJson;
     }
 
@@ -281,7 +281,7 @@ public class SurveyQuestionEntity {
      *
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
-    public void setOptionsJson(Object optionsJson) {
+    public void setOptionsJson(String optionsJson) {
         this.optionsJson = optionsJson;
     }
 

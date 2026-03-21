@@ -42,7 +42,6 @@ public class SurveyQuestionGetByTemplateProcessor
             throw AppException.of(ErrorCodes.BAD_REQUEST, "templateId is required");
         }
 
-
         SurveyTemplateEntity template =
                 surveyTemplateMapper.selectByPrimaryKey(request.getTemplateId());
 
@@ -50,7 +49,6 @@ public class SurveyQuestionGetByTemplateProcessor
                 !context.getTenantId().equals(template.getCompanyId())) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
         }
-
 
         List<SurveyQuestionEntity> entities =
                 surveyQuestionMapper.selectByTemplateId(template.getSurveyTemplateId());
@@ -69,6 +67,7 @@ public class SurveyQuestionGetByTemplateProcessor
             dto.setScaleMin(q.getScaleMin());
             dto.setScaleMax(q.getScaleMax());
             dto.setTemplateId(q.getSurveyTemplateId());
+            dto.setOptionsJson(q.getOptionsJson());
             questions.add(dto);
         }
 
