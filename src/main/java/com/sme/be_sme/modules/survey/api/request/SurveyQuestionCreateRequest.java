@@ -9,7 +9,7 @@ public class SurveyQuestionCreateRequest {
     private String content;
     private Boolean required;
     private Integer sortOrder;
-    private String optionsJson;
+    private Object optionsJson;
     private String dimensionCode;
     private Boolean measurable;
     private Integer scaleMin;

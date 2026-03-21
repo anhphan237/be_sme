@@ -13,11 +13,10 @@ import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import com.sme.be_sme.shared.util.UuidGenerator;
-import lombok.RequiredArgsConstructor;
-import org.flywaydb.core.internal.util.StringUtils;
-import org.springframework.stereotype.Component;
-
 import java.util.Date;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Component
 @RequiredArgsConstructor
@@ -26,12 +25,12 @@ public class SurveyQuestionCreateProcessor extends BaseBizProcessor<BizContext> 
     private final ObjectMapper objectMapper;
     private final SurveyTemplateMapper surveyTemplateMapper;
     private final SurveyQuestionMapper surveyQuestionMapper;
+
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
         SurveyQuestionCreateRequest request =
                 objectMapper.convertValue(payload, SurveyQuestionCreateRequest.class);
         validate(context, request);
-
 
         SurveyTemplateEntity template =
                 surveyTemplateMapper.selectByPrimaryKey(request.getTemplateId().trim());
@@ -40,27 +39,33 @@ public class SurveyQuestionCreateProcessor extends BaseBizProcessor<BizContext> 
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
         }
 
-
         Date now = new Date();
         String questionId = UuidGenerator.generate();
+
+        String type = request.getType().trim();
+        String optionsJson = null;
+
+        try {
+            if (isChoiceType(type) && request.getOptionsJson() != null) {
+                optionsJson = objectMapper.writeValueAsString(request.getOptionsJson());
+            }
+        } catch (Exception e) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid optionsJson");
+        }
 
         SurveyQuestionEntity q = new SurveyQuestionEntity();
         q.setSurveyQuestionId(questionId);
         q.setCompanyId(context.getTenantId());
         q.setSurveyTemplateId(request.getTemplateId().trim());
-        q.setType(request.getType().trim());
+        q.setType(type);
         q.setContent(request.getContent().trim());
-        q.setRequired(request.getRequired() != null ? request.getRequired() : Boolean.FALSE);
+        q.setRequired(Boolean.TRUE.equals(request.getRequired()));
         q.setSortOrder(request.getSortOrder() != null ? request.getSortOrder() : 0);
-        if (request.getOptionsJson() != null && !request.getOptionsJson().isEmpty()) {
-            q.setOptionsJson(request.getOptionsJson().toString());
-        } else {
-            q.setOptionsJson(null);
-        }
+        q.setOptionsJson(optionsJson);
         q.setDimensionCode(request.getDimensionCode());
-        q.setMeasurable(request.getMeasurable() != null ? request.getMeasurable() : Boolean.TRUE);
-        q.setScaleMin(request.getScaleMin() != null ? request.getScaleMin() : 1);
-        q.setScaleMax(request.getScaleMax() != null ? request.getScaleMax() : 5);
+        q.setMeasurable(request.getMeasurable() != null ? request.getMeasurable() : !"TEXT".equals(type));
+        q.setScaleMin("RATING".equals(type) ? (request.getScaleMin() != null ? request.getScaleMin() : 1) : null);
+        q.setScaleMax("RATING".equals(type) ? (request.getScaleMax() != null ? request.getScaleMax() : 5) : null);
         q.setCreatedAt(now);
         q.setUpdatedAt(now);
 
@@ -78,13 +83,12 @@ public class SurveyQuestionCreateProcessor extends BaseBizProcessor<BizContext> 
         res.setMeasurable(q.getMeasurable());
         res.setScaleMin(q.getScaleMin());
         res.setScaleMax(q.getScaleMax());
-        res.setDimensionCode(q.getDimensionCode());
         res.setType(q.getType());
         res.setContent(q.getContent());
-        Object opt = q.getOptionsJson();
-        res.setOptionsJson(opt == null ? null : opt.toString());
+        res.setOptionsJson(q.getOptionsJson() == null ? null : q.getOptionsJson().toString());
         return res;
     }
+
     private static void validate(BizContext context, SurveyQuestionCreateRequest request) {
         if (context == null || !StringUtils.hasText(context.getTenantId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
@@ -103,9 +107,17 @@ public class SurveyQuestionCreateProcessor extends BaseBizProcessor<BizContext> 
         }
 
         String type = request.getType().trim();
-        if (!type.equals("RATING") && !type.equals("TEXT") && !type.equals("CHOICE")) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "type must be RATING|TEXT|CHOICE");
+        if (!type.equals("RATING")
+                && !type.equals("TEXT")
+                && !type.equals("SINGLE_CHOICE")
+                && !type.equals("MULTIPLE_CHOICE")) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "type must be RATING|TEXT|SINGLE_CHOICE|MULTIPLE_CHOICE");
         }
+    }
 
+    private static boolean isChoiceType(String type) {
+        return "SINGLE_CHOICE".equals(type) || "MULTIPLE_CHOICE".equals(type);
     }
 }
