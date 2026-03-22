@@ -80,4 +80,13 @@
     where chat_session_id = #{chatSessionId,jdbcType=VARCHAR}
     order by created_at asc
   </select>
+  <select id="selectFirstMessageBySessionIds" resultMap="BaseResultMap">
+    SELECT DISTINCT ON (chat_session_id) chat_message_id, company_id, chat_session_id, sender, content, kb_article_id, created_at
+    FROM chat_messages
+    WHERE chat_session_id IN
+    <foreach collection="sessionIds" item="id" open="(" separator="," close=")">
+      #{id,jdbcType=VARCHAR}
+    </foreach>
+    ORDER BY chat_session_id, created_at ASC
+  </select>
 </mapper>
