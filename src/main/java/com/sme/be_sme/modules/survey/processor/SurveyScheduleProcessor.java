@@ -58,6 +58,7 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         entity.setScheduledAt(scheduledAt);
         entity.setClosedAt(closedAt);
         entity.setStatus("SCHEDULED");
+        entity.setResponderUserId(request.getResponderUserId());
         entity.setCreatedAt(now);
 
         int inserted = surveyInstanceMapper.insert(entity);
