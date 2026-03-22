@@ -6,4 +6,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ChatSessionListRequest {
+    /** Optional: reserve for future pagination/filter */
+    private Integer limit;
 }
