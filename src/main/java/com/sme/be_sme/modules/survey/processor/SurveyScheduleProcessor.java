@@ -40,15 +40,9 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         }
 
         Date now = new Date();
-
-        Date baseDate = request.getJoinDate() != null
-                ? request.getJoinDate()
-                : now;
-
-
-        Date scheduledAt = plusDays(baseDate, request.getMilestoneDays());
-
         int dueDays = request.getDueDays() != null ? request.getDueDays() : 3;
+
+        Date scheduledAt = request.getScheduledAt();
         Date closedAt = plusDays(scheduledAt, dueDays);
 
         SurveyInstanceEntity entity = new SurveyInstanceEntity();
@@ -56,9 +50,8 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         entity.setCompanyId(context.getTenantId());
         entity.setOnboardingId(request.getOnboardingId());
         entity.setSurveyTemplateId(template.getSurveyTemplateId());
-
-        entity.setScheduledAt(scheduledAt); // openAt
-        entity.setClosedAt(closedAt);       // dueAt
+        entity.setScheduledAt(scheduledAt);
+        entity.setClosedAt(closedAt);
         entity.setStatus("SCHEDULED");
         entity.setCreatedAt(now);
 
@@ -89,8 +82,11 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         if (!StringUtils.hasText(request.getOnboardingId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "onboardingId is required");
         }
-        if (request.getMilestoneDays() == null || request.getMilestoneDays() < 0) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "milestoneDays must be >= 0");
+        if (request.getScheduledAt() == null) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "scheduledAt is required");
+        }
+        if (request.getDueDays() != null && request.getDueDays() < 0) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "dueDays must be >= 0");
         }
     }
 
