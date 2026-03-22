@@ -17,4 +17,5 @@ public class SurveyInstanceListRow {
     private String responderUserId;
     private String employeeName;
     private String email;
+    private String instanceId;
 }
