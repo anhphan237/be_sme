@@ -8,12 +8,18 @@ import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapper;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyTemplateMapper;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyInstanceEntity;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyTemplateEntity;
+
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapper;
+import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
+
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import com.sme.be_sme.shared.util.UuidGenerator;
+
 import java.util.Date;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -25,13 +31,12 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
     private final ObjectMapper objectMapper;
     private final SurveyTemplateMapper surveyTemplateMapper;
     private final SurveyInstanceMapper surveyInstanceMapper;
-
+    private final UserMapper userMapper;
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
         SurveyScheduleRequest request =
                 objectMapper.convertValue(payload, SurveyScheduleRequest.class);
         validate(context, request);
-
         SurveyTemplateEntity template =
                 surveyTemplateMapper.selectByPrimaryKey(request.getTemplateId().trim());
 
@@ -60,9 +65,24 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "schedule survey instance failed");
         }
 
+        UserEntity user = null;
+        if (StringUtils.hasText(request.getResponderUserId())) {
+            user = userMapper.selectByPrimaryKey(request.getResponderUserId());
+        }
         SurveyScheduleResponse response = new SurveyScheduleResponse();
         response.setScheduleId(entity.getSurveyInstanceId());
         response.setStatus(entity.getStatus());
+        response.setOpenAt(scheduledAt);
+        response.setDueAt(closedAt);
+        response.setTemplateId(template.getSurveyTemplateId());
+        response.setResponderUserId(request.getResponderUserId());
+        response.setInstanceId(entity.getSurveyInstanceId());
+
+        if (user != null) {
+            response.setEmployeeName(user.getFullName());
+            response.setEmail(user.getEmail());
+        }
+
         return response;
     }
 
@@ -82,6 +102,9 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         if (!StringUtils.hasText(request.getOnboardingId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "onboardingId is required");
         }
+        if (!StringUtils.hasText(request.getResponderUserId())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "responderUserId is required");
+        }
         if (request.getScheduledAt() == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "scheduledAt is required");
         }
@@ -89,5 +112,4 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "dueDays must be >= 0");
         }
     }
-
 }

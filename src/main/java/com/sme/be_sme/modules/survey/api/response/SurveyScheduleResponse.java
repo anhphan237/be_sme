@@ -15,5 +15,7 @@ public class SurveyScheduleResponse {
     private String templateId;
     private String responderUserId;
     private String instanceId;
+    private String employeeName;
+    private String email;
 
 }
