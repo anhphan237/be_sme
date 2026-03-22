@@ -14,4 +14,7 @@ public class SurveyInstanceListRow {
     private Date scheduledAt;
     private String status;
     private Date createdAt;
+    private String responderUserId;
+    private String employeeName;
+    private String email;
 }
