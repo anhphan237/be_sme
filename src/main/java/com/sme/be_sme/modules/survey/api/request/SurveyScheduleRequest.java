@@ -12,5 +12,5 @@ public class SurveyScheduleRequest {
     private String templateId;
     private Date scheduledAt;
     private Integer dueDays;
-
+    private String responderUserId;
 }
