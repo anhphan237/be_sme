@@ -1,0 +1,9 @@
+package com.sme.be_sme.modules.chat.api.request;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class ChatSessionListRequest {
+}

@@ -6,18 +6,24 @@ import com.sme.be_sme.modules.ai.api.request.AssistantAskRequest;
 import com.sme.be_sme.modules.ai.api.response.AssistantAskResponse;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentChunkMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper;
+import com.sme.be_sme.modules.knowledge.infrastructure.mapper.ChatMessageMapper;
+import com.sme.be_sme.modules.knowledge.infrastructure.mapper.ChatSessionMapper;
+import com.sme.be_sme.modules.knowledge.infrastructure.persistence.entity.ChatMessageEntity;
+import com.sme.be_sme.modules.knowledge.infrastructure.persistence.entity.ChatSessionEntity;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentChunkEntity;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import com.sme.be_sme.shared.util.UuidGenerator;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -36,10 +42,13 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
 
     private static final int TOP_K_CHUNKS = 6;
     private static final int MIN_TOKEN_LENGTH = 3;
+    private static final int MAX_HISTORY_MESSAGES = 10;
 
     private final ObjectMapper objectMapper;
     private final DocumentChunkMapper documentChunkMapper;
     private final DocumentMapper documentMapper;
+    private final ChatMessageMapper chatMessageMapper;
+    private final ChatSessionMapper chatSessionMapper;
     private final ChatLanguageModel chatModel;
 
     @Override
@@ -48,7 +57,13 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
         validate(context, request);
 
         String companyId = context.getTenantId();
+        String operatorId = context.getOperatorId();
         String question = request.getQuestion().trim();
+
+        String chatSessionId = StringUtils.hasText(request.getChatSessionId()) ? request.getChatSessionId().trim() : null;
+        if (chatSessionId != null) {
+            validateSessionOwnership(companyId, operatorId, chatSessionId);
+        }
 
         List<DocumentChunkEntity> allChunks = documentChunkMapper.selectByCompanyId(companyId);
         if (allChunks == null) {
@@ -66,8 +81,11 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
             sourceDocumentNames = new ArrayList<>();
         } else {
             String documentsExcerpts = buildExcerptsPrompt(topChunks, documentIdToTitle);
+            String conversationHistory = buildConversationHistory(chatSessionId);
             String userPrompt = SYSTEM_PROMPT + "\n\nCompany document excerpts (use only this to answer):\n\n"
-                    + documentsExcerpts + "\n\nEmployee question: " + question;
+                    + documentsExcerpts
+                    + (conversationHistory.isEmpty() ? "" : "\n\n--- Conversation history ---\n" + conversationHistory + "--- End history ---\n\n")
+                    + "Employee question: " + question;
             try {
                 answer = chatModel.generate(userPrompt);
             } catch (Exception e) {
@@ -80,10 +98,60 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
                     .toList();
         }
 
+        if (chatSessionId != null) {
+            saveMessages(companyId, chatSessionId, operatorId, question, answer);
+        }
+
         AssistantAskResponse response = new AssistantAskResponse();
         response.setAnswer(answer);
         response.setSourceDocumentNames(sourceDocumentNames);
+        response.setChatSessionId(chatSessionId);
         return response;
+    }
+
+    private void validateSessionOwnership(String companyId, String userId, String chatSessionId) {
+        ChatSessionEntity session = chatSessionMapper.selectByPrimaryKey(chatSessionId);
+        if (session == null) {
+            throw AppException.of(ErrorCodes.NOT_FOUND, "Chat session not found");
+        }
+        if (!companyId.equals(session.getCompanyId()) || !userId.equals(session.getUserId())) {
+            throw AppException.of(ErrorCodes.FORBIDDEN, "Chat session does not belong to user");
+        }
+    }
+
+    private String buildConversationHistory(String chatSessionId) {
+        if (chatSessionId == null) return "";
+        List<ChatMessageEntity> messages = chatMessageMapper.selectBySessionIdOrderByCreatedAt(chatSessionId);
+        if (messages == null || messages.isEmpty()) return "";
+        int fromIdx = Math.max(0, messages.size() - MAX_HISTORY_MESSAGES);
+        StringBuilder sb = new StringBuilder();
+        for (int i = fromIdx; i < messages.size(); i++) {
+            ChatMessageEntity m = messages.get(i);
+            String role = "USER".equals(m.getSender()) ? "User" : "Assistant";
+            sb.append(role).append(": ").append(m.getContent() != null ? m.getContent() : "").append("\n");
+        }
+        return sb.toString();
+    }
+
+    private void saveMessages(String companyId, String chatSessionId, String operatorId, String question, String answer) {
+        Date now = new Date();
+        ChatMessageEntity userMsg = new ChatMessageEntity();
+        userMsg.setChatMessageId(UuidGenerator.generate());
+        userMsg.setCompanyId(companyId);
+        userMsg.setChatSessionId(chatSessionId);
+        userMsg.setSender("USER");
+        userMsg.setContent(question);
+        userMsg.setCreatedAt(now);
+        chatMessageMapper.insert(userMsg);
+
+        ChatMessageEntity botMsg = new ChatMessageEntity();
+        botMsg.setChatMessageId(UuidGenerator.generate());
+        botMsg.setCompanyId(companyId);
+        botMsg.setChatSessionId(chatSessionId);
+        botMsg.setSender("BOT");
+        botMsg.setContent(answer);
+        botMsg.setCreatedAt(now);
+        chatMessageMapper.insert(botMsg);
     }
 
     private Map<String, String> loadDocumentTitles(String companyId, List<DocumentChunkEntity> chunks) {

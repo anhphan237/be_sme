@@ -73,4 +73,11 @@
     created_at
     from chat_messages
   </select>
+  <select id="selectBySessionIdOrderByCreatedAt" resultMap="BaseResultMap">
+    select chat_message_id, company_id, chat_session_id, sender, content, kb_article_id,
+    created_at
+    from chat_messages
+    where chat_session_id = #{chatSessionId,jdbcType=VARCHAR}
+    order by created_at asc
+  </select>
 </mapper>

@@ -69,4 +69,11 @@
     select chat_session_id, company_id, user_id, channel, started_at, ended_at
     from chat_sessions
   </select>
+  <select id="selectByCompanyIdAndUserId" resultMap="BaseResultMap">
+    select chat_session_id, company_id, user_id, channel, started_at, ended_at
+    from chat_sessions
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and user_id = #{userId,jdbcType=VARCHAR}
+    order by started_at desc
+  </select>
 </mapper>
