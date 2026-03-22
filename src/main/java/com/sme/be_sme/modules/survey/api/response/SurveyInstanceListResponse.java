@@ -21,5 +21,8 @@ public class SurveyInstanceListResponse {
         private Date scheduledAt;
         private String status;
         private Date createdAt;
+        private String responderUserId;
+        private String employeeName;
+        private String email;
     }
 }

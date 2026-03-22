@@ -92,6 +92,16 @@ public class SurveyInstanceEntity {
      *
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
+    private String responderUserId;
+
+    public String getResponderUserId() {
+        return responderUserId;
+    }
+
+    public void setResponderUserId(String responderUserId) {
+        this.responderUserId = responderUserId;
+    }
+
     public String getSurveyInstanceId() {
         return surveyInstanceId;
     }
