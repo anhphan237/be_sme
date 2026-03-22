@@ -8,10 +8,9 @@ import java.util.Date;
 @Getter
 @Setter
 public class SurveyScheduleRequest {
-    private String templateId;
     private String onboardingId;
-    private Integer milestoneDays;
+    private String templateId;
+    private Date scheduledAt;
     private Integer dueDays;
-    private Date joinDate;
 
 }
