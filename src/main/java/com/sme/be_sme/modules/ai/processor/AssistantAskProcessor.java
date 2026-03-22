@@ -38,7 +38,9 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
 
     private static final String SYSTEM_PROMPT =
             "You are an HR assistant for the company. Answer the employee's question strictly based on the provided company documents. "
-                    + "If the information is not in the documents, say you don't know.";
+                    + "If the information is not in the documents, say you don't know. "
+                    + "Respond in the same language as the user's question (Vietnamese or English). "
+                    + "Be helpful, professional, and explain clearly with appropriate context when useful.";
 
     private static final int TOP_K_CHUNKS = 6;
     private static final int MIN_TOKEN_LENGTH = 3;
