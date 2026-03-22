@@ -24,5 +24,6 @@ public class SurveyInstanceListResponse {
         private String responderUserId;
         private String employeeName;
         private String email;
+        private String instanceId;
     }
 }

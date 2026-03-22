@@ -79,12 +79,12 @@ public class SurveyInstanceListProcessor extends BaseBizProcessor<BizContext> {
         item.setScheduledAt(row.getScheduledAt());
         item.setStatus(row.getStatus());
         item.setCreatedAt(row.getCreatedAt());
-        item.setId(row.getSurveyInstanceId());
-        item.setTemplateId(row.getSurveyTemplateId());
-        item.setTemplateName(row.getTemplateName());
-        item.setScheduledAt(row.getScheduledAt());
-        item.setStatus(row.getStatus());
-        item.setCreatedAt(row.getCreatedAt());
+
+        item.setResponderUserId(row.getResponderUserId());
+        item.setInstanceId(row.getInstanceId());
+        item.setEmployeeName(row.getEmployeeName());
+        item.setEmail(row.getEmail());
+
         return item;
     }
 
