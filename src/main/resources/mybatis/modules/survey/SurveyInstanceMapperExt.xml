@@ -7,26 +7,18 @@
         si.survey_instance_id as surveyInstanceId,
         si.survey_template_id as surveyTemplateId,
         st.name as templateName,
-
-        -- 🔥 THÊM
         si.responder_user_id as responderUserId,
         u.full_name as employeeName,
         u.email as email,
-
         si.scheduled_at as scheduledAt,
         si.status as status,
         si.created_at as createdAt
-
         from survey_instances si
-
         join survey_templates st
         on st.survey_template_id = si.survey_template_id
         and st.company_id = si.company_id
-
-        -- 🔥 JOIN USER
         left join users u
         on u.user_id = si.responder_user_id
-
         where si.company_id = #{companyId,jdbcType=VARCHAR}
 
         <if test="templateId != null and templateId != ''">
@@ -45,7 +37,11 @@
             and si.scheduled_at &lt;= #{endDate,jdbcType=TIMESTAMP}
         </if>
 
-        order by si.created_at desc
+        <if test="responderUserId != null and responderUserId != ''">
+            and si.responder_user_id = #{responderUserId,jdbcType=VARCHAR}
+        </if>
+
+        order by coalesce(si.sent_at, si.scheduled_at, si.created_at) desc
         limit #{limit,jdbcType=INTEGER}
         offset #{offset,jdbcType=INTEGER}
     </select>
@@ -69,6 +65,10 @@
 
         <if test="endDate != null">
             and si.scheduled_at &lt;= #{endDate,jdbcType=TIMESTAMP}
+        </if>
+
+        <if test="responderUserId != null and responderUserId != ''">
+            and si.responder_user_id = #{responderUserId,jdbcType=VARCHAR}
         </if>
     </select>
 
