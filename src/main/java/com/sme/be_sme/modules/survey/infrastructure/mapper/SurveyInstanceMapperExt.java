@@ -17,6 +17,7 @@ public interface SurveyInstanceMapperExt {
             @Param("status") String status,
             @Param("startDate") Date startDate,
             @Param("endDate") Date endDate,
+            @Param("responderUserId") String responderUserId,
             @Param("offset") int offset,
             @Param("limit") int limit
     );
@@ -26,7 +27,8 @@ public interface SurveyInstanceMapperExt {
             @Param("templateId") String templateId,
             @Param("status") String status,
             @Param("startDate") Date startDate,
-            @Param("endDate") Date endDate
+            @Param("endDate") Date endDate,
+            @Param("responderUserId") String responderUserId
     );
 
     @Select("""
