@@ -10,4 +10,6 @@ public class AssistantAskRequest {
     private String question;
     /** Optional: defaults to current operator from context if not provided */
     private String userId;
+    /** Optional: when provided, loads conversation history and saves messages to this session */
+    private String chatSessionId;
 }

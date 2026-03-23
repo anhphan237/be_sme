@@ -12,4 +12,6 @@ public class AssistantAskResponse {
     private String answer;
     /** Document names used as context (company-specific) */
     private List<String> sourceDocumentNames;
+    /** Chat session id when provided in request (echo back for convenience) */
+    private String chatSessionId;
 }
