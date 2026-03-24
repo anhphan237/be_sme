@@ -28,6 +28,8 @@ import java.util.stream.Collectors;
 public class SurveyInstanceGetProcessor extends BaseBizProcessor<BizContext> {
 
     private static final String ROLE_EMPLOYEE = "EMPLOYEE";
+    private static final String ROLE_MANAGER = "MANAGER";
+
 
     private final ObjectMapper objectMapper;
     private final SurveyInstanceMapperExt surveyInstanceMapperExt;
