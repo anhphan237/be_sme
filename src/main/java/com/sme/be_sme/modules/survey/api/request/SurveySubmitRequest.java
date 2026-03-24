@@ -1,6 +1,9 @@
 package com.sme.be_sme.modules.survey.api.request;
 
+import java.util.List;
 import java.util.Map;
+
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,5 +11,11 @@ import lombok.Setter;
 @Setter
 public class SurveySubmitRequest {
     private String surveyInstanceId;
-    private Map<String, String> answers;
+    private List<AnswerItem> answers;
+
+    @Data
+    public static class AnswerItem {
+        private String questionId;
+        private Object value;
+    }
 }

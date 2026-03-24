@@ -135,8 +135,31 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
         return filtered;
     }
 
-    private static Map<String, String> normalizeAnswers(Map<String, String> answers) {
-        return answers;
+    private Map<String, String> normalizeAnswers(List<SurveySubmitRequest.AnswerItem> answers) {
+        Map<String, String> result = new java.util.HashMap<>();
+
+        for (SurveySubmitRequest.AnswerItem item : answers) {
+            if (item == null || item.getQuestionId() == null) continue;
+
+            Object value = item.getValue();
+            String normalized;
+
+            if (value == null) {
+                normalized = null;
+            } else if (value instanceof List<?> list) {
+                try {
+                    normalized = objectMapper.writeValueAsString(list);
+                } catch (Exception e) {
+                    throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid multiple choice format");
+                }
+            } else {
+                normalized = String.valueOf(value);
+            }
+
+            result.put(item.getQuestionId(), normalized);
+        }
+
+        return result;
     }
 
     private static void ensureRequiredAnswered(List<SurveyQuestionEntity> questions, Map<String, String> answers) {
@@ -225,6 +248,7 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
             case "RATING" -> answerEntity.setValueRating(parseInteger(answer));
             case "CHOICE" -> answerEntity.setValueChoice(answer);
             case "TEXT" -> answerEntity.setValueText(answer);
+            case "MULTIPLE_CHOICE" -> answerEntity.setValueText(answer);
             default -> answerEntity.setValueText(answer);
         }
     }
