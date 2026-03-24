@@ -14,4 +14,18 @@
             </foreach>
         </if>
     </select>
+    <select id="selectByResponseId"
+            resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyAnswerRow">
+        SELECT
+        survey_answer_id AS surveyAnswerId,
+        survey_response_id AS surveyResponseId,
+        survey_question_id AS surveyQuestionId,
+        value_text AS valueText,
+        value_rating AS valueRating,
+        value_choice AS valueChoice
+        FROM survey_answers
+        WHERE company_id = #{companyId}
+        AND survey_response_id = #{surveyResponseId}
+        ORDER BY created_at ASC
+    </select>
 </mapper>
