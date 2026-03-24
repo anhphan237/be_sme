@@ -13,6 +13,8 @@ import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterCrea
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterCreateDefaultRolesCoreProcessor;
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterValidateCoreProcessor;
 import com.sme.be_sme.modules.identity.infrastructure.repository.UserRoleRepository;
+import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
+import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.shared.gateway.core.BaseCoreProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import com.sme.be_sme.shared.security.JwtProperties;
@@ -21,6 +23,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 @Component
@@ -40,6 +44,7 @@ public class CompanyRegisterProcessor extends BaseCoreProcessor<CompanyRegisterC
     private final CompanyRegisterSeedRolePermissionsCoreProcessor seedRolePermissions;
     private final CompanyRegisterAssignAdminRoleCoreProcessor assignAdminRole;
     private final CompanyRegistrationSubscriptionService subscriptionService;
+    private final NotificationService notificationService;
 
     @Override
     protected CompanyRegisterContext buildContext(BizContext biz, JsonNode payload) {
@@ -75,6 +80,27 @@ public class CompanyRegisterProcessor extends BaseCoreProcessor<CompanyRegisterC
         ctx.getResponse().setAccessToken(token);
         ctx.getResponse().setTokenType("Bearer");
         ctx.getResponse().setExpiresInSeconds(jwtProperties.getAccessTtlSeconds());
+
+        try {
+            String companyName = ctx.getCompany().getName() != null ? ctx.getCompany().getName() : "your company";
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("companyName", companyName);
+            NotificationCreateParams params = NotificationCreateParams.builder()
+                    .companyId(companyId)
+                    .userId(adminUserId)
+                    .type("COMPANY_WELCOME")
+                    .title("Welcome to " + companyName)
+                    .content("Your company " + companyName + " has been set up successfully.")
+                    .refType("COMPANY")
+                    .refId(companyId)
+                    .sendEmail(true)
+                    .emailTemplate("COMPANY_WELCOME")
+                    .emailPlaceholders(placeholders)
+                    .build();
+            notificationService.create(params);
+        } catch (Exception e) {
+            // Non-critical, log and continue
+        }
 
         return ctx.getResponse();
     }

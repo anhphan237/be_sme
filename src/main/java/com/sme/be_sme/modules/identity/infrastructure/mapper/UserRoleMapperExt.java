@@ -40,5 +40,10 @@ public interface UserRoleMapperExt {
             @Param("newRoleId") String newRoleId,
             @Param("updatedAt") Date updatedAt
     );
+
+    List<String> selectUserIdsByCompanyAndRoleCode(
+            @Param("companyId") String companyId,
+            @Param("roleCode") String roleCode
+    );
 }
 

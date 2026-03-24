@@ -4,13 +4,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskAssignRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
+import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
+import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -19,8 +25,12 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class OnboardingTaskAssignProcessor extends BaseBizProcessor<BizContext> {
 
+    private static final String TEMPLATE_TASK_ASSIGNED = "TASK_ASSIGNED";
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_LOCAL_DATE;
+
     private final ObjectMapper objectMapper;
     private final TaskInstanceMapper taskInstanceMapper;
+    private final NotificationService notificationService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -43,6 +53,27 @@ public class OnboardingTaskAssignProcessor extends BaseBizProcessor<BizContext> 
         if (updated != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "assign task failed");
         }
+
+        String taskTitle = StringUtils.hasText(task.getTitle()) ? task.getTitle() : "Task";
+        String dueStr = task.getDueDate() != null
+                ? task.getDueDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().format(DATE_FMT)
+                : "";
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("taskTitle", taskTitle);
+        placeholders.put("dueDate", dueStr);
+        NotificationCreateParams params = NotificationCreateParams.builder()
+                .companyId(task.getCompanyId())
+                .userId(task.getAssignedUserId())
+                .type("TASK_ASSIGNED")
+                .title("New task assigned: " + taskTitle)
+                .content("You have been assigned: \"" + taskTitle + "\". Due: " + dueStr)
+                .refType("TASK")
+                .refId(task.getTaskId())
+                .sendEmail(true)
+                .emailTemplate(TEMPLATE_TASK_ASSIGNED)
+                .emailPlaceholders(placeholders)
+                .build();
+        notificationService.create(params);
 
         OnboardingTaskResponse response = new OnboardingTaskResponse();
         response.setTaskId(task.getTaskId());

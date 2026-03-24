@@ -9,13 +9,12 @@ import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
-import com.sme.be_sme.modules.notification.infrastructure.mapper.NotificationMapper;
-import com.sme.be_sme.modules.notification.infrastructure.persistence.entity.NotificationEntity;
+import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
+import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
-import com.sme.be_sme.shared.util.UuidGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -26,8 +25,10 @@ import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 
 @Component
@@ -40,12 +41,13 @@ public class UsageCheckProcessor extends BaseBizProcessor<BizContext> {
     private static final double APPROACHING_THRESHOLD = 80.0;
     private static final double EXCEEDED_THRESHOLD = 100.0;
     private static final String NOTIFICATION_TYPE_USAGE_ALERT = "USAGE_ALERT";
+    private static final String TEMPLATE_USAGE_ALERT = "USAGE_ALERT";
 
     private final ObjectMapper objectMapper;
     private final OnboardingUsageMapper onboardingUsageMapper;
     private final PlanMapper planMapper;
     private final SubscriptionMapper subscriptionMapper;
-    private final NotificationMapper notificationMapper;
+    private final NotificationService notificationService;
 
     private static final DateTimeFormatter YEAR_MONTH = DateTimeFormatter.ofPattern("yyyy-MM");
 
@@ -114,19 +116,24 @@ public class UsageCheckProcessor extends BaseBizProcessor<BizContext> {
 
     private void createUsageAlertNotification(String companyId, String userId, String month, int usage, Integer limit, String alertLevel) {
         if (!StringUtils.hasText(userId)) return;
-        Date now = new Date();
-        NotificationEntity n = new NotificationEntity();
-        n.setNotificationId(UuidGenerator.generate());
-        n.setCompanyId(companyId);
-        n.setUserId(userId);
-        n.setType(NOTIFICATION_TYPE_USAGE_ALERT);
-        n.setTitle(ALERT_EXCEEDED.equals(alertLevel) ? "Usage limit exceeded" : "Usage approaching limit");
-        n.setContent(String.format("Onboarding usage for %s: %d of %s. %s.", month, usage, limit != null ? limit.toString() : "—", ALERT_EXCEEDED.equals(alertLevel) ? "Limit exceeded" : "Approaching limit"));
-        n.setStatus("UNREAD");
-        n.setRefType("USAGE");
-        n.setRefId(month);
-        n.setCreatedAt(now);
-        notificationMapper.insert(n);
+        String title = ALERT_EXCEEDED.equals(alertLevel) ? "Usage limit exceeded" : "Usage approaching limit";
+        String content = String.format("Onboarding usage for %s: %d of %s. %s.", month, usage, limit != null ? limit.toString() : "—", ALERT_EXCEEDED.equals(alertLevel) ? "Limit exceeded" : "Approaching limit");
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("alertTitle", title);
+        placeholders.put("alertContent", content);
+        NotificationCreateParams params = NotificationCreateParams.builder()
+                .companyId(companyId)
+                .userId(userId)
+                .type(NOTIFICATION_TYPE_USAGE_ALERT)
+                .title(title)
+                .content(content)
+                .refType("USAGE")
+                .refId(month)
+                .sendEmail(true)
+                .emailTemplate(TEMPLATE_USAGE_ALERT)
+                .emailPlaceholders(placeholders)
+                .build();
+        notificationService.create(params);
     }
 
     private static String trimLower(String value) {

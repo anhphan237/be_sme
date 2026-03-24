@@ -12,8 +12,8 @@ import com.sme.be_sme.modules.billing.infrastructure.mapper.PaymentTransactionMa
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.DunningCaseEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.InvoiceEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PaymentTransactionEntity;
-import com.sme.be_sme.modules.notification.infrastructure.mapper.NotificationMapper;
-import com.sme.be_sme.modules.notification.infrastructure.persistence.entity.NotificationEntity;
+import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
+import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -25,6 +25,8 @@ import org.springframework.util.StringUtils;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -34,6 +36,7 @@ public class DunningRetryProcessor extends BaseBizProcessor<BizContext> {
     private static final int NEXT_RETRY_DAYS_SUCCESS = 3;
     private static final int NEXT_RETRY_DAYS_FAIL = 1;
     private static final String NOTIFICATION_TYPE_PAYMENT_FAILED = "PAYMENT_FAILED";
+    private static final String TEMPLATE_PAYMENT_FAILED = "PAYMENT_FAILED";
 
     private final ObjectMapper objectMapper;
     private final DunningCaseMapper dunningCaseMapper;
@@ -41,7 +44,7 @@ public class DunningRetryProcessor extends BaseBizProcessor<BizContext> {
     private final InvoiceMapperExt invoiceMapperExt;
     private final PaymentGatewayPort paymentGateway;
     private final PaymentTransactionMapper paymentTransactionMapper;
-    private final NotificationMapper notificationMapper;
+    private final NotificationService notificationService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -130,19 +133,22 @@ public class DunningRetryProcessor extends BaseBizProcessor<BizContext> {
 
     private void notifyPaymentFailed(String companyId, String userId, String refId, String reason) {
         if (!StringUtils.hasText(userId)) return;
-        Date now = new Date();
-        NotificationEntity n = new NotificationEntity();
-        n.setNotificationId(UuidGenerator.generate());
-        n.setCompanyId(companyId);
-        n.setUserId(userId);
-        n.setType(NOTIFICATION_TYPE_PAYMENT_FAILED);
-        n.setTitle("Payment retry failed");
-        n.setContent("Dunning retry failed" + (StringUtils.hasText(reason) ? ": " + reason : "."));
-        n.setStatus("UNREAD");
-        n.setRefType("DUNNING");
-        n.setRefId(refId);
-        n.setCreatedAt(now);
-        notificationMapper.insert(n);
+        String content = "Dunning retry failed" + (StringUtils.hasText(reason) ? ": " + reason : ".");
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("reason", StringUtils.hasText(reason) ? reason : "Unknown error");
+        NotificationCreateParams params = NotificationCreateParams.builder()
+                .companyId(companyId)
+                .userId(userId)
+                .type(NOTIFICATION_TYPE_PAYMENT_FAILED)
+                .title("Payment retry failed")
+                .content(content)
+                .refType("DUNNING")
+                .refId(refId)
+                .sendEmail(true)
+                .emailTemplate(TEMPLATE_PAYMENT_FAILED)
+                .emailPlaceholders(placeholders)
+                .build();
+        notificationService.create(params);
     }
 
     private DunningRetryResponse failureResponse(DunningCaseEntity dunningCase, String message) {

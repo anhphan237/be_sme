@@ -152,6 +152,12 @@
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
 
+		<!-- WebSocket (notification push) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
+		</dependency>
+
 		<!-- Cloudinary: file upload (documents from local machine) -->
 		<dependency>
 			<groupId>com.cloudinary</groupId>
