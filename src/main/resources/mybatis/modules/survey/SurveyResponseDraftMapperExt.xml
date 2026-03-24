@@ -17,10 +17,11 @@
         #{instanceId,jdbcType=VARCHAR},
         #{questionId,jdbcType=VARCHAR},
         #{responderUserId,jdbcType=VARCHAR},
-        #{answerValue,jdbcType=LONGVARCHAR}
+        CAST(#{answerValue,jdbcType=LONGVARCHAR} AS jsonb)
         )
-        ON DUPLICATE KEY UPDATE
-        answer_value = VALUES(answer_value),
+        ON CONFLICT (survey_instance_id, question_id, responder_user_id)
+        DO UPDATE SET
+        answer_value = EXCLUDED.answer_value,
         updated_at = CURRENT_TIMESTAMP
     </insert>
 
