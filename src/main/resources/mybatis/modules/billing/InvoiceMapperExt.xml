@@ -24,4 +24,14 @@
         order by issued_at desc
         limit 1
     </select>
+
+    <select id="selectDueBetweenAndStatusIssued" resultMap="com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper.BaseResultMap">
+        select invoice_id, company_id, subscription_id, invoice_no, amount_total, currency,
+               status, issued_at, due_at, e_invoice_url, created_at
+        from invoices
+        where due_at &gt;= #{fromDate,jdbcType=TIMESTAMP}
+          and due_at &lt;= #{toDate,jdbcType=TIMESTAMP}
+          and (status is null or upper(trim(status)) = 'ISSUED')
+        order by due_at asc
+    </select>
 </mapper>

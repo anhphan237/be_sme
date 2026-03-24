@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Date;
+import java.util.List;
 
 @Mapper
 public interface InvoiceMapperExt {
@@ -25,5 +26,13 @@ public interface InvoiceMapperExt {
             @Param("subscriptionId") String subscriptionId,
             @Param("issuedFrom") Date issuedFrom,
             @Param("issuedTo") Date issuedTo
+    );
+
+    /**
+     * Invoices with due_at between fromDate and toDate, status ISSUED (unpaid).
+     */
+    List<InvoiceEntity> selectDueBetweenAndStatusIssued(
+            @Param("fromDate") Date fromDate,
+            @Param("toDate") Date toDate
     );
 }

@@ -1,13 +1,11 @@
 package com.sme.be_sme.modules.automation.job;
 
-import com.sme.be_sme.modules.automation.service.EmailSenderService;
 import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
 import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
-import com.sme.be_sme.modules.notification.infrastructure.mapper.NotificationMapper;
-import com.sme.be_sme.modules.notification.infrastructure.persistence.entity.NotificationEntity;
+import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
+import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
-import com.sme.be_sme.shared.util.UuidGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Daily job: send TASK_REMINDER email for tasks due in 1-2 days (status != DONE). Optionally create in-app notification.
+ * Daily job: send TASK_REMINDER for tasks due in 1-2 days (status != DONE). Uses NotificationService (DB + email + WebSocket).
  */
 @Component
 @RequiredArgsConstructor
@@ -36,8 +34,7 @@ public class TaskReminderEmailJob {
 
     private final TaskInstanceMapperExt taskInstanceMapperExt;
     private final UserMapperExt userMapperExt;
-    private final EmailSenderService emailSenderService;
-    private final NotificationMapper notificationMapper;
+    private final NotificationService notificationService;
 
     @Scheduled(cron = "${app.automation.task-reminder.cron:0 0 9 * * ?}")
     public void run() {
@@ -66,23 +63,24 @@ public class TaskReminderEmailJob {
         String dueStr = task.getDueDate() != null
                 ? task.getDueDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().format(DATE_FMT)
                 : "";
+        String taskTitle = StringUtils.hasText(task.getTitle()) ? task.getTitle() : "Task";
         Map<String, String> placeholders = new HashMap<>();
-        placeholders.put("taskTitle", StringUtils.hasText(task.getTitle()) ? task.getTitle() : "Task");
+        placeholders.put("taskTitle", taskTitle);
         placeholders.put("dueDate", dueStr);
-        emailSenderService.sendWithTemplate(task.getCompanyId(), TEMPLATE_TASK_REMINDER, user.getEmail(),
-                placeholders, assigneeUserId, null);
 
-        NotificationEntity n = new NotificationEntity();
-        n.setNotificationId(UuidGenerator.generate());
-        n.setCompanyId(task.getCompanyId());
-        n.setUserId(assigneeUserId);
-        n.setType(NOTIFICATION_TYPE_TASK_REMINDER);
-        n.setTitle("Task due soon: " + (task.getTitle() != null ? task.getTitle() : "Task"));
-        n.setContent("Task \"" + (task.getTitle() != null ? task.getTitle() : "Task") + "\" is due on " + dueStr + ".");
-        n.setStatus("UNREAD");
-        n.setRefType("TASK");
-        n.setRefId(task.getTaskId());
-        n.setCreatedAt(new Date());
-        notificationMapper.insert(n);
+        NotificationCreateParams params = NotificationCreateParams.builder()
+                .companyId(task.getCompanyId())
+                .userId(assigneeUserId)
+                .type(NOTIFICATION_TYPE_TASK_REMINDER)
+                .title("Task due soon: " + taskTitle)
+                .content("Task \"" + taskTitle + "\" is due on " + dueStr + ".")
+                .refType("TASK")
+                .refId(task.getTaskId())
+                .sendEmail(true)
+                .emailTemplate(TEMPLATE_TASK_REMINDER)
+                .emailPlaceholders(placeholders)
+                .toEmail(user.getEmail())
+                .build();
+        notificationService.create(params);
     }
 }

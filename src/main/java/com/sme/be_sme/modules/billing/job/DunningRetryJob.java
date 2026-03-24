@@ -7,6 +7,9 @@ import com.sme.be_sme.modules.billing.infrastructure.mapper.DunningCaseMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.DunningCaseMapperExt;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.DunningCaseEntity;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserRoleMapperExt;
+import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
+import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
 import com.sme.be_sme.modules.billing.processor.DunningRetryProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
@@ -17,7 +20,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Internal scheduled job: scans dunning_cases with next_retry_at <= now and status = PENDING_RETRY,
@@ -38,6 +43,8 @@ public class DunningRetryJob {
     private final SubscriptionMapper subscriptionMapper;
     private final DunningRetryProcessor dunningRetryProcessor;
     private final ObjectMapper objectMapper;
+    private final UserRoleMapperExt userRoleMapperExt;
+    private final NotificationService notificationService;
 
     @Scheduled(cron = "${app.dunning.retry.cron:0 0 9 * * ?}") // default: daily at 09:00
     public void run() {
@@ -95,6 +102,28 @@ public class DunningRetryJob {
                 log.info("DunningRetryJob: suspended subscription {}", sub.getSubscriptionId());
             }
         }
-        // Optional: send "account suspended" notification or email (e.g. to company admin)
+        notifyAccountSuspended(caseEntity.getCompanyId());
+    }
+
+    private void notifyAccountSuspended(String companyId) {
+        List<String> adminUserIds = userRoleMapperExt.selectUserIdsByCompanyAndRoleCode(companyId, "ADMIN");
+        if (adminUserIds == null) return;
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("message", "Account suspended due to repeated payment failures.");
+        for (String userId : adminUserIds) {
+            NotificationCreateParams params = NotificationCreateParams.builder()
+                    .companyId(companyId)
+                    .userId(userId)
+                    .type("ACCOUNT_SUSPENDED")
+                    .title("Account suspended")
+                    .content("Your account has been suspended due to repeated payment failures.")
+                    .refType("SUBSCRIPTION")
+                    .refId(companyId)
+                    .sendEmail(true)
+                    .emailTemplate("ACCOUNT_SUSPENDED")
+                    .emailPlaceholders(placeholders)
+                    .build();
+            notificationService.create(params);
+        }
     }
 }

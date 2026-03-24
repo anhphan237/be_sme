@@ -1,12 +1,13 @@
 package com.sme.be_sme.modules.automation.job;
 
-import com.sme.be_sme.modules.automation.service.EmailSenderService;
 import com.sme.be_sme.modules.company.infrastructure.mapper.CompanyMapper;
-import com.sme.be_sme.modules.company.infrastructure.persistence.entity.CompanyEntity;
 import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapper;
+import com.sme.be_sme.modules.company.infrastructure.persistence.entity.CompanyEntity;
 import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
+import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
+import com.sme.be_sme.modules.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -35,7 +36,7 @@ public class PreFirstDayEmailJob {
     private final OnboardingInstanceMapperExt onboardingInstanceMapperExt;
     private final EmployeeProfileMapper employeeProfileMapper;
     private final CompanyMapper companyMapper;
-    private final EmailSenderService emailSenderService;
+    private final NotificationService notificationService;
 
     @Scheduled(cron = "${app.automation.pre-first-day.cron:0 0 8 * * ?}")
     public void run() {
@@ -56,7 +57,7 @@ public class PreFirstDayEmailJob {
     private void sendPreFirstDay(OnboardingInstanceEntity instance, LocalDate startDate) {
         if (!StringUtils.hasText(instance.getEmployeeId())) return;
         EmployeeProfileEntity employee = employeeProfileMapper.selectByPrimaryKey(instance.getEmployeeId());
-        if (employee == null || !StringUtils.hasText(employee.getEmployeeEmail())) return;
+        if (employee == null || !StringUtils.hasText(employee.getUserId())) return;
         String companyName = "";
         CompanyEntity company = companyMapper.selectByPrimaryKey(instance.getCompanyId());
         if (company != null && StringUtils.hasText(company.getName())) companyName = company.getName();
@@ -64,7 +65,20 @@ public class PreFirstDayEmailJob {
         placeholders.put("employeeName", StringUtils.hasText(employee.getEmployeeName()) ? employee.getEmployeeName() : "there");
         placeholders.put("companyName", companyName);
         placeholders.put("startDate", startDate.format(DATE_FMT));
-        emailSenderService.sendWithTemplate(instance.getCompanyId(), TEMPLATE_PRE_FIRST_DAY, employee.getEmployeeEmail(),
-                placeholders, employee.getUserId(), instance.getOnboardingId());
+        NotificationCreateParams params = NotificationCreateParams.builder()
+                .companyId(instance.getCompanyId())
+                .userId(employee.getUserId())
+                .type("PRE_FIRST_DAY")
+                .title("Your first day at " + companyName + " is tomorrow")
+                .content("Reminder: your first day at " + companyName + " is tomorrow (" + startDate.format(DATE_FMT) + ").")
+                .refType("ONBOARDING")
+                .refId(instance.getOnboardingId())
+                .sendEmail(true)
+                .emailTemplate(TEMPLATE_PRE_FIRST_DAY)
+                .emailPlaceholders(placeholders)
+                .toEmail(employee.getEmployeeEmail())
+                .onboardingId(instance.getOnboardingId())
+                .build();
+        notificationService.create(params);
     }
 }

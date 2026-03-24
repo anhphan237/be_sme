@@ -6,7 +6,8 @@ import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceActivateR
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskGenerateRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceResponse;
 import com.sme.be_sme.modules.onboarding.facade.OnboardingTaskFacade;
-import com.sme.be_sme.modules.automation.service.EmailSenderService;
+import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
+import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.company.infrastructure.mapper.CompanyMapper;
 import com.sme.be_sme.modules.company.infrastructure.persistence.entity.CompanyEntity;
 import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapper;
@@ -35,7 +36,7 @@ public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizCon
     private final ObjectMapper objectMapper;
     private final OnboardingInstanceMapper onboardingInstanceMapper;
     private final OnboardingTaskFacade onboardingTaskFacade;
-    private final EmailSenderService emailSenderService;
+    private final NotificationService notificationService;
     private final EmployeeProfileMapper employeeProfileMapper;
     private final CompanyMapper companyMapper;
 
@@ -91,7 +92,7 @@ public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizCon
             OnboardingTaskGenerateRequest genReq = new OnboardingTaskGenerateRequest();
             genReq.setInstanceId(instance.getOnboardingId());
             onboardingTaskFacade.generateTasksFromTemplate(genReq);
-            sendWelcomeEmailIfPossible(companyId, instance);
+            notifyOnboardingStarted(companyId, instance);
         }
 
         OnboardingInstanceResponse response = new OnboardingInstanceResponse();
@@ -100,21 +101,34 @@ public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizCon
         return response;
     }
 
-    private void sendWelcomeEmailIfPossible(String companyId, OnboardingInstanceEntity instance) {
+    private void notifyOnboardingStarted(String companyId, OnboardingInstanceEntity instance) {
         if (!StringUtils.hasText(instance.getEmployeeId())) return;
         try {
             EmployeeProfileEntity employee = employeeProfileMapper.selectByPrimaryKey(instance.getEmployeeId());
-            if (employee == null || !StringUtils.hasText(employee.getEmployeeEmail())) return;
+            if (employee == null || !StringUtils.hasText(employee.getUserId())) return;
             String companyName = "";
             CompanyEntity company = companyMapper.selectByPrimaryKey(companyId);
             if (company != null && StringUtils.hasText(company.getName())) companyName = company.getName();
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("employeeName", StringUtils.hasText(employee.getEmployeeName()) ? employee.getEmployeeName() : "there");
             placeholders.put("companyName", companyName);
-            emailSenderService.sendWithTemplate(companyId, TEMPLATE_WELCOME, employee.getEmployeeEmail(),
-                    placeholders, employee.getUserId(), instance.getOnboardingId());
+            NotificationCreateParams params = NotificationCreateParams.builder()
+                    .companyId(companyId)
+                    .userId(employee.getUserId())
+                    .type("ONBOARDING_STARTED")
+                    .title("Onboarding started")
+                    .content("Welcome to " + companyName + ". Your onboarding has started.")
+                    .refType("ONBOARDING")
+                    .refId(instance.getOnboardingId())
+                    .sendEmail(true)
+                    .emailTemplate(TEMPLATE_WELCOME)
+                    .emailPlaceholders(placeholders)
+                    .toEmail(employee.getEmployeeEmail())
+                    .onboardingId(instance.getOnboardingId())
+                    .build();
+            notificationService.create(params);
         } catch (Exception e) {
-            log.warn("Welcome email failed for onboarding {}: {}", instance.getOnboardingId(), e.getMessage());
+            log.warn("Onboarding notification failed for {}: {}", instance.getOnboardingId(), e.getMessage());
         }
     }
 
