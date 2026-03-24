@@ -56,6 +56,7 @@ public class PermissionService {
                     || "com.sme.identity.user.get".equalsIgnoreCase(perm)
                     || "com.sme.survey.instance.list".equalsIgnoreCase(perm)
                     || "com.sme.survey.question.list.bytemplate".equalsIgnoreCase(perm)
+                    || "com.sme.survey.instance.get".equalsIgnoreCase(perm)
                     || "com.sme.ai.assistant.ask".equalsIgnoreCase(perm)
                     || "com.sme.chat.session.create".equalsIgnoreCase(perm)
                     || "com.sme.chat.session.list".equalsIgnoreCase(perm)
