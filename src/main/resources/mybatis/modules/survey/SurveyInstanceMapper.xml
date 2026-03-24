@@ -16,6 +16,7 @@
     <result column="closed_at" jdbcType="TIMESTAMP" property="closedAt" />
     <result column="status" jdbcType="VARCHAR" property="status" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="responder_user_id" jdbcType="VARCHAR" property="responderUserId" />
   </resultMap>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
     <!--
@@ -114,7 +115,7 @@
     si.status                   AS status,
     si.created_at               AS createdAt,
 
-    si.onboarding_id            AS instanceId,
+    si.onboarding_id            AS onboardingId,
     si.responder_user_id        AS responderUserId,
     u.full_name                 AS employeeName,
     u.email                     AS email
