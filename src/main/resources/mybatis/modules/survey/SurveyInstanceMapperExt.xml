@@ -72,4 +72,25 @@
         </if>
     </select>
 
+    <select id="selectDetailById"
+            resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyInstanceDetailRow">
+        select
+        si.survey_instance_id as surveyInstanceId,
+        si.survey_template_id as surveyTemplateId,
+        st.name as templateName,
+        si.responder_user_id as responderUserId,
+        si.status as status,
+        si.scheduled_at as scheduledAt
+        from survey_instances si
+        join survey_templates st
+        on st.survey_template_id = si.survey_template_id
+        and st.company_id = si.company_id
+        where si.company_id = #{companyId,jdbcType=VARCHAR}
+        and si.survey_instance_id = #{instanceId,jdbcType=VARCHAR}
+        <if test="responderUserId != null and responderUserId != ''">
+            and si.responder_user_id = #{responderUserId,jdbcType=VARCHAR}
+        </if>
+        limit 1
+    </select>
+
 </mapper>
