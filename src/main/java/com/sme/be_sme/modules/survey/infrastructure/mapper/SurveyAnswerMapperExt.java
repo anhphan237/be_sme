@@ -1,6 +1,7 @@
 package com.sme.be_sme.modules.survey.infrastructure.mapper;
 
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyAnswerEntity;
+import com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyAnswerRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -15,5 +16,9 @@ public interface SurveyAnswerMapperExt {
     List<SurveyAnswerEntity> selectByCompanyIdAndResponseIds(
             @Param("companyId") String companyId,
             @Param("responseIds") List<String> responseIds
+    );
+    List<SurveyAnswerRow> selectByResponseId(
+            @Param("companyId") String companyId,
+            @Param("surveyResponseId") String surveyResponseId
     );
 }

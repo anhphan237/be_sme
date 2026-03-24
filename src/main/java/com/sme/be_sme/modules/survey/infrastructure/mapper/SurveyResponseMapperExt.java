@@ -1,6 +1,7 @@
 package com.sme.be_sme.modules.survey.infrastructure.mapper;
 
 import com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyResponseFilterRow;
+import com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyResponseRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -20,5 +21,9 @@ public interface SurveyResponseMapperExt {
             @Param("endDate") Date endDate,
             @Param("templateId") String templateId,
             @Param("stage") String stage
+    );
+    SurveyResponseRow selectLatestByInstanceId(
+            @Param("companyId") String companyId,
+            @Param("instanceId") String instanceId
     );
 }

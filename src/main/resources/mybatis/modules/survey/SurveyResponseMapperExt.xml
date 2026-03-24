@@ -24,4 +24,17 @@
         </if>
         order by sr.submitted_at desc
     </select>
+    <select id="selectLatestByInstanceId"
+            resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyResponseRow">
+        SELECT
+        survey_response_id AS surveyResponseId,
+        survey_instance_id AS surveyInstanceId,
+        responder_user_id AS responderUserId,
+        submitted_at AS submittedAt
+        FROM survey_responses
+        WHERE company_id = #{companyId}
+        AND survey_instance_id = #{instanceId}
+        ORDER BY submitted_at DESC
+        LIMIT 1
+    </select>
 </mapper>
