@@ -54,7 +54,11 @@ public class PermissionService {
                     || "com.sme.content.document.list".equalsIgnoreCase(perm)
                     || "com.sme.content.document.acknowledge".equalsIgnoreCase(perm)
                     || "com.sme.identity.user.get".equalsIgnoreCase(perm)
-                    || "com.sme.survey.instance.list".equalsIgnoreCase(perm)){
+                    || "com.sme.survey.instance.list".equalsIgnoreCase(perm)
+                    || "com.sme.ai.assistant.ask".equalsIgnoreCase(perm)
+                    || "com.sme.chat.session.create".equalsIgnoreCase(perm)
+                    || "com.sme.chat.session.list".equalsIgnoreCase(perm)
+                    || "com.sme.chat.message.list".equalsIgnoreCase(perm)){
                 return true;
             }
         }
