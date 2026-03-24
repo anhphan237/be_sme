@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyResponseDraftMapperExt">
+
+    <insert id="upsertDraft">
+        INSERT INTO survey_response_drafts (
+        survey_response_draft_id,
+        company_id,
+        survey_instance_id,
+        question_id,
+        responder_user_id,
+        answer_value
+        )
+        VALUES (
+        #{draftId,jdbcType=VARCHAR},
+        #{companyId,jdbcType=VARCHAR},
+        #{instanceId,jdbcType=VARCHAR},
+        #{questionId,jdbcType=VARCHAR},
+        #{responderUserId,jdbcType=VARCHAR},
+        #{answerValue,jdbcType=LONGVARCHAR}
+        )
+        ON DUPLICATE KEY UPDATE
+        answer_value = VALUES(answer_value),
+        updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <select id="selectByInstanceIdAndResponder"
+            resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyResponseDraftRow">
+        SELECT
+        survey_response_draft_id as surveyResponseDraftId,
+        survey_instance_id as surveyInstanceId,
+        question_id as questionId,
+        responder_user_id as responderUserId,
+        answer_value as answerValue
+        FROM survey_response_drafts
+        WHERE company_id = #{companyId,jdbcType=VARCHAR}
+        AND survey_instance_id = #{instanceId,jdbcType=VARCHAR}
+        AND responder_user_id = #{responderUserId,jdbcType=VARCHAR}
+    </select>
+
+    <delete id="deleteByInstanceIdAndResponder">
+        DELETE FROM survey_response_drafts
+        WHERE company_id = #{companyId,jdbcType=VARCHAR}
+        AND survey_instance_id = #{instanceId,jdbcType=VARCHAR}
+        AND responder_user_id = #{responderUserId,jdbcType=VARCHAR}
+    </delete>
+
+</mapper>

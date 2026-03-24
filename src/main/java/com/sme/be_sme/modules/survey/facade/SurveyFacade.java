@@ -55,4 +55,11 @@ public interface SurveyFacade extends OperationFacadeProvider {
     @OperationType("com.sme.survey.analytics.report")
     SurveyAnalyticsReportResponse getSurveyAnalyticsReport(SurveyAnalyticsReportRequest request);
 
+    @OperationType("com.sme.survey.instance.get")
+    SurveyInstanceGetResponse getSurveyInstance(SurveyInstanceGetRequest request);
+
+    @OperationType("com.sme.survey.response.saveDraft")
+    SurveyResponseSaveDraftResponse saveSurveyResponseDraft(SurveyResponseSaveDraftRequest request);
+
+
 }

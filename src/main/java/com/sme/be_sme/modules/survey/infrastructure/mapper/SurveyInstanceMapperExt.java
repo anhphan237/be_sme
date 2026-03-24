@@ -1,5 +1,6 @@
 package com.sme.be_sme.modules.survey.infrastructure.mapper;
 
+import com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyInstanceDetailRow;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyInstanceListRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -45,6 +46,10 @@ public interface SurveyInstanceMapperExt {
             @Param("startDate") Date startDate,
             @Param("endDate") Date endDate
     );
-
+    SurveyInstanceDetailRow selectDetailById(
+            @Param("companyId") String companyId,
+            @Param("instanceId") String instanceId,
+            @Param("responderUserId") String responderUserId
+    );
 
 }
