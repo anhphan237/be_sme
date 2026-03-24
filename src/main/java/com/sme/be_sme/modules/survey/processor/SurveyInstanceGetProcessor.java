@@ -75,7 +75,7 @@ public class SurveyInstanceGetProcessor extends BaseBizProcessor<BizContext> {
         response.setTemplateId(row.getSurveyTemplateId());
         response.setTemplateName(row.getTemplateName());
         response.setStatus(row.getStatus());
-        response.setScheduledAt(row.getScheduledAt());
+        response.setScheduledAt(row.getScheduledAt().toLocalDateTime());
         response.setDraftAnswers(draftAnswers);
         return response;
     }
