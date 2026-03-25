@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.billing.api.request.UsageTrackRequest;
 import com.sme.be_sme.modules.billing.api.response.UsageTrackResponse;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.UsageMonthlyMapper;
+import com.sme.be_sme.modules.billing.service.BillingEntitlementService;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.UsageMonthlyEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -27,11 +28,14 @@ public class UsageTrackProcessor extends BaseBizProcessor<BizContext> {
     private final ObjectMapper objectMapper;
     private final UsageMonthlyMapper usageMonthlyMapper;
     private final SubscriptionMapper subscriptionMapper;
+    private final BillingEntitlementService billingEntitlementService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
         UsageTrackRequest request = objectMapper.convertValue(payload, UsageTrackRequest.class);
         validate(context, request);
+
+        billingEntitlementService.assertPaidForOperationalAccess(context.getTenantId().trim());
 
         SubscriptionEntity subscription = subscriptionMapper.selectByPrimaryKey(request.getSubscriptionId().trim());
         if (subscription == null || !context.getTenantId().trim().equals(subscription.getCompanyId())) {

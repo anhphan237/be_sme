@@ -59,6 +59,8 @@ app:
   einvoice:
     provider: ${EINVOICE_PROVIDER:mock}
   billing:
+    # When true, paid plans cannot use gated operations while an ISSUED invoice is overdue or falls in the current subscription period.
+    require-paid-for-operations: ${BILLING_REQUIRE_PAID:true}
     recurring-invoice:
       # cron: 1st day of month at 00:00
       cron: ${RECURRING_INVOICE_CRON:0 0 1 1 * *}

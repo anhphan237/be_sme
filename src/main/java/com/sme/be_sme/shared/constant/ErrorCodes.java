@@ -10,4 +10,6 @@ public final class ErrorCodes {
     public static final String INVALID_REQUEST = "INVALID_REQUEST";
     public static final String DUPLICATED = "DUPLICATED";
     public static final String LIMIT_EXCEEDED = "LIMIT_EXCEEDED";
+    /** Active paid subscription has an unpaid invoice (overdue or current period). */
+    public static final String PAYMENT_REQUIRED = "PAYMENT_REQUIRED";
 }

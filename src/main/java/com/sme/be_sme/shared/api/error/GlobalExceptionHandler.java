@@ -71,6 +71,9 @@ public class GlobalExceptionHandler {
         if (ErrorCodes.NOT_FOUND.equals(code)) {
             return HttpStatus.NOT_FOUND;
         }
+        if (ErrorCodes.PAYMENT_REQUIRED.equals(code)) {
+            return HttpStatus.PAYMENT_REQUIRED;
+        }
         return HttpStatus.INTERNAL_SERVER_ERROR;
     }
 }

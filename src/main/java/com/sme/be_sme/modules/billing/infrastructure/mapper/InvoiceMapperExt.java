@@ -19,6 +19,14 @@ public interface InvoiceMapperExt {
     );
 
     /**
+     * Latest invoice still in ISSUED (awaiting payment) for the subscription, by issued_at desc.
+     */
+    InvoiceEntity selectLatestIssuedBySubscriptionId(
+            @Param("companyId") String companyId,
+            @Param("subscriptionId") String subscriptionId
+    );
+
+    /**
      * Invoice for the subscription issued between the given dates (inclusive). Used by recurring job to avoid duplicates.
      */
     InvoiceEntity selectBySubscriptionIdAndIssuedBetween(

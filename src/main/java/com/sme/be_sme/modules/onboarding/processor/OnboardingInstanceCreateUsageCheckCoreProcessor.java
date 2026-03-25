@@ -5,6 +5,7 @@ import com.sme.be_sme.modules.billing.api.request.UsageCheckRequest;
 import com.sme.be_sme.modules.billing.api.response.PlanGetResponse;
 import com.sme.be_sme.modules.billing.api.response.UsageCheckResponse;
 import com.sme.be_sme.modules.billing.facade.BillingFacade;
+import com.sme.be_sme.modules.billing.service.BillingEntitlementService;
 import com.sme.be_sme.modules.onboarding.context.OnboardingInstanceCreateContext;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -18,12 +19,15 @@ public class OnboardingInstanceCreateUsageCheckCoreProcessor
         extends BaseCoreProcessor<OnboardingInstanceCreateContext> {
 
     private final BillingFacade billingFacade;
+    private final BillingEntitlementService billingEntitlementService;
 
     @Override
     protected Object process(OnboardingInstanceCreateContext ctx) {
         if (ctx.getExistingInstance() != null) {
             return null;
         }
+
+        billingEntitlementService.assertPaidForOperationalAccess(ctx.getBiz().getTenantId());
 
         UsageCheckResponse usage = billingFacade.checkUsage(new UsageCheckRequest());
         PlanGetResponse plan;
