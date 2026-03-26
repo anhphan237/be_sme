@@ -167,6 +167,10 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
                 item.setAssignedDepartmentId(e.getAssignedDepartmentId());
                 item.setCompletedAt(e.getCompletedAt());
                 item.setCreatedAt(e.getCreatedAt());
+                item.setRequireAck(e.getRequireAck());
+                item.setRequiresManagerApproval(e.getRequiresManagerApproval());
+                item.setApprovalStatus(e.getApprovalStatus());
+                item.setApproverUserId(e.getApproverUserId());
                 return item;
             })
             .collect(Collectors.toList());

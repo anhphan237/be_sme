@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.analytics.api.request.CompanyTaskCompletionRequest
 import com.sme.be_sme.modules.analytics.api.response.CompanyTaskCompletionResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -125,9 +126,9 @@ public class CompanyTaskCompletionProcessor extends BaseBizProcessor<BizContext>
         if (task == null) {
             return false;
         }
-        if (task.getCompletedAt() != null) {
+        if (task.getStatus() != null && "COMPLETED".equalsIgnoreCase(task.getStatus())) {
             return true;
         }
-        return task.getStatus() != null && "COMPLETED".equalsIgnoreCase(task.getStatus());
+        return OnboardingInstanceProgressService.isEffectivelyComplete(task);
     }
 }

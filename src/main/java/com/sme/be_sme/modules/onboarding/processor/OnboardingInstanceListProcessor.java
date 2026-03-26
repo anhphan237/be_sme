@@ -124,12 +124,16 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
                 managerNameByUserId
         );
         response.setEmployeeUserId(employeeLinkInfo.employeeUserId);
-        response.setManagerUserId(employeeLinkInfo.managerUserId);
-        response.setManagerName(employeeLinkInfo.managerName);
+        String managerUserId = StringUtils.hasText(entity.getManagerUserId())
+                ? entity.getManagerUserId().trim()
+                : employeeLinkInfo.managerUserId;
+        response.setManagerUserId(managerUserId);
+        response.setManagerName(resolveManagerName(companyId, managerUserId, managerNameByUserId));
         response.setTemplateId(entity.getOnboardingTemplateId());
         response.setStatus(entity.getStatus());
         response.setStartDate(entity.getStartDate());
         response.setCompletedAt(entity.getCompletedAt());
+        response.setProgressPercent(entity.getProgressPercent() != null ? entity.getProgressPercent() : 0);
         return response;
     }
 

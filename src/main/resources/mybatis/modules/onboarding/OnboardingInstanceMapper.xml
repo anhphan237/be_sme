@@ -21,6 +21,8 @@
     <result column="updated_by" jdbcType="VARCHAR" property="updatedBy" />
     <result column="progress_percent" jdbcType="INTEGER" property="progressPercent" />
     <result column="request_no" jdbcType="VARCHAR" property="requestNo" />
+    <result column="manager_user_id" jdbcType="VARCHAR" property="managerUserId" />
+    <result column="it_staff_user_id" jdbcType="VARCHAR" property="itStaffUserId" />
   </resultMap>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
     <!--
@@ -40,11 +42,11 @@
     insert into onboarding_instances (onboarding_id, company_id, employee_id, 
       onboarding_template_id, status, start_date, 
       completed_at, completed_by, created_by, 
-      created_at, updated_at, updated_by, progress_percent, request_no)
+      created_at, updated_at, updated_by, progress_percent, request_no, manager_user_id, it_staff_user_id)
     values (#{onboardingId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{employeeId,jdbcType=VARCHAR}, 
       #{onboardingTemplateId,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR}, #{startDate,jdbcType=DATE}, 
       #{completedAt,jdbcType=TIMESTAMP}, #{completedBy,jdbcType=VARCHAR}, #{createdBy,jdbcType=VARCHAR}, 
-      #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, #{updatedBy,jdbcType=VARCHAR}, #{progressPercent,jdbcType=INTEGER}, #{requestNo,jdbcType=VARCHAR})
+      #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, #{updatedBy,jdbcType=VARCHAR}, #{progressPercent,jdbcType=INTEGER}, #{requestNo,jdbcType=VARCHAR}, #{managerUserId,jdbcType=VARCHAR}, #{itStaffUserId,jdbcType=VARCHAR})
   </insert>
   <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity">
     <!--
@@ -65,7 +67,9 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP},
       updated_by = #{updatedBy,jdbcType=VARCHAR},
       progress_percent = #{progressPercent,jdbcType=INTEGER},
-      request_no = #{requestNo,jdbcType=VARCHAR}
+      request_no = #{requestNo,jdbcType=VARCHAR},
+      manager_user_id = #{managerUserId,jdbcType=VARCHAR},
+      it_staff_user_id = #{itStaffUserId,jdbcType=VARCHAR}
     where onboarding_id = #{onboardingId,jdbcType=VARCHAR}
   </update>
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
@@ -75,18 +79,21 @@
       This element was generated on Thu Jan 22 16:08:37 ICT 2026.
     -->
     select onboarding_id, company_id, employee_id, onboarding_template_id, status, start_date, 
-    completed_at, completed_by, created_by, created_at, updated_at, updated_by, progress_percent, request_no
+    completed_at, completed_by, created_by, created_at, updated_at, updated_by, progress_percent, request_no,
+    manager_user_id, it_staff_user_id
     from onboarding_instances
     where onboarding_id = #{onboardingId,jdbcType=VARCHAR}
   </select>
   <select id="selectAll" resultMap="BaseResultMap">
     select onboarding_id, company_id, employee_id, onboarding_template_id, status, start_date, 
-    completed_at, completed_by, created_by, created_at, updated_at, updated_by, progress_percent, request_no
+    completed_at, completed_by, created_by, created_at, updated_at, updated_by, progress_percent, request_no,
+    manager_user_id, it_staff_user_id
     from onboarding_instances
   </select>
   <select id="selectByCompanyIdAndRequestNo" resultMap="BaseResultMap">
     select onboarding_id, company_id, employee_id, onboarding_template_id, status, start_date, 
-    completed_at, completed_by, created_by, created_at, updated_at, updated_by, progress_percent, request_no
+    completed_at, completed_by, created_by, created_at, updated_at, updated_by, progress_percent, request_no,
+    manager_user_id, it_staff_user_id
     from onboarding_instances
     where company_id = #{companyId,jdbcType=VARCHAR}
       and request_no = #{requestNo,jdbcType=VARCHAR}

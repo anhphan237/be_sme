@@ -20,6 +20,16 @@ public class TaskDetailResponse {
     private Date updatedAt;
     private String createdBy;
 
+    private Boolean requireAck;
+    private Date acknowledgedAt;
+    private String acknowledgedBy;
+    private Boolean requiresManagerApproval;
+    private String approvalStatus;
+    private String approvedBy;
+    private Date approvedAt;
+    private String rejectionReason;
+    private String approverUserId;
+
     // Related entities (enriched)
     private ChecklistInfo checklist;
     private UserInfo assignedUser;

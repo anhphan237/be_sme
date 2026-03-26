@@ -168,6 +168,95 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Onboarding tasks",
+      "item": [
+        {
+          "name": "Task acknowledge",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"operationType\": \"com.sme.onboarding.task.acknowledge\",\n    \"requestId\": \"req-task-ack-001\",\n    \"payload\": {\n        \"taskId\": \"{{task_id}}\"\n    }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/gateway",
+              "host": ["{{baseURL}}"],
+              "path": ["api", "v1", "gateway"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Task approve",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"operationType\": \"com.sme.onboarding.task.approve\",\n    \"requestId\": \"req-task-approve-001\",\n    \"payload\": {\n        \"taskId\": \"{{task_id}}\"\n    }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/gateway",
+              "host": ["{{baseURL}}"],
+              "path": ["api", "v1", "gateway"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Task reject",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"operationType\": \"com.sme.onboarding.task.reject\",\n    \"requestId\": \"req-task-reject-001\",\n    \"payload\": {\n        \"taskId\": \"{{task_id}}\",\n        \"reason\": \"Please fix documentation\"\n    }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/gateway",
+              "host": ["{{baseURL}}"],
+              "path": ["api", "v1", "gateway"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Task attachment add",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"operationType\": \"com.sme.onboarding.task.attachment.add\",\n    \"requestId\": \"req-task-attach-001\",\n    \"payload\": {\n        \"taskId\": \"{{task_id}}\",\n        \"fileName\": \"handover-signed.pdf\",\n        \"fileUrl\": \"https://storage.example.com/handover-signed.pdf\",\n        \"fileType\": \"application/pdf\",\n        \"fileSizeBytes\": 1024\n    }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/gateway",
+              "host": ["{{baseURL}}"],
+              "path": ["api", "v1", "gateway"]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [

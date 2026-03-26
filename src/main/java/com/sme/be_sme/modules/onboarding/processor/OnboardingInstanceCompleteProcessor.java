@@ -2,6 +2,8 @@ package com.sme.be_sme.modules.onboarding.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapper;
+import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.identity.api.request.UpdateUserRequest;
 import com.sme.be_sme.modules.identity.context.IdentityUpdateUserContext;
 import com.sme.be_sme.modules.identity.processor.IdentityUserUpdateProcessor;
@@ -25,6 +27,7 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
 
     private final ObjectMapper objectMapper;
     private final OnboardingInstanceMapper onboardingInstanceMapper;
+    private final EmployeeProfileMapper employeeProfileMapper;
     private final IdentityUserUpdateProcessor identityUserUpdateProcessor;
 
     @Override
@@ -52,12 +55,13 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "complete onboarding instance failed");
         }
 
-        if (StringUtils.hasText(instance.getEmployeeId())) {
+        String employeeUserId = resolveEmployeeUserId(instance.getEmployeeId());
+        if (StringUtils.hasText(employeeUserId)) {
             IdentityUpdateUserContext identityContext = new IdentityUpdateUserContext();
             identityContext.setTenantId(context.getTenantId());
             identityContext.setOperatorId(context.getOperatorId());
             UpdateUserRequest updateUserRequest = UpdateUserRequest.builder()
-                    .userId(instance.getEmployeeId())
+                    .userId(employeeUserId)
                     .companyId(companyId)
                     .status("OFFICIAL")
                     .build();
@@ -68,6 +72,18 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
         response.setInstanceId(instance.getOnboardingId());
         response.setStatus(instance.getStatus());
         return response;
+    }
+
+    private String resolveEmployeeUserId(String employeeIdRaw) {
+        if (!StringUtils.hasText(employeeIdRaw)) {
+            return null;
+        }
+        String key = employeeIdRaw.trim();
+        EmployeeProfileEntity profile = employeeProfileMapper.selectByPrimaryKey(key);
+        if (profile != null && StringUtils.hasText(profile.getUserId())) {
+            return profile.getUserId().trim();
+        }
+        return key;
     }
 
     private static void validate(BizContext context, OnboardingInstanceCompleteRequest request) {

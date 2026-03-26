@@ -69,6 +69,13 @@ public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizCon
             throw AppException.of(ErrorCodes.FORBIDDEN, "instance does not belong to tenant");
         }
 
+        if (StringUtils.hasText(request.getManagerUserId())) {
+            instance.setManagerUserId(request.getManagerUserId().trim());
+        }
+        if (StringUtils.hasText(request.getItStaffUserId())) {
+            instance.setItStaffUserId(request.getItStaffUserId().trim());
+        }
+
         Date now = new Date();
         boolean wasInactive = !"ACTIVE".equalsIgnoreCase(instance.getStatus());
         if (wasInactive) {
@@ -91,6 +98,9 @@ public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizCon
         if (wasInactive) {
             OnboardingTaskGenerateRequest genReq = new OnboardingTaskGenerateRequest();
             genReq.setInstanceId(instance.getOnboardingId());
+            genReq.setManagerId(resolveManagerUserIdForGenerate(instance));
+            genReq.setItStaffUserId(
+                    StringUtils.hasText(instance.getItStaffUserId()) ? instance.getItStaffUserId().trim() : null);
             onboardingTaskFacade.generateTasksFromTemplate(genReq);
             notifyOnboardingStarted(companyId, instance);
         }
@@ -99,6 +109,20 @@ public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizCon
         response.setInstanceId(instance.getOnboardingId());
         response.setStatus(instance.getStatus());
         return response;
+    }
+
+    private String resolveManagerUserIdForGenerate(OnboardingInstanceEntity instance) {
+        if (StringUtils.hasText(instance.getManagerUserId())) {
+            return instance.getManagerUserId().trim();
+        }
+        if (!StringUtils.hasText(instance.getEmployeeId())) {
+            return null;
+        }
+        EmployeeProfileEntity profile = employeeProfileMapper.selectByPrimaryKey(instance.getEmployeeId().trim());
+        if (profile == null || !StringUtils.hasText(profile.getManagerUserId())) {
+            return null;
+        }
+        return profile.getManagerUserId().trim();
     }
 
     private void notifyOnboardingStarted(String companyId, OnboardingInstanceEntity instance) {
