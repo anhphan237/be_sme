@@ -39,6 +39,7 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         SurveyScheduleRequest request =
                 objectMapper.convertValue(payload, SurveyScheduleRequest.class);
         validate(context, request);
+
         SurveyTemplateEntity template =
                 surveyTemplateMapper.selectByPrimaryKey(request.getTemplateId().trim());
 
@@ -52,52 +53,53 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         Date scheduledAt = request.getScheduledAt();
         Date closedAt = plusDays(scheduledAt, dueDays);
 
-        SurveyInstanceEntity entity = new SurveyInstanceEntity();
-        entity.setSurveyInstanceId(UuidGenerator.generate());
-        entity.setCompanyId(context.getTenantId());
-        entity.setOnboardingId(request.getOnboardingId());
-        entity.setSurveyTemplateId(template.getSurveyTemplateId());
-        entity.setScheduledAt(scheduledAt);
-        entity.setClosedAt(closedAt);
-        entity.setStatus("SCHEDULED");
-        entity.setResponderUserId(request.getResponderUserId());
-        entity.setCreatedAt(now);
+        String targetRole = request.getTargetRole();
+        if (!StringUtils.hasText(targetRole)) {
+            targetRole = template.getTargetRole();
+        }
+        if (!StringUtils.hasText(targetRole)) {
+            targetRole = "EMPLOYEE";
+        }
 
-        int inserted = surveyInstanceMapper.insert(entity);
-        if (inserted != 1) {
-            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "schedule survey instance failed");
+        String employeeId = request.getResponderUserId();
+        String createdInstanceId = null;
+
+        String departmentId = userMapperExt.selectDepartmentIdByUserId(employeeId);
+        String managerId = null;
+        if (StringUtils.hasText(departmentId)) {
+            managerId = userMapperExt.selectManagerIdByDepartmentId(
+                    context.getTenantId(),
+                    departmentId
+            );
+        }
+
+        if (("MANAGER".equalsIgnoreCase(targetRole) || "BOTH".equalsIgnoreCase(targetRole))
+                && !StringUtils.hasText(managerId)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "manager not found for department");
+        }
+
+        if ("MANAGER".equalsIgnoreCase(targetRole)) {
+            createdInstanceId = createInstance(context, template, request, managerId, scheduledAt, closedAt);
+        } else if ("BOTH".equalsIgnoreCase(targetRole)) {
+            createInstance(context, template, request, employeeId, scheduledAt, closedAt);
+            createdInstanceId = createInstance(context, template, request, managerId, scheduledAt, closedAt);
+        } else {
+            createdInstanceId = createInstance(context, template, request, employeeId, scheduledAt, closedAt);
         }
 
         UserEntity user = null;
         if (StringUtils.hasText(request.getResponderUserId())) {
             user = userMapper.selectByPrimaryKey(request.getResponderUserId());
         }
+
         SurveyScheduleResponse response = new SurveyScheduleResponse();
-        response.setScheduleId(entity.getSurveyInstanceId());
-        response.setStatus(entity.getStatus());
+        response.setScheduleId(createdInstanceId);
+        response.setStatus("SCHEDULED");
         response.setOpenAt(scheduledAt);
         response.setDueAt(closedAt);
         response.setTemplateId(template.getSurveyTemplateId());
-        String targetRole = request.getTargetRole();
-        String employeeId = request.getResponderUserId();
-
-        String departmentId = userMapperExt.selectDepartmentIdByUserId(employeeId);
-        String managerId = userMapperExt.selectManagerIdByDepartmentId(
-                context.getTenantId(),
-                departmentId
-        );
-
-        if ("MANAGER".equals(targetRole)) {
-            createInstance(context, template, request, managerId, scheduledAt, closedAt);
-        }
-        else if ("BOTH".equals(targetRole)) {
-            createInstance(context, template, request, employeeId, scheduledAt, closedAt);
-            createInstance(context, template, request, managerId, scheduledAt, closedAt);
-        }
-        else {
-            createInstance(context, template, request, employeeId, scheduledAt, closedAt);
-        }
-        response.setInstanceId(entity.getSurveyInstanceId());
+        response.setResponderUserId(request.getResponderUserId());
+        response.setInstanceId(createdInstanceId);
 
         if (user != null) {
             response.setEmployeeName(user.getFullName());
@@ -106,7 +108,8 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
 
         return response;
     }
-    private void createInstance(
+
+    private String createInstance(
             BizContext context,
             SurveyTemplateEntity template,
             SurveyScheduleRequest request,
@@ -114,7 +117,9 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
             Date scheduledAt,
             Date closedAt
     ) {
-        Date now = new Date();
+        if (!StringUtils.hasText(responderUserId)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "responderUserId is required");
+        }
 
         SurveyInstanceEntity entity = new SurveyInstanceEntity();
         entity.setSurveyInstanceId(UuidGenerator.generate());
@@ -125,12 +130,14 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         entity.setClosedAt(closedAt);
         entity.setStatus("SCHEDULED");
         entity.setResponderUserId(responderUserId);
-        entity.setCreatedAt(now);
+        entity.setCreatedAt(new Date());
 
         int inserted = surveyInstanceMapper.insert(entity);
         if (inserted != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "schedule survey instance failed");
         }
+
+        return entity.getSurveyInstanceId();
     }
     private static Date plusDays(Date start, int days) {
         return new Date(start.getTime() + (long) days * 24 * 60 * 60 * 1000);
