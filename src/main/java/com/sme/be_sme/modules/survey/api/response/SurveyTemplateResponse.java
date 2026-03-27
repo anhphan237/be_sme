@@ -20,4 +20,5 @@ public class SurveyTemplateResponse {
     private Date createdAt;
     private Date updatedAt;
     private Boolean isDefault;
+    private String targetRole;
 }

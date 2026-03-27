@@ -13,4 +13,5 @@ public class SurveyTemplateUpdateRequest {
     private String status;       // DRAFT/ACTIVE/...
     private Boolean isDefault;
     private Integer version;
+    private String targetRole;
 }

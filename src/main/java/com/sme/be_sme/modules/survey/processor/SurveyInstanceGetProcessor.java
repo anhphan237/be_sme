@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -63,7 +64,12 @@ public class SurveyInstanceGetProcessor extends BaseBizProcessor<BizContext> {
         if (row == null) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "Survey instance not found");
         }
-
+        if (!STATUS_COMPLETED.equalsIgnoreCase(row.getStatus())
+                && row.getScheduledAt() != null
+                && row.getScheduledAt().toInstant().isAfter(Instant.now())
+                && shouldRestrictByResponder(context)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "Survey is not open yet");
+        }
         List<SurveyInstanceGetResponse.SurveyDraftAnswerDto> answers;
         if (STATUS_COMPLETED.equalsIgnoreCase(row.getStatus())) {
             answers = loadSubmittedAnswers(companyId, row.getSurveyInstanceId());

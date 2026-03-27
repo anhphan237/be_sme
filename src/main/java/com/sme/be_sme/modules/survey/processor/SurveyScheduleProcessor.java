@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.survey.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
 import com.sme.be_sme.modules.survey.api.request.SurveyScheduleRequest;
 import com.sme.be_sme.modules.survey.api.response.SurveyScheduleResponse;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapper;
@@ -32,6 +33,7 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
     private final SurveyTemplateMapper surveyTemplateMapper;
     private final SurveyInstanceMapper surveyInstanceMapper;
     private final UserMapper userMapper;
+    private final UserMapperExt userMapperExt;
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
         SurveyScheduleRequest request =
@@ -76,7 +78,25 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         response.setOpenAt(scheduledAt);
         response.setDueAt(closedAt);
         response.setTemplateId(template.getSurveyTemplateId());
-        response.setResponderUserId(request.getResponderUserId());
+        String targetRole = request.getTargetRole();
+        String employeeId = request.getResponderUserId();
+
+        String departmentId = userMapperExt.selectDepartmentIdByUserId(employeeId);
+        String managerId = userMapperExt.selectManagerIdByDepartmentId(
+                context.getTenantId(),
+                departmentId
+        );
+
+        if ("MANAGER".equals(targetRole)) {
+            createInstance(context, template, request, managerId, scheduledAt, closedAt);
+        }
+        else if ("BOTH".equals(targetRole)) {
+            createInstance(context, template, request, employeeId, scheduledAt, closedAt);
+            createInstance(context, template, request, managerId, scheduledAt, closedAt);
+        }
+        else {
+            createInstance(context, template, request, employeeId, scheduledAt, closedAt);
+        }
         response.setInstanceId(entity.getSurveyInstanceId());
 
         if (user != null) {
@@ -86,7 +106,32 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
 
         return response;
     }
+    private void createInstance(
+            BizContext context,
+            SurveyTemplateEntity template,
+            SurveyScheduleRequest request,
+            String responderUserId,
+            Date scheduledAt,
+            Date closedAt
+    ) {
+        Date now = new Date();
 
+        SurveyInstanceEntity entity = new SurveyInstanceEntity();
+        entity.setSurveyInstanceId(UuidGenerator.generate());
+        entity.setCompanyId(context.getTenantId());
+        entity.setOnboardingId(request.getOnboardingId());
+        entity.setSurveyTemplateId(template.getSurveyTemplateId());
+        entity.setScheduledAt(scheduledAt);
+        entity.setClosedAt(closedAt);
+        entity.setStatus("SCHEDULED");
+        entity.setResponderUserId(responderUserId);
+        entity.setCreatedAt(now);
+
+        int inserted = surveyInstanceMapper.insert(entity);
+        if (inserted != 1) {
+            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "schedule survey instance failed");
+        }
+    }
     private static Date plusDays(Date start, int days) {
         return new Date(start.getTime() + (long) days * 24 * 60 * 60 * 1000);
     }
