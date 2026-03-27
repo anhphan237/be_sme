@@ -50,8 +50,8 @@ public class CreateUserRequest {
      * ========================= */
 
     /**
-     * Required.
-     * Used to set employee_profiles.department_id
+     * Required for roleCode EMPLOYEE or MANAGER ({@code employee_profiles.department_id}).
+     * Optional for other roles (e.g. IT) — tenant-level staff with no department.
      */
     private String departmentId;
 

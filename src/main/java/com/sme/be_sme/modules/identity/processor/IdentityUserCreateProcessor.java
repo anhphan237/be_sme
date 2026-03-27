@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -129,8 +130,11 @@ public class IdentityUserCreateProcessor extends BaseBizProcessor<BizContext> {
         if (request == null) throw AppException.of(ErrorCodes.BAD_REQUEST, "payload is required");
         if (isBlank(request.getEmail())) throw AppException.of(ErrorCodes.BAD_REQUEST, "email is required");
         if (isBlank(request.getFullName())) throw AppException.of(ErrorCodes.BAD_REQUEST, "fullName is required");
-        if (isBlank(request.getDepartmentId())) throw AppException.of(ErrorCodes.BAD_REQUEST, "departmentId is required");
         if (isBlank(request.getRoleCode())) throw AppException.of(ErrorCodes.BAD_REQUEST, "roleCode is required");
+        String roleUpper = request.getRoleCode().trim().toUpperCase(Locale.ROOT);
+        if (("EMPLOYEE".equals(roleUpper) || "MANAGER".equals(roleUpper)) && isBlank(request.getDepartmentId())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "departmentId is required for EMPLOYEE and MANAGER");
+        }
     }
 
     private static boolean isBlank(String s) { return s == null || s.isBlank(); }
