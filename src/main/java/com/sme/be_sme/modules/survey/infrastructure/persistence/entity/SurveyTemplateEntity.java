@@ -303,6 +303,23 @@ public class SurveyTemplateEntity {
     private String description;
     private Integer version;
     private Boolean isDefault;
+    private String targetRole;
+
+    public Boolean getDefault() {
+        return isDefault;
+    }
+
+    public void setDefault(Boolean aDefault) {
+        isDefault = aDefault;
+    }
+
+    public String getTargetRole() {
+        return targetRole;
+    }
+
+    public void setTargetRole(String targetRole) {
+        this.targetRole = targetRole;
+    }
 
     public String getDescription() {
         return description;

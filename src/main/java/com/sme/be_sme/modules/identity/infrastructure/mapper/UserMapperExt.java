@@ -26,4 +26,11 @@ public interface UserMapperExt {
     );
 
     int countByEmail(@Param("email") String email);
+
+    String selectDepartmentIdByUserId(@Param("userId") String userId);
+
+    String selectManagerIdByDepartmentId(
+            @Param("companyId") String companyId,
+            @Param("departmentId") String departmentId
+    );
 }

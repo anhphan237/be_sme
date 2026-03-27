@@ -73,6 +73,10 @@ public class SurveyTemplateUpdateProcessor extends BaseBizProcessor<BizContext> 
         if (entity.getVersion() == null) entity.setVersion(1);
         else entity.setVersion(entity.getVersion() + 1);
 
+        if (StringUtils.hasText(request.getTargetRole())) {
+            entity.setTargetRole(request.getTargetRole().trim());
+        }
+
         entity.setUpdatedAt(new Date());
 
         int updated = surveyTemplateMapper.updateByPrimaryKey(entity);
@@ -89,6 +93,7 @@ public class SurveyTemplateUpdateProcessor extends BaseBizProcessor<BizContext> 
         res.setManagerOnly(entity.getManagerOnly());
         res.setVersion(entity.getVersion());
         res.setIsDefault(entity.getIsDefault());
+        res.setTargetRole(entity.getTargetRole());
         return res;
     }
 }
