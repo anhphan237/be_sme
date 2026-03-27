@@ -42,7 +42,9 @@ public class SurveyTemplateCreateProcessor extends BaseBizProcessor<BizContext> 
         entity.setCreatedBy(context.getOperatorId() != null ? context.getOperatorId() : "system");
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
-
+        entity.setTargetRole(
+                request.getTargetRole() != null ? request.getTargetRole() : "EMPLOYEE"
+        );
         entity.setVersion(1);
         entity.setIsDefault(Boolean.FALSE);
 
@@ -61,6 +63,7 @@ public class SurveyTemplateCreateProcessor extends BaseBizProcessor<BizContext> 
         response.setVersion(1);
         response.setCreatedBy(entity.getCreatedBy());
         response.setCreatedAt(entity.getCreatedAt());
+        response.setTargetRole(entity.getTargetRole());
         return response;
     }
 

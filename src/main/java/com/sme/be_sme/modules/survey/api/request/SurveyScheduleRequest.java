@@ -13,4 +13,5 @@ public class SurveyScheduleRequest {
     private Date scheduledAt;
     private Integer dueDays;
     private String responderUserId;
+    private String targetRole;
 }

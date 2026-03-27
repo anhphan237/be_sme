@@ -75,6 +75,7 @@ public class SurveyTemplateGetDetailProcessor extends BaseBizProcessor<BizContex
         response.setVersion(template.getVersion());
         response.setQuestions(questions);
         response.setIsDefault(template.getIsDefault());
+        response.setTargetRole(template.getTargetRole());
         return response;
     }
 }

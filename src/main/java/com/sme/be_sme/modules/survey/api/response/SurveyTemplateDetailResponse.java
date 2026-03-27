@@ -14,4 +14,5 @@ public class SurveyTemplateDetailResponse {
     private Integer version;
     private Boolean isDefault;
     private List<SurveyQuestionResponse> questions;
+    private String targetRole;
 }

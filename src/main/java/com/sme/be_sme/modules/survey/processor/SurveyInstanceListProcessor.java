@@ -27,7 +27,8 @@ public class SurveyInstanceListProcessor extends BaseBizProcessor<BizContext> {
     private static final int DEFAULT_LIMIT = 20;
     private static final int MAX_LIMIT = 100;
     private static final String ROLE_EMPLOYEE = "EMPLOYEE";
-
+    private static final String ROLE_MANAGER = "MANAGER";
+    private static final String ROLE_HR = "HR";
     private final ObjectMapper objectMapper;
     private final SurveyInstanceMapperExt surveyInstanceMapperExt;
 
@@ -49,7 +50,7 @@ public class SurveyInstanceListProcessor extends BaseBizProcessor<BizContext> {
                 ? request.getOffset()
                 : 0;
 
-        String responderUserId = isEmployee(context) ? operatorId : null;
+        String responderUserId = shouldRestrictByResponder(context) ? operatorId : null;
 
         int totalCount = surveyInstanceMapperExt.countByCompanyId(
                 companyId,
@@ -84,7 +85,26 @@ public class SurveyInstanceListProcessor extends BaseBizProcessor<BizContext> {
         response.setTotalCount(totalCount);
         return response;
     }
+    private boolean shouldRestrictByResponder(BizContext context) {
+        Set<String> roles = context.getRoles();
+        if (CollectionUtils.isEmpty(roles)) {
+            return true;
+        }
 
+        boolean isHr = roles.stream()
+                .filter(StringUtils::hasText)
+                .anyMatch(role -> ROLE_HR.equalsIgnoreCase(role));
+
+        if (isHr) {
+            return false;
+        }
+
+        return roles.stream()
+                .filter(StringUtils::hasText)
+                .anyMatch(role ->
+                        ROLE_EMPLOYEE.equalsIgnoreCase(role)
+                                || ROLE_MANAGER.equalsIgnoreCase(role));
+    }
     private SurveyInstanceListResponse.SurveyInstanceItem toItem(SurveyInstanceListRow row) {
         SurveyInstanceListResponse.SurveyInstanceItem item = new SurveyInstanceListResponse.SurveyInstanceItem();
         item.setId(row.getSurveyInstanceId());
@@ -111,14 +131,4 @@ public class SurveyInstanceListProcessor extends BaseBizProcessor<BizContext> {
         }
     }
 
-    private boolean isEmployee(BizContext context) {
-        Set<String> roles = context.getRoles();
-        if (CollectionUtils.isEmpty(roles)) {
-            return false;
-        }
-
-        return roles.stream()
-                .filter(StringUtils::hasText)
-                .anyMatch(role -> ROLE_EMPLOYEE.equalsIgnoreCase(role));
-    }
 }

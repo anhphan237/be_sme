@@ -6,10 +6,9 @@ import lombok.Setter;
 @Getter
 @Setter
 public class SurveySendRequest {
-    // 1 trong 2 cách:
-    private String surveyInstanceId; // nếu muốn gửi lại / gửi instance đã schedule
-    private String templateId;       // nếu gửi ngoài lịch, tạo instance mới
-
-    // optional nhưng nên có (gắn theo onboarding)
+    private String surveyInstanceId;
+    private String templateId;
     private String onboardingId;
+    private String targetRole;
+    private String responderUserId;
 }

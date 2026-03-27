@@ -58,6 +58,7 @@ public class SurveyTemplateGetListProcessor extends BaseBizProcessor<BizContext>
             dto.setCreatedAt(t.getCreatedAt());
             dto.setUpdatedAt(t.getUpdatedAt());
             dto.setIsDefault(t.getIsDefault());
+            dto.setTargetRole(t.getTargetRole());
             items.add(dto);
         }
 

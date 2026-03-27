@@ -98,4 +98,19 @@
       limit 1
   </select>
 
+  <select id="selectDepartmentIdByUserId" resultType="java.lang.String">
+    SELECT department_id
+    FROM users
+    WHERE user_id = #{userId}
+    LIMIT 1
+  </select>
+  <select id="selectManagerIdByDepartmentId" resultType="java.lang.String">
+    SELECT u.user_id
+    FROM users u
+    JOIN user_roles ur ON ur.user_id = u.user_id
+    WHERE u.company_id = #{companyId}
+    AND u.department_id = #{departmentId}
+    AND ur.role_code = 'MANAGER'
+    LIMIT 1
+  </select>
 </mapper>
