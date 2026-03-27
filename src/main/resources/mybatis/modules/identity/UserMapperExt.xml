@@ -69,5 +69,11 @@
         where email is not null
           and lower(email) = lower(#{email})
     </select>
+    <select id="selectManagerUserIdByUserId" resultType="java.lang.String">
+        SELECT manager_user_id
+        FROM employee_profiles
+        WHERE user_id = #{userId}
+        LIMIT 1
+    </select>
 
 </mapper>

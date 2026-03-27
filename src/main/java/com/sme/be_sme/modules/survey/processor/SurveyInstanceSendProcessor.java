@@ -75,16 +75,13 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
         String targetRole = request.getTargetRole();
         String employeeId = request.getResponderUserId();
 
-        String departmentId = userMapperExt.selectDepartmentIdByUserId(employeeId);
-        String managerId = userMapperExt.selectManagerIdByDepartmentId(
-                context.getTenantId(),
-                departmentId
-        );
+        String managerId = userMapperExt.selectManagerUserIdByUserId(employeeId);
 
         String createdInstanceId;
 
-        if ("MANAGER".equals(targetRole)) {
-            createdInstanceId = createAndSend(context, template, request, managerId, now);
+        if (("MANAGER".equals(targetRole) || "BOTH".equals(targetRole))
+                && !StringUtils.hasText(managerId)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "Manager not found for user");
         } else if ("BOTH".equals(targetRole)) {
             createAndSend(context, template, request, employeeId, now);
             createdInstanceId = createAndSend(context, template, request, managerId, now);
