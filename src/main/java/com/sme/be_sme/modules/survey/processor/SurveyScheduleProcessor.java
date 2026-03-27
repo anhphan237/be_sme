@@ -64,18 +64,11 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         String employeeId = request.getResponderUserId();
         String createdInstanceId = null;
 
-        String departmentId = userMapperExt.selectDepartmentIdByUserId(employeeId);
-        String managerId = null;
-        if (StringUtils.hasText(departmentId)) {
-            managerId = userMapperExt.selectManagerIdByDepartmentId(
-                    context.getTenantId(),
-                    departmentId
-            );
-        }
+        String managerId = userMapperExt.selectManagerUserIdByUserId(employeeId);
 
         if (("MANAGER".equalsIgnoreCase(targetRole) || "BOTH".equalsIgnoreCase(targetRole))
                 && !StringUtils.hasText(managerId)) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "manager not found for department");
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "Manager not found for user");
         }
 
         if ("MANAGER".equalsIgnoreCase(targetRole)) {
