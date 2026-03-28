@@ -10,11 +10,10 @@ import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import java.util.Date;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-
-import java.util.Date;
 
 @Component
 @RequiredArgsConstructor
@@ -44,37 +43,100 @@ public class SurveyTemplateUpdateProcessor extends BaseBizProcessor<BizContext> 
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
         }
 
-        // optional optimistic check (nếu bạn muốn)
-        if (request.getVersion() != null && entity.getVersion() != null
+        if (request.getVersion() != null
+                && entity.getVersion() != null
                 && !request.getVersion().equals(entity.getVersion())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "version mismatch");
         }
 
-        // PATCH-style: field nào gửi thì update field đó
+        String nextStage = StringUtils.hasText(request.getStage())
+                ? request.getStage().trim()
+                : entity.getStage();
+
+        String nextTargetRole = StringUtils.hasText(request.getTargetRole())
+                ? request.getTargetRole().trim()
+                : entity.getTargetRole();
+
+        String nextStatus = StringUtils.hasText(request.getStatus())
+                ? request.getStatus().trim()
+                : entity.getStatus();
+
+        Boolean nextIsDefault = request.getIsDefault() != null
+                ? request.getIsDefault()
+                : entity.getIsDefault();
+
+        validateUpdateValues(nextStage, nextStatus, nextTargetRole);
+
+        if ("CUSTOM".equals(nextStage) && Boolean.TRUE.equals(nextIsDefault)) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "CUSTOM_STAGE_CANNOT_BE_DEFAULT"
+            );
+        }
+
+        if (Boolean.TRUE.equals(nextIsDefault) && !"ACTIVE".equals(nextStatus)) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "ONLY_ACTIVE_TEMPLATE_CAN_BE_DEFAULT"
+            );
+        }
+
+        if (Boolean.TRUE.equals(nextIsDefault)) {
+            SurveyTemplateEntity oldDefault =
+                    surveyTemplateMapper.findActiveDefaultByCompanyStageAndTargetRoleExcludingTemplateId(
+                            context.getTenantId(),
+                            nextStage,
+                            nextTargetRole,
+                            entity.getSurveyTemplateId()
+                    );
+
+            if (oldDefault != null) {
+                throw AppException.of(
+                        ErrorCodes.BAD_REQUEST,
+                        "DEFAULT_TEMPLATE_ALREADY_EXISTS"
+                );
+            }
+        }
+
         if (StringUtils.hasText(request.getName())) {
-            entity.setName(request.getName().trim());
+            String nextName = request.getName().trim();
+            if (nextName.length() > 255) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "name is too long");
+            }
+            entity.setName(nextName);
         }
+
         if (request.getDescription() != null) {
-            entity.setDescription(request.getDescription()); // allow null if client wants clear
+            if (request.getDescription().length() > 5000) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "description is too long");
+            }
+            entity.setDescription(request.getDescription());
         }
+
         if (StringUtils.hasText(request.getStage())) {
-            entity.setStage(request.getStage().trim());
+            entity.setStage(nextStage);
         }
+
         if (request.getManagerOnly() != null) {
             entity.setManagerOnly(request.getManagerOnly());
         }
+
         if (StringUtils.hasText(request.getStatus())) {
-            entity.setStatus(request.getStatus().trim());
+            entity.setStatus(nextStatus);
         }
+
         if (request.getIsDefault() != null) {
             entity.setIsDefault(request.getIsDefault());
         }
 
-        if (entity.getVersion() == null) entity.setVersion(1);
-        else entity.setVersion(entity.getVersion() + 1);
-
         if (StringUtils.hasText(request.getTargetRole())) {
-            entity.setTargetRole(request.getTargetRole().trim());
+            entity.setTargetRole(nextTargetRole);
+        }
+
+        if (entity.getVersion() == null) {
+            entity.setVersion(1);
+        } else {
+            entity.setVersion(entity.getVersion() + 1);
         }
 
         entity.setUpdatedAt(new Date());
@@ -95,5 +157,38 @@ public class SurveyTemplateUpdateProcessor extends BaseBizProcessor<BizContext> 
         res.setIsDefault(entity.getIsDefault());
         res.setTargetRole(entity.getTargetRole());
         return res;
+    }
+
+    private static void validateUpdateValues(
+            String stage,
+            String status,
+            String targetRole
+    ) {
+        if (StringUtils.hasText(stage)) {
+            String value = stage.trim();
+            if (!"D7".equals(value)
+                    && !"D30".equals(value)
+                    && !"D60".equals(value)
+                    && !"CUSTOM".equals(value)) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid stage");
+            }
+        }
+
+        if (StringUtils.hasText(status)) {
+            String value = status.trim();
+            if (!"DRAFT".equals(value)
+                    && !"ACTIVE".equals(value)
+                    && !"ARCHIVED".equals(value)
+                    && !"DISABLED".equals(value)) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid status");
+            }
+        }
+
+        if (StringUtils.hasText(targetRole)) {
+            String value = targetRole.trim();
+            if (!"EMPLOYEE".equals(value) && !"MANAGER".equals(value)) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid targetRole");
+            }
+        }
     }
 }

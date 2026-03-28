@@ -11,4 +11,5 @@ public class SurveyTemplateCreateRequest {
     private String stage;
     private Boolean managerOnly;
     private String targetRole;
+    private String status;
 }
