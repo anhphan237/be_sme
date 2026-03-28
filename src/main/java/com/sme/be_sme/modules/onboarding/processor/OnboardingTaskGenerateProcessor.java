@@ -2,7 +2,7 @@ package com.sme.be_sme.modules.onboarding.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapper;
+import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
 import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskGenerateRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskGenerationResponse;
@@ -32,7 +32,7 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
     private final ChecklistInstanceMapper checklistInstanceMapper;
     private final TaskTemplateMapper taskTemplateMapper;
     private final TaskInstanceMapper taskInstanceMapper;
-    private final EmployeeProfileMapper employeeProfileMapper;
+    private final EmployeeProfileMapperExt employeeProfileMapperExt;
     private final OnboardingTaskApprovalAuthority approvalAuthority;
 
     @Override
@@ -237,8 +237,8 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
         } else if ("DEPARTMENT".equals(ownerType) && StringUtils.hasText(template.getOwnerRefId())) {
             taskInstance.setAssignedDepartmentId(template.getOwnerRefId().trim());
         } else if ("EMPLOYEE".equals(ownerType) && instance != null && StringUtils.hasText(instance.getEmployeeId())) {
-            EmployeeProfileEntity profile =
-                    employeeProfileMapper.selectByUserId(instance.getEmployeeId().trim());
+            EmployeeProfileEntity profile = employeeProfileMapperExt.selectByCompanyIdAndUserId(
+                    instance.getCompanyId(), instance.getEmployeeId().trim());
             if (profile == null || !StringUtils.hasText(profile.getUserId())) {
                 throw AppException.of(
                         ErrorCodes.BAD_REQUEST,

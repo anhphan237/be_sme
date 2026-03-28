@@ -10,7 +10,7 @@ import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
 import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.company.infrastructure.mapper.CompanyMapper;
 import com.sme.be_sme.modules.company.infrastructure.persistence.entity.CompanyEntity;
-import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapper;
+import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
 import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
@@ -24,6 +24,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -37,8 +38,18 @@ public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizCon
     private final OnboardingInstanceMapper onboardingInstanceMapper;
     private final OnboardingTaskFacade onboardingTaskFacade;
     private final NotificationService notificationService;
-    private final EmployeeProfileMapper employeeProfileMapper;
+    private final EmployeeProfileMapperExt employeeProfileMapperExt;
     private final CompanyMapper companyMapper;
+
+    /**
+     * Keep status update and task generation in one transaction so a failed generate
+     * does not leave an ACTIVE instance with zero tasks.
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Object execute(BizContext context) {
+        return super.execute(context);
+    }
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -118,7 +129,8 @@ public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizCon
         if (!StringUtils.hasText(instance.getEmployeeId())) {
             return null;
         }
-        EmployeeProfileEntity profile = employeeProfileMapper.selectByPrimaryKey(instance.getEmployeeId().trim());
+        EmployeeProfileEntity profile = employeeProfileMapperExt.selectByCompanyIdAndUserId(
+                instance.getCompanyId(), instance.getEmployeeId().trim());
         if (profile == null || !StringUtils.hasText(profile.getManagerUserId())) {
             return null;
         }
@@ -128,7 +140,8 @@ public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizCon
     private void notifyOnboardingStarted(String companyId, OnboardingInstanceEntity instance) {
         if (!StringUtils.hasText(instance.getEmployeeId())) return;
         try {
-            EmployeeProfileEntity employee = employeeProfileMapper.selectByPrimaryKey(instance.getEmployeeId());
+            EmployeeProfileEntity employee = employeeProfileMapperExt.selectByCompanyIdAndUserId(
+                    companyId, instance.getEmployeeId().trim());
             if (employee == null || !StringUtils.hasText(employee.getUserId())) return;
             String companyName = "";
             CompanyEntity company = companyMapper.selectByPrimaryKey(companyId);
