@@ -52,9 +52,15 @@ public interface TaskInstanceMapperExt {
      * @return Total count
      */
     Integer countByOnboardingId(
-        @Param("companyId") String companyId,
-        @Param("onboardingId") String onboardingId,
-        @Param("status") String status,
-        @Param("assignedUserId") String assignedUserId
+            @Param("companyId") String companyId,
+            @Param("onboardingId") String onboardingId,
+            @Param("status") String status,
+            @Param("assignedUserId") String assignedUserId
+    );
+
+    /** Delete tasks for one checklist (cleanup before removing orphan checklist shell). */
+    int deleteByCompanyIdAndChecklistId(
+            @Param("companyId") String companyId,
+            @Param("checklistId") String checklistId
     );
 }

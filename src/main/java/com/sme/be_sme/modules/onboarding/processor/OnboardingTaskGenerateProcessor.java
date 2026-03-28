@@ -32,6 +32,7 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
     private final ChecklistInstanceMapper checklistInstanceMapper;
     private final TaskTemplateMapper taskTemplateMapper;
     private final TaskInstanceMapper taskInstanceMapper;
+    private final TaskInstanceMapperExt taskInstanceMapperExt;
     private final EmployeeProfileMapperExt employeeProfileMapperExt;
     private final OnboardingTaskApprovalAuthority approvalAuthority;
 
@@ -52,20 +53,32 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
         String companyId = context.getTenantId();
         List<ChecklistInstanceEntity> existingChecklists =
                 checklistInstanceMapper.selectByCompanyIdAndOnboardingId(companyId, instance.getOnboardingId());
-        if (existingChecklists != null && !existingChecklists.isEmpty()) {
-            List<TaskInstanceEntity> tasks = taskInstanceMapper.selectByCompanyIdAndOnboardingId(
-                    companyId, instance.getOnboardingId());
-            int n = tasks == null ? 0 : tasks.size();
+        List<TaskInstanceEntity> existingTasks = taskInstanceMapper.selectByCompanyIdAndOnboardingId(
+                companyId, instance.getOnboardingId());
+        int existingTaskCount = existingTasks == null ? 0 : existingTasks.size();
+
+        if (existingChecklists != null && !existingChecklists.isEmpty() && existingTaskCount > 0) {
             OnboardingTaskGenerationResponse skip = new OnboardingTaskGenerationResponse();
             skip.setInstanceId(instance.getOnboardingId());
-            skip.setTotalTasks(n);
+            skip.setTotalTasks(existingTaskCount);
             skip.setAlreadyGenerated(true);
             return skip;
+        }
+
+        if (existingChecklists != null && !existingChecklists.isEmpty() && existingTaskCount == 0) {
+            removeFailedGenerationShells(companyId, existingChecklists);
         }
 
         OnboardingTaskGenerateRequest effective = mergeGenerateRequest(companyId, instance, request);
 
         List<ChecklistTemplateEntity> checklistTemplates = filterChecklistTemplates(companyId, instance.getOnboardingTemplateId());
+        if (checklistTemplates.isEmpty()) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "no checklist templates for onboarding_template_id="
+                            + instance.getOnboardingTemplateId()
+                            + "; cannot create tasks");
+        }
         List<TaskTemplateEntity> taskTemplates = filterTaskTemplates(companyId);
 
         String lineManagerResolved = approvalAuthority.resolveLineManagerUserId(companyId, instance);
@@ -133,11 +146,31 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
             }
         }
 
+        if (totalTasks == 0) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "no task instances were created: ensure task_templates reference the correct checklist_template_id "
+                            + "for this onboarding template");
+        }
+
         OnboardingTaskGenerationResponse response = new OnboardingTaskGenerationResponse();
         response.setInstanceId(request.getInstanceId());
         response.setTotalTasks(totalTasks);
         response.setAlreadyGenerated(false);
         return response;
+    }
+
+    private void removeFailedGenerationShells(String companyId, List<ChecklistInstanceEntity> checklists) {
+        for (ChecklistInstanceEntity ch : checklists) {
+            if (ch == null || !StringUtils.hasText(ch.getChecklistId())) {
+                continue;
+            }
+            taskInstanceMapperExt.deleteByCompanyIdAndChecklistId(companyId, ch.getChecklistId().trim());
+            int deleted = checklistInstanceMapper.deleteByPrimaryKey(ch.getChecklistId().trim());
+            if (deleted != 1) {
+                throw AppException.of(ErrorCodes.INTERNAL_ERROR, "remove orphan checklist instance failed");
+            }
+        }
     }
 
     private OnboardingTaskGenerateRequest mergeGenerateRequest(
