@@ -65,6 +65,8 @@ public class SurveyTemplateUpdateProcessor extends BaseBizProcessor<BizContext> 
                 ? request.getIsDefault()
                 : entity.getIsDefault();
 
+        boolean forceReplaceDefault = Boolean.TRUE.equals(request.getForceReplaceDefault());
+
         validateUpdateValues(nextStage, nextStatus, nextTargetRole);
 
         if ("CUSTOM".equals(nextStage) && Boolean.TRUE.equals(nextIsDefault)) {
@@ -90,10 +92,19 @@ public class SurveyTemplateUpdateProcessor extends BaseBizProcessor<BizContext> 
                             entity.getSurveyTemplateId()
                     );
 
-            if (oldDefault != null) {
+            if (oldDefault != null && !forceReplaceDefault) {
                 throw AppException.of(
                         ErrorCodes.BAD_REQUEST,
                         "DEFAULT_TEMPLATE_ALREADY_EXISTS"
+                );
+            }
+
+            if (oldDefault != null) {
+                surveyTemplateMapper.clearDefaultByCompanyStageAndTargetRoleExcludingTemplateId(
+                        context.getTenantId(),
+                        nextStage,
+                        nextTargetRole,
+                        entity.getSurveyTemplateId()
                 );
             }
         }
