@@ -91,4 +91,10 @@
       </if>
   </select>
 
+  <delete id="deleteByCompanyIdAndChecklistId">
+    DELETE FROM task_instances
+    WHERE company_id = #{companyId,jdbcType=VARCHAR}
+      AND checklist_id = #{checklistId,jdbcType=VARCHAR}
+  </delete>
+
 </mapper>
