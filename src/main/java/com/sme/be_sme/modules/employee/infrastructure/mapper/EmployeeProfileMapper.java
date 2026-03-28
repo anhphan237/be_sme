@@ -46,4 +46,6 @@ public interface EmployeeProfileMapper {
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
     int updateByPrimaryKey(EmployeeProfileEntity row);
+
+    EmployeeProfileEntity selectByUserId(String userId);
 }
