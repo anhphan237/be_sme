@@ -6,16 +6,8 @@ import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapp
 import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskGenerateRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskGenerationResponse;
-import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstanceMapper;
-import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistTemplateMapper;
-import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper;
-import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
-import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskTemplateMapper;
-import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.ChecklistInstanceEntity;
-import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.ChecklistTemplateEntity;
-import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
-import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
-import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateEntity;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.*;
+import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.*;
 import com.sme.be_sme.modules.onboarding.service.OnboardingTaskApprovalAuthority;
 import com.sme.be_sme.modules.onboarding.support.OnboardingTaskWorkflow;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -23,15 +15,12 @@ import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import com.sme.be_sme.shared.util.UuidGenerator;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
@@ -249,7 +238,7 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
             taskInstance.setAssignedDepartmentId(template.getOwnerRefId().trim());
         } else if ("EMPLOYEE".equals(ownerType) && instance != null && StringUtils.hasText(instance.getEmployeeId())) {
             EmployeeProfileEntity profile =
-                    employeeProfileMapper.selectByPrimaryKey(instance.getEmployeeId().trim());
+                    employeeProfileMapper.selectByUserId(instance.getEmployeeId().trim());
             if (profile == null || !StringUtils.hasText(profile.getUserId())) {
                 throw AppException.of(
                         ErrorCodes.BAD_REQUEST,
