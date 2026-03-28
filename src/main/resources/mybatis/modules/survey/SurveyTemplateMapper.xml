@@ -91,4 +91,51 @@
 
     from survey_templates
   </select>
+  <select id="findActiveDefaultByCompanyStageAndTargetRoleExcludingTemplateId"
+          resultMap="BaseResultMap">
+    SELECT survey_template_id,
+    company_id,
+    name,
+    stage,
+    manager_only,
+    status,
+    created_by,
+    created_at,
+    updated_at,
+    description,
+    version,
+    is_default,
+    target_role
+    FROM survey_templates
+    WHERE company_id = #{companyId}
+    AND stage = #{stage}
+    AND target_role = #{targetRole}
+    AND is_default = true
+    AND status = 'ACTIVE'
+    AND survey_template_id &lt;&gt; #{excludeTemplateId}
+    LIMIT 1
+  </select>
+  <select id="findActiveDefaultByCompanyStageAndTargetRole"
+          resultMap="BaseResultMap">
+    SELECT survey_template_id,
+    company_id,
+    name,
+    stage,
+    manager_only,
+    status,
+    created_by,
+    created_at,
+    updated_at,
+    description,
+    version,
+    is_default,
+    target_role
+    FROM survey_templates
+    WHERE company_id = #{companyId}
+    AND stage = #{stage}
+    AND target_role = #{targetRole}
+    AND is_default = true
+    AND status = 'ACTIVE'
+    LIMIT 1
+  </select>
 </mapper>
