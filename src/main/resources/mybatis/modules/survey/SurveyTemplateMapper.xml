@@ -138,4 +138,14 @@
     AND status = 'ACTIVE'
     LIMIT 1
   </select>
+  <update id="clearDefaultByCompanyStageAndTargetRoleExcludingTemplateId">
+    UPDATE survey_templates
+    SET is_default = false,
+    updated_at = CURRENT_TIMESTAMP
+    WHERE company_id = #{companyId}
+    AND stage = #{stage}
+    AND target_role = #{targetRole}
+    AND is_default = true
+    AND survey_template_id &lt;&gt; #{excludeTemplateId}
+  </update>
 </mapper>

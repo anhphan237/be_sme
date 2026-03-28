@@ -59,4 +59,10 @@ public interface SurveyTemplateMapper {
             @org.apache.ibatis.annotations.Param("stage") String stage,
             @org.apache.ibatis.annotations.Param("targetRole") String targetRole
     );
+    int clearDefaultByCompanyStageAndTargetRoleExcludingTemplateId(
+            @org.apache.ibatis.annotations.Param("companyId") String companyId,
+            @org.apache.ibatis.annotations.Param("stage") String stage,
+            @org.apache.ibatis.annotations.Param("targetRole") String targetRole,
+            @org.apache.ibatis.annotations.Param("excludeTemplateId") String excludeTemplateId
+    );
 }
