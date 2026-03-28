@@ -188,14 +188,12 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
                 context.getTenantId(),
                 context.getOperatorId()
         );
-        if (me == null || !StringUtils.hasText(me.getEmployeeId())) {
+        if (me == null) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "employee profile not found");
         }
-        String instanceEmployeeId = StringUtils.hasText(instance.getEmployeeId()) ? instance.getEmployeeId().trim() : null;
-        String myEmployeeId = me.getEmployeeId().trim();
+        String instanceOnboardeeUserId = StringUtils.hasText(instance.getEmployeeId()) ? instance.getEmployeeId().trim() : null;
         String myUserId = context.getOperatorId().trim();
-        // Compatibility: old data may store userId in onboarding_instances.employee_id
-        if (!myEmployeeId.equals(instanceEmployeeId) && !myUserId.equals(instanceEmployeeId)) {
+        if (!myUserId.equals(instanceOnboardeeUserId)) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "employee can only access own onboarding instance");
         }
     }
