@@ -92,8 +92,20 @@
         </if>
         limit 1
     </select>
-    <select id="findActiveByUniqueKey" resultMap="BaseResultMap">
-        SELECT *
+    <select id="findActiveByUniqueKey"
+            resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyInstanceEntity">
+        SELECT
+        survey_instance_id,
+        company_id,
+        onboarding_id,
+        survey_template_id,
+        responder_user_id,
+        scheduled_at,
+        sent_at,
+        closed_at,
+        status,
+        created_at,
+        updated_at
         FROM survey_instances
         WHERE company_id = #{companyId}
         AND survey_template_id = #{templateId}
