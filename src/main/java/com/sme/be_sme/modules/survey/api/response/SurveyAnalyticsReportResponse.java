@@ -23,8 +23,19 @@ public class SurveyAnalyticsReportResponse {
     private List<DimensionStat> dimensionStats;
     private List<QuestionStat> questionStats;
 
+    private List<DimensionStat> lowScoreDimensions;
+    private List<DimensionStat> topPositiveDimensions;
     // 4) trend (option)
     private List<StageTrend> stageTrends;
+    private List<TrendPoint> timeTrends;
+
+    private Integer textResponseCount;
+    private Integer ratingQuestionCount;
+    private Integer textQuestionCount;
+    private Integer choiceQuestionCount;
+
+    private List<QuestionStat> lowestQuestions;
+    private List<QuestionStat> highestQuestions;
 
     @Getter @Setter
     public static class DimensionStat {
@@ -50,6 +61,9 @@ public class SurveyAnalyticsReportResponse {
 
         // text (simple)
         private Integer textAnswerCount;
+
+        private BigDecimal completionRate;
+        private List<String> sampleTexts;
     }
 
     @Getter @Setter
@@ -57,5 +71,12 @@ public class SurveyAnalyticsReportResponse {
         private String stage;                 // D7/D30...
         private Integer submittedCount;
         private BigDecimal averageOverall;    // avg overall_score theo stage
+    }
+
+    @Getter @Setter
+    public static class TrendPoint {
+        private String bucket;
+        private Integer submittedCount;
+        private BigDecimal averageScore;
     }
 }
