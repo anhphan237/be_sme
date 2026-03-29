@@ -11,4 +11,5 @@ public class SurveyResponseRow {
     private String surveyInstanceId;
     private String responderUserId;
     private OffsetDateTime submittedAt;
+    private String stage;
 }
