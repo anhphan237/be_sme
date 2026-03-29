@@ -92,5 +92,21 @@
         </if>
         limit 1
     </select>
-
+    <select id="findActiveByUniqueKey" resultMap="BaseResultMap">
+        SELECT *
+        FROM survey_instances
+        WHERE company_id = #{companyId}
+        AND survey_template_id = #{templateId}
+        AND responder_user_id = #{responderUserId}
+        AND status IN ('SENT', 'SCHEDULED')
+        <choose>
+            <when test="onboardingId != null and onboardingId != ''">
+                AND onboarding_id = #{onboardingId}
+            </when>
+            <otherwise>
+                AND onboarding_id IS NULL
+            </otherwise>
+        </choose>
+        LIMIT 1
+    </select>
 </mapper>
