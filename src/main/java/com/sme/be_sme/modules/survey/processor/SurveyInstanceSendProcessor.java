@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
 import com.sme.be_sme.modules.survey.api.request.SurveySendRequest;
 import com.sme.be_sme.modules.survey.api.response.SurveySendResponse;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapper;
+import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapperExt;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyTemplateMapper;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyInstanceEntity;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyTemplateEntity;
@@ -38,6 +39,7 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
     private final SurveyTemplateMapper surveyTemplateMapper;
     private final NotificationService notificationService;
     private final UserMapperExt userMapperExt;
+    private final SurveyInstanceMapperExt surveyInstanceMapperExt;
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
         SurveySendRequest request = objectMapper.convertValue(payload, SurveySendRequest.class);
@@ -102,6 +104,17 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
             String responderUserId,
             Date now
     ) {
+        SurveyInstanceEntity existed = surveyInstanceMapperExt.findActiveByUniqueKey(
+                context.getTenantId(),
+                StringUtils.hasText(request.getOnboardingId()) ? request.getOnboardingId().trim() : null,
+                template.getSurveyTemplateId(),
+                responderUserId
+        );
+
+        if (existed != null) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "Survey already sent or scheduled for this user");
+        }
+
         SurveyInstanceEntity entity = new SurveyInstanceEntity();
         entity.setSurveyInstanceId(UuidGenerator.generate());
         entity.setCompanyId(context.getTenantId());
