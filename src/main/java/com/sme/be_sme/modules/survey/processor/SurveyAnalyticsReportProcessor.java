@@ -53,7 +53,7 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
                 req.getStage() != null ? String.valueOf(req.getStage()) : null
         );
 
-        Integer sentCount = null;
+        int sentCount = 0;
         try {
             sentCount = surveyInstanceMapperExt.countSent(
                     companyId,
@@ -62,7 +62,6 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
                     req.getEndDate()
             );
         } catch (Exception ignored) {
-
         }
 
         if (rows == null || rows.isEmpty()) {
@@ -146,6 +145,7 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
                 .toList();
 
         List<SurveyAnalyticsReportResponse.TrendPoint> timeTrends = buildTimeTrends(rows);
+        List<SurveyAnalyticsReportResponse.StageTrend> stageTrends =buildStageTrends(rows);
 
         int ratingQuestionCount = (int) questionMap.values().stream()
                 .filter(q -> q != null && "RATING".equalsIgnoreCase(q.getType()))
@@ -158,6 +158,7 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
         int choiceQuestionCount = (int) questionMap.values().stream()
                 .filter(q -> q != null && (
                         "CHOICE".equalsIgnoreCase(q.getType()) ||
+                                "SINGLE_CHOICE".equalsIgnoreCase(q.getType()) ||
                                 "MULTIPLE_CHOICE".equalsIgnoreCase(q.getType())
                 ))
                 .count();
@@ -186,7 +187,7 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
         res.setRatingQuestionCount(ratingQuestionCount);
         res.setTextQuestionCount(textQuestionCount);
         res.setChoiceQuestionCount(choiceQuestionCount);
-
+        res.setStageTrends(stageTrends);
         return res;
     }
 
@@ -209,6 +210,7 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
         empty.setRatingQuestionCount(0);
         empty.setTextQuestionCount(0);
         empty.setChoiceQuestionCount(0);
+        empty.setStageTrends(Collections.emptyList());
         return empty;
     }
 
@@ -219,9 +221,13 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
     }
 
     private static BigDecimal calcRate(Integer sent, Integer submitted) {
-        if (sent == null || sent <= 0 || submitted == null) {
-            return null;
+        if (submitted == null) {
+            return BigDecimal.ZERO;
         }
+        if (sent == null || sent <= 0) {
+            return BigDecimal.ZERO;
+        }
+
         return BigDecimal.valueOf(submitted)
                 .divide(BigDecimal.valueOf(sent), 4, RoundingMode.HALF_UP);
     }
@@ -488,5 +494,51 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
         } catch (Exception ignored) {
             return null;
         }
+    }
+    private List<SurveyAnalyticsReportResponse.StageTrend> buildStageTrends(
+            List<SurveyResponseFilterRow> rows
+    ) {
+        if (rows == null || rows.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Map<String, List<SurveyResponseFilterRow>> byStage = rows.stream()
+                .filter(r -> r.getStage() != null && !r.getStage().isBlank())
+                .collect(Collectors.groupingBy(r -> r.getStage().trim()));
+
+        List<SurveyAnalyticsReportResponse.StageTrend> out = new ArrayList<>();
+
+        for (Map.Entry<String, List<SurveyResponseFilterRow>> entry : byStage.entrySet()) {
+            List<SurveyResponseFilterRow> stageRows = entry.getValue();
+
+            SurveyAnalyticsReportResponse.StageTrend trend =
+                    new SurveyAnalyticsReportResponse.StageTrend();
+            trend.setStage(entry.getKey());
+            trend.setSubmittedCount((int) stageRows.stream()
+                    .map(SurveyResponseFilterRow::getSurveyResponseId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .count());
+
+            trend.setAverageOverall(avg(stageRows.stream()
+                    .map(SurveyResponseFilterRow::getOverallScore)
+                    .filter(Objects::nonNull)
+                    .toList()));
+
+            out.add(trend);
+        }
+
+        out.sort(Comparator.comparing(t -> normalizeStageOrder(t.getStage())));
+        return out;
+    }
+    private int normalizeStageOrder(String stage) {
+        if (stage == null) return 999;
+
+        String s = stage.trim().toUpperCase();
+        if ("D7".equals(s) || "DAY_7".equals(s)) return 7;
+        if ("D30".equals(s) || "DAY_30".equals(s)) return 30;
+        if ("D60".equals(s) || "DAY_60".equals(s)) return 60;
+        if ("CUSTOM".equals(s)) return 999;
+        return 500;
     }
 }
