@@ -288,12 +288,25 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
                             .orElse(0);
                     stat.setAverageScore(BigDecimal.valueOf(average).setScale(2, RoundingMode.HALF_UP));
                 }
-            } else if ("CHOICE".equals(type) || "MULTIPLE_CHOICE".equals(type)) {
+
+            } else if ("CHOICE".equals(type) || "SINGLE_CHOICE".equals(type)) {
                 Map<String, Long> distribution = ans.stream()
                         .map(SurveyAnswerEntity::getValueChoice)
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.groupingBy(choice -> choice, Collectors.counting()));
-                stat.setChoiceDistribution(distribution);
+                        .filter(v -> v != null && !v.isBlank())
+                        .map(String::trim)
+                        .collect(Collectors.groupingBy(value -> value, Collectors.counting()));
+
+                stat.setChoiceDistribution(distribution.isEmpty() ? null : distribution);
+
+            } else if ("MULTIPLE_CHOICE".equals(type)) {
+                Map<String, Long> distribution = ans.stream()
+                        .map(SurveyAnswerEntity::getValueText)
+                        .filter(v -> v != null && !v.isBlank())
+                        .flatMap(this::parseMultiChoiceValues)
+                        .collect(Collectors.groupingBy(value -> value, Collectors.counting()));
+
+                stat.setChoiceDistribution(distribution.isEmpty() ? null : distribution);
+
             } else if ("TEXT".equals(type)) {
                 List<String> texts = ans.stream()
                         .map(SurveyAnswerEntity::getValueText)
@@ -302,7 +315,7 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
                         .toList();
 
                 stat.setTextAnswerCount(texts.size());
-                stat.setSampleTexts(texts.stream().limit(3).toList());
+                stat.setSampleTexts(texts.isEmpty() ? null : texts.stream().limit(3).toList());
             }
 
             out.add(stat);
@@ -318,6 +331,28 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
         return out;
     }
 
+    private java.util.stream.Stream<String> parseMultiChoiceValues(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return java.util.stream.Stream.empty();
+        }
+
+        String value = raw.trim();
+        if (value.startsWith("[") && value.endsWith("]")) {
+            try {
+                String[] arr = objectMapper.readValue(value, String[].class);
+                return Arrays.stream(arr)
+                        .filter(Objects::nonNull)
+                        .map(String::trim)
+                        .filter(s -> !s.isBlank());
+            } catch (Exception ignored) {
+
+            }
+        }
+        return Arrays.stream(value.split(","))
+                .map(String::trim)
+                .map(s -> s.replace("\"", ""))
+                .filter(s -> !s.isBlank());
+    }
     private List<SurveyAnalyticsReportResponse.DimensionStat> buildDimensionStats(
             Map<String, SurveyQuestionEntity> questionMap,
             List<SurveyAnswerEntity> answers
