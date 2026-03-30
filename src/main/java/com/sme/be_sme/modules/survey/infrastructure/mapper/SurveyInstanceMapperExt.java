@@ -33,15 +33,6 @@ public interface SurveyInstanceMapperExt {
             @Param("responderUserId") String responderUserId
     );
 
-    @Select("""
-    select count(*)
-    from survey_instances
-    where company_id = #{companyId}
-      and (#{templateId} is null or survey_template_id = #{templateId})
-      and status in ('SENT', 'SCHEDULED', 'COMPLETED', 'EXPIRED')
-      and (#{startDate} is null or coalesce(sent_at, scheduled_at, created_at) >= #{startDate})
-      and (#{endDate} is null or coalesce(sent_at, scheduled_at, created_at) <= #{endDate})
-""")
     int countSent(
             @Param("companyId") String companyId,
             @Param("templateId") String templateId,

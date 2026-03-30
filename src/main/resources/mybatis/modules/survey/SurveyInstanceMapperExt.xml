@@ -121,4 +121,19 @@
         </choose>
         LIMIT 1
     </select>
+    <select id="countSent" resultType="int">
+        select count(*)
+        from survey_instances
+        where company_id = #{companyId,jdbcType=VARCHAR}
+        and status in ('SENT', 'SCHEDULED', 'COMPLETED', 'EXPIRED')
+        <if test="templateId != null and templateId != ''">
+            and survey_template_id = #{templateId,jdbcType=VARCHAR}
+        </if>
+        <if test="startDate != null">
+            and coalesce(sent_at, scheduled_at, created_at) &gt;= #{startDate,jdbcType=TIMESTAMP}
+        </if>
+        <if test="endDate != null">
+            and coalesce(sent_at, scheduled_at, created_at) &lt;= #{endDate,jdbcType=TIMESTAMP}
+        </if>
+    </select>
 </mapper>

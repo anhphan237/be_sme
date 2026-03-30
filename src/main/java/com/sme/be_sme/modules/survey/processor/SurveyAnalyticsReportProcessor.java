@@ -34,7 +34,6 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
     private final SurveyAnswerMapperExt surveyAnswerMapperExt;
     private final SurveyQuestionMapper surveyQuestionMapper;
     private final SurveyInstanceMapperExt surveyInstanceMapperExt;
-
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
         validate(context);
@@ -61,7 +60,10 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
                     req.getStartDate(),
                     req.getEndDate()
             );
-        } catch (Exception ignored) {
+            System.out.println("DEBUG mybatis sentCount = " + sentCount);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            throw ex;
         }
 
         if (rows == null || rows.isEmpty()) {
