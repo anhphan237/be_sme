@@ -15,4 +15,7 @@ public class SurveyResponseFilterRow {
     private BigDecimal overallScore;
     private Date submittedAt;
     private String stage;
+    private String templateName;
+    private String responderUserId;
+    private String employeeName;
 }
