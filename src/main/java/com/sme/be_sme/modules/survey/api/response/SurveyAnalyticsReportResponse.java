@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -36,7 +37,7 @@ public class SurveyAnalyticsReportResponse {
 
     private List<QuestionStat> lowestQuestions;
     private List<QuestionStat> highestQuestions;
-
+    private List<ResponseSummary> responseSummaries;
     @Getter @Setter
     public static class DimensionStat {
         private String dimensionCode;     // e.g. IT_SETUP / HR_SUPPORT
@@ -78,5 +79,15 @@ public class SurveyAnalyticsReportResponse {
         private String bucket;
         private Integer submittedCount;
         private BigDecimal averageScore;
+    }
+    @Getter
+    @Setter
+    public static class ResponseSummary {
+        private String surveyResponseId;
+        private String surveyInstanceId;
+        private String templateName;
+        private String employeeName;
+        private BigDecimal overallScore;
+        private Date submittedAt;
     }
 }

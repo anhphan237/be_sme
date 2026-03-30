@@ -169,7 +169,19 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
                 .map(SurveyAnswerEntity::getValueText)
                 .filter(v -> v != null && !v.isBlank())
                 .count();
-
+        List<SurveyAnalyticsReportResponse.ResponseSummary> responseSummaries = rows.stream()
+                .map(row -> {
+                    SurveyAnalyticsReportResponse.ResponseSummary item =
+                            new SurveyAnalyticsReportResponse.ResponseSummary();
+                    item.setSurveyResponseId(row.getSurveyResponseId());
+                    item.setSurveyInstanceId(row.getSurveyInstanceId());
+                    item.setTemplateName(row.getTemplateName());
+                    item.setEmployeeName(row.getEmployeeName());
+                    item.setOverallScore(row.getOverallScore());
+                    item.setSubmittedAt(row.getSubmittedAt());
+                    return item;
+                })
+                .toList();
         SurveyAnalyticsReportResponse res = new SurveyAnalyticsReportResponse();
         res.setSentCount(sentCount);
         res.setSubmittedCount(submittedCount);
@@ -190,6 +202,8 @@ public class SurveyAnalyticsReportProcessor extends BaseBizProcessor<BizContext>
         res.setTextQuestionCount(textQuestionCount);
         res.setChoiceQuestionCount(choiceQuestionCount);
         res.setStageTrends(stageTrends);
+
+        res.setResponseSummaries(responseSummaries);
         return res;
     }
 
