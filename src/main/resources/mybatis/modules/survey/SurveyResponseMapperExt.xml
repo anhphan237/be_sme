@@ -4,43 +4,38 @@
 
     <select id="selectByCompanyIdAndFilters"
             resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyResponseFilterRow">
-
         select
         sr.survey_response_id as surveyResponseId,
         sr.survey_instance_id as surveyInstanceId,
         si.survey_template_id as surveyTemplateId,
+        st.name as templateName,
+        si.responder_user_id as responderUserId,
+        u.full_name as employeeName,
         sr.overall_score as overallScore,
         sr.submitted_at as submittedAt,
         st.stage as stage
-
         from survey_responses sr
-
         join survey_instances si
         on si.survey_instance_id = sr.survey_instance_id
         and si.company_id = sr.company_id
-
         join survey_templates st
         on st.survey_template_id = si.survey_template_id
         and st.company_id = si.company_id
-
+        left join users u
+        on u.user_id = si.responder_user_id
         where sr.company_id = #{companyId,jdbcType=VARCHAR}
-
         <if test="startDate != null">
             and sr.submitted_at &gt;= #{startDate,jdbcType=TIMESTAMP}
         </if>
-
         <if test="endDate != null">
             and sr.submitted_at &lt;= #{endDate,jdbcType=TIMESTAMP}
         </if>
-
         <if test="templateId != null and templateId != ''">
             and si.survey_template_id = #{templateId,jdbcType=VARCHAR}
         </if>
-
         <if test="stage != null and stage != ''">
             and st.stage = #{stage,jdbcType=VARCHAR}
         </if>
-
         order by sr.submitted_at desc
     </select>
     <select id="selectLatestByInstanceId"
