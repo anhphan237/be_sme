@@ -42,6 +42,16 @@ public class PermissionService {
             return true;
         }
 
+        // IT: assignee-scoped onboarding tasks (list own work, detail, update status)
+        if (rolesUpper.contains("IT") && requiredPerm != null) {
+            String perm = requiredPerm.trim();
+            if ("com.sme.onboarding.task.listByAssignee".equalsIgnoreCase(perm)
+                    || "com.sme.onboarding.task.updateStatus".equalsIgnoreCase(perm)
+                    || "com.sme.onboarding.task.detail".equalsIgnoreCase(perm)) {
+                return true;
+            }
+        }
+
         // EMPLOYEE: task page, onboarding view, notifications, documents, own profile
         if (rolesUpper.contains("EMPLOYEE") && requiredPerm != null) {
             String perm = requiredPerm.trim();
@@ -67,6 +77,16 @@ public class PermissionService {
                     || "com.sme.chat.session.create".equalsIgnoreCase(perm)
                     || "com.sme.chat.session.list".equalsIgnoreCase(perm)
                     || "com.sme.chat.message.list".equalsIgnoreCase(perm)){
+                return true;
+            }
+        }
+
+        // IT: assigned task operations only (assignee enforced in processors)
+        if (rolesUpper.contains("IT") && requiredPerm != null) {
+            String perm = requiredPerm.trim();
+            if ("com.sme.onboarding.task.listByAssignee".equalsIgnoreCase(perm)
+                    || "com.sme.onboarding.task.updateStatus".equalsIgnoreCase(perm)
+                    || "com.sme.onboarding.task.detail".equalsIgnoreCase(perm)) {
                 return true;
             }
         }

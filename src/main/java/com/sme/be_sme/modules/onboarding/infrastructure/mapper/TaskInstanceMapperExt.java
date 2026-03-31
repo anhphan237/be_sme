@@ -1,5 +1,6 @@
 package com.sme.be_sme.modules.onboarding.infrastructure.mapper;
 
+import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskAssigneeListRow;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -62,5 +63,21 @@ public interface TaskInstanceMapperExt {
     int deleteByCompanyIdAndChecklistId(
             @Param("companyId") String companyId,
             @Param("checklistId") String checklistId
+    );
+
+    List<TaskAssigneeListRow> selectByCompanyIdAndAssignee(
+            @Param("companyId") String companyId,
+            @Param("assigneeUserId") String assigneeUserId,
+            @Param("status") String status,
+            @Param("sortBy") String sortBy,
+            @Param("sortOrder") String sortOrder,
+            @Param("offset") int offset,
+            @Param("limit") int limit
+    );
+
+    Integer countByCompanyIdAndAssignee(
+            @Param("companyId") String companyId,
+            @Param("assigneeUserId") String assigneeUserId,
+            @Param("status") String status
     );
 }

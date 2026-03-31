@@ -42,7 +42,7 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
             throw AppException.of(ErrorCodes.FORBIDDEN, "task does not belong to tenant");
         }
 
-        enforceAssigneeIfEmployee(context, task);
+        enforceAssigneeUnlessElevated(context, task);
 
         String newStatus = request.getStatus().trim();
         Date now = new Date();
@@ -97,15 +97,23 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
         return response;
     }
 
-    private static void enforceAssigneeIfEmployee(BizContext context, TaskInstanceEntity task) {
+    private static void enforceAssigneeUnlessElevated(BizContext context, TaskInstanceEntity task) {
         if (OnboardingTaskAuth.isHrManagerAdmin(context.getRoles())) {
             return;
         }
         if (OnboardingTaskAuth.isEmployeeOnly(context.getRoles())) {
-            if (!StringUtils.hasText(task.getAssignedUserId())
-                    || !task.getAssignedUserId().equals(context.getOperatorId())) {
-                throw AppException.of(ErrorCodes.FORBIDDEN, "only assignee can update this task");
-            }
+            assertAssignee(context, task);
+            return;
+        }
+        if (OnboardingTaskAuth.isItStaffScopedToAssignee(context.getRoles())) {
+            assertAssignee(context, task);
+        }
+    }
+
+    private static void assertAssignee(BizContext context, TaskInstanceEntity task) {
+        if (!StringUtils.hasText(task.getAssignedUserId())
+                || !task.getAssignedUserId().equals(context.getOperatorId())) {
+            throw AppException.of(ErrorCodes.FORBIDDEN, "only assignee can update this task");
         }
     }
 
