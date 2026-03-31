@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.onboarding.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.onboarding.OnboardTaskEnum;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskAcknowledgeRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
@@ -11,10 +12,11 @@ import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
-import java.util.Date;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+
+import java.util.Date;
 
 @Component
 @RequiredArgsConstructor
@@ -57,6 +59,7 @@ public class OnboardingTaskAcknowledgeProcessor extends BaseBizProcessor<BizCont
         task.setAcknowledgedAt(now);
         task.setAcknowledgedBy(context.getOperatorId());
         task.setUpdatedAt(now);
+        task.setStatus(OnboardTaskEnum.DONE.toString());
         if (taskInstanceMapper.updateByPrimaryKey(task) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "acknowledge task failed");
         }
