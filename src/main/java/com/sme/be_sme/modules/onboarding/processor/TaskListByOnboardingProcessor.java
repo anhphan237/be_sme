@@ -114,8 +114,8 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
     }
 
     private boolean isValidStatus(String status) {
-        return "TODO".equals(status) || "IN_PROGRESS".equals(status) || 
-               "DONE".equals(status) || "PENDING".equals(status);
+        return "TODO".equals(status) || "IN_PROGRESS".equals(status) || "WAIT_ACK".equals(status)
+               || "DONE".equals(status) || "PENDING".equals(status);
     }
 
     private boolean isValidSortBy(String sortBy) {
