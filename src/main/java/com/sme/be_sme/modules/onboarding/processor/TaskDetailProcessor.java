@@ -18,6 +18,7 @@ import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskA
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskAttachmentEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskCommentEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.support.OnboardingTaskAuth;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -61,6 +62,15 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
         // 4. Verify tenant ownership if auth is enabled
         if (context.getTenantId() != null && !context.getTenantId().equals(task.getCompanyId())) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "task does not belong to tenant");
+        }
+
+        if (context.getTenantId() != null
+                && StringUtils.hasText(context.getOperatorId())
+                && OnboardingTaskAuth.isItStaffScopedToAssignee(context.getRoles())) {
+            if (!StringUtils.hasText(task.getAssignedUserId())
+                    || !task.getAssignedUserId().equals(context.getOperatorId().trim())) {
+                throw AppException.of(ErrorCodes.FORBIDDEN, "only assignee can view this task");
+            }
         }
 
         // 5. Load related data

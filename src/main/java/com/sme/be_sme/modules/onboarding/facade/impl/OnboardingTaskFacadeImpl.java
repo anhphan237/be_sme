@@ -8,11 +8,13 @@ import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskRejectRequest
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskUpdateStatusRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskAttachmentAddRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskDetailRequest;
+import com.sme.be_sme.modules.onboarding.api.request.TaskListByAssigneeRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskListByOnboardingRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskGenerationResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskAttachmentAddResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskDetailResponse;
+import com.sme.be_sme.modules.onboarding.api.response.TaskListByAssigneeResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskListByOnboardingResponse;
 import com.sme.be_sme.modules.onboarding.facade.OnboardingTaskFacade;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskAcknowledgeProcessor;
@@ -23,6 +25,7 @@ import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskRejectProcessor
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskUpdateStatusProcessor;
 import com.sme.be_sme.modules.onboarding.processor.TaskAttachmentAddProcessor;
 import com.sme.be_sme.modules.onboarding.processor.TaskDetailProcessor;
+import com.sme.be_sme.modules.onboarding.processor.TaskListByAssigneeProcessor;
 import com.sme.be_sme.modules.onboarding.processor.TaskListByOnboardingProcessor;
 import com.sme.be_sme.shared.gateway.core.BaseOperationFacade;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +43,7 @@ public class OnboardingTaskFacadeImpl extends BaseOperationFacade implements Onb
     private final OnboardingTaskRejectProcessor onboardingTaskRejectProcessor;
     private final TaskAttachmentAddProcessor taskAttachmentAddProcessor;
     private final TaskListByOnboardingProcessor taskListByOnboardingProcessor;
+    private final TaskListByAssigneeProcessor taskListByAssigneeProcessor;
     private final TaskDetailProcessor taskDetailProcessor;
 
     @Override
@@ -80,6 +84,11 @@ public class OnboardingTaskFacadeImpl extends BaseOperationFacade implements Onb
     @Override
     public TaskListByOnboardingResponse listTasksByOnboarding(TaskListByOnboardingRequest request) {
         return call(taskListByOnboardingProcessor, request, TaskListByOnboardingResponse.class);
+    }
+
+    @Override
+    public TaskListByAssigneeResponse listTasksByAssignee(TaskListByAssigneeRequest request) {
+        return call(taskListByAssigneeProcessor, request, TaskListByAssigneeResponse.class);
     }
 
     @Override

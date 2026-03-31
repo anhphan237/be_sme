@@ -34,4 +34,22 @@ public final class OnboardingTaskAuth {
         }
         return !isHrManagerAdmin(roles);
     }
+
+    /**
+     * IT-only (no EMPLOYEE role): must be scoped to tasks where they are assignee.
+     * IT+EMPLOYEE is handled by {@link #isEmployeeOnly}; IT+MANAGER/HR uses elevated rules.
+     */
+    public static boolean isItStaffScopedToAssignee(Set<String> roles) {
+        if (roles == null || roles.isEmpty()) {
+            return false;
+        }
+        Set<String> upper = roles.stream()
+                .map(r -> r != null ? r.trim().toUpperCase() : "")
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
+        if (upper.contains("EMPLOYEE")) {
+            return false;
+        }
+        return upper.contains("IT") && !isHrManagerAdmin(roles);
+    }
 }
