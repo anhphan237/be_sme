@@ -7,6 +7,7 @@ import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskAcknowledgeRe
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
 import com.sme.be_sme.modules.onboarding.support.OnboardingTaskAuth;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -24,6 +25,7 @@ public class OnboardingTaskAcknowledgeProcessor extends BaseBizProcessor<BizCont
 
     private final ObjectMapper objectMapper;
     private final TaskInstanceMapper taskInstanceMapper;
+    private final OnboardingInstanceProgressService progressService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -63,6 +65,8 @@ public class OnboardingTaskAcknowledgeProcessor extends BaseBizProcessor<BizCont
         if (taskInstanceMapper.updateByPrimaryKey(task) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "acknowledge task failed");
         }
+
+        progressService.recalculateFromTask(companyId, task);
 
         OnboardingTaskResponse response = new OnboardingTaskResponse();
         response.setTaskId(task.getTaskId());
