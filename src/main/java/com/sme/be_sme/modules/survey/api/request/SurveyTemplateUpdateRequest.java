@@ -8,9 +8,11 @@ public class SurveyTemplateUpdateRequest {
 
     private String name;
     private String description;
-    private String stage;        // D7/D30/D60...
+    private String stage;
     private Boolean managerOnly;
-    private String status;       // DRAFT/ACTIVE/...
+    private String status;
     private Boolean isDefault;
     private Integer version;
+    private String targetRole;
+    private Boolean forceReplaceDefault;
 }

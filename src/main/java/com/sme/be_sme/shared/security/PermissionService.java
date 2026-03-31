@@ -47,6 +47,11 @@ public class PermissionService {
             String perm = requiredPerm.trim();
             if ("com.sme.onboarding.task.listByOnboarding".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.updateStatus".equalsIgnoreCase(perm)
+                    || "com.sme.onboarding.task.detail".equalsIgnoreCase(perm)
+                    || "com.sme.onboarding.task.acknowledge".equalsIgnoreCase(perm)
+                    || "com.sme.onboarding.task.attachment.add".equalsIgnoreCase(perm)
+                    || "com.sme.onboarding.task.approve".equalsIgnoreCase(perm)
+                    || "com.sme.onboarding.task.reject".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.instance.list".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.instance.get".equalsIgnoreCase(perm)
                     || "com.sme.notification.list".equalsIgnoreCase(perm)

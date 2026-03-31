@@ -9,4 +9,5 @@ public class SurveyTemplateListResponse {
     private Integer total;
     private Integer page;
     private Integer pageSize;
+    private String targetRole;
 }

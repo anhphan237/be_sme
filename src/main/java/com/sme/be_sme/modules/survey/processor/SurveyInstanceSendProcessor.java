@@ -2,9 +2,11 @@ package com.sme.be_sme.modules.survey.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
 import com.sme.be_sme.modules.survey.api.request.SurveySendRequest;
 import com.sme.be_sme.modules.survey.api.response.SurveySendResponse;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapper;
+import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapperExt;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyTemplateMapper;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyInstanceEntity;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyTemplateEntity;
@@ -36,7 +38,8 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
     private final SurveyInstanceMapper surveyInstanceMapper;
     private final SurveyTemplateMapper surveyTemplateMapper;
     private final NotificationService notificationService;
-
+    private final UserMapperExt userMapperExt;
+    private final SurveyInstanceMapperExt surveyInstanceMapperExt;
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
         SurveySendRequest request = objectMapper.convertValue(payload, SurveySendRequest.class);
@@ -44,7 +47,6 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
 
         Date now = new Date();
 
-        // Case A: gửi bằng surveyInstanceId -> update sent_at + status
         if (StringUtils.hasText(request.getSurveyInstanceId())) {
             SurveyInstanceEntity entity = surveyInstanceMapper.selectByPrimaryKey(request.getSurveyInstanceId().trim());
             if (entity == null || !context.getTenantId().equals(entity.getCompanyId())) {
@@ -67,10 +69,50 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
             return res;
         }
 
-        // Case B: gửi ngoài lịch -> tạo instance mới theo templateId (+ onboardingId nếu có)
         SurveyTemplateEntity template = surveyTemplateMapper.selectByPrimaryKey(request.getTemplateId().trim());
         if (template == null || !context.getTenantId().equals(template.getCompanyId())) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
+        }
+
+        String targetRole = request.getTargetRole();
+        String employeeId = request.getResponderUserId();
+
+        String managerId = userMapperExt.selectManagerUserIdByUserId(employeeId);
+
+        String createdInstanceId;
+
+        if (("MANAGER".equals(targetRole) || "BOTH".equals(targetRole))
+                && !StringUtils.hasText(managerId)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "Manager not found for user");
+        } else if ("BOTH".equals(targetRole)) {
+            createAndSend(context, template, request, employeeId, now);
+            createdInstanceId = createAndSend(context, template, request, managerId, now);
+        } else {
+            createdInstanceId = createAndSend(context, template, request, employeeId, now);
+        }
+
+        SurveySendResponse res = new SurveySendResponse();
+        res.setSurveyInstanceId(createdInstanceId);
+        res.setStatus("SENT");
+        res.setSentAt(now);
+        return res;
+    }
+    private String createAndSend(
+            BizContext context,
+            SurveyTemplateEntity template,
+            SurveySendRequest request,
+            String responderUserId,
+            Date now
+    ) {
+        SurveyInstanceEntity existed = surveyInstanceMapperExt.findActiveByUniqueKey(
+                context.getTenantId(),
+                StringUtils.hasText(request.getOnboardingId()) ? request.getOnboardingId().trim() : null,
+                template.getSurveyTemplateId(),
+                responderUserId
+        );
+
+        if (existed != null) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "Survey already sent or scheduled for this user");
         }
 
         SurveyInstanceEntity entity = new SurveyInstanceEntity();
@@ -78,8 +120,8 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
         entity.setCompanyId(context.getTenantId());
         entity.setSurveyTemplateId(template.getSurveyTemplateId());
         entity.setOnboardingId(StringUtils.hasText(request.getOnboardingId()) ? request.getOnboardingId().trim() : null);
-
-        entity.setScheduledAt(now); // gửi ngay
+        entity.setResponderUserId(responderUserId);
+        entity.setScheduledAt(now);
         entity.setSentAt(now);
         entity.setStatus("SENT");
         entity.setCreatedAt(now);
@@ -88,15 +130,10 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
         if (inserted != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create & send survey instance failed");
         }
-        // Case B: no responderUserId set, skip notification
 
-        SurveySendResponse res = new SurveySendResponse();
-        res.setSurveyInstanceId(entity.getSurveyInstanceId());
-        res.setStatus(entity.getStatus());
-        res.setSentAt(entity.getSentAt());
-        return res;
+        notifySurveyReady(entity);
+        return entity.getSurveyInstanceId();
     }
-
     private void notifySurveyReady(SurveyInstanceEntity entity) {
         if (!StringUtils.hasText(entity.getResponderUserId())) return;
         String dueStr = entity.getClosedAt() != null
@@ -131,6 +168,11 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
 
         if (!hasInstanceId && !hasTemplateId) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "surveyInstanceId or templateId is required");
+        }
+        if (!hasInstanceId) {
+            if (!StringUtils.hasText(request.getResponderUserId())) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "responderUserId is required");
+            }
         }
     }
 }

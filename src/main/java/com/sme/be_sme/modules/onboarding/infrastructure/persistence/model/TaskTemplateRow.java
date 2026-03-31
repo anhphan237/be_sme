@@ -14,6 +14,8 @@ public class TaskTemplateRow {
     private String ownerRefId;
     private Integer dueDaysOffset;
     private Boolean requireAck;
+    private Boolean requiresManagerApproval;
+    private String approverUserId;
     private Integer orderNo;
     private String status;
 }

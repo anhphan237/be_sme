@@ -8,4 +8,6 @@ import lombok.Setter;
 public class OnboardingTaskGenerationResponse {
     private String instanceId;
     private int totalTasks;
+    /** True when checklist/tasks already existed for this onboarding (idempotent generate). */
+    private boolean alreadyGenerated;
 }

@@ -100,6 +100,11 @@ public class OnboardingInstanceEntity {
     private Integer progressPercent;
     private String requestNo;
 
+    /** users.user_id of line manager for MANAGER-owned template tasks */
+    private String managerUserId;
+    /** users.user_id of IT assignee for IT_STAFF-owned template tasks */
+    private String itStaffUserId;
+
     public Integer getProgressPercent() {
         return progressPercent;
     }
@@ -114,6 +119,22 @@ public class OnboardingInstanceEntity {
 
     public void setRequestNo(String requestNo) {
         this.requestNo = requestNo == null ? null : requestNo.trim();
+    }
+
+    public String getManagerUserId() {
+        return managerUserId;
+    }
+
+    public void setManagerUserId(String managerUserId) {
+        this.managerUserId = managerUserId == null ? null : managerUserId.trim();
+    }
+
+    public String getItStaffUserId() {
+        return itStaffUserId;
+    }
+
+    public void setItStaffUserId(String itStaffUserId) {
+        this.itStaffUserId = itStaffUserId == null ? null : itStaffUserId.trim();
     }
 
     /**

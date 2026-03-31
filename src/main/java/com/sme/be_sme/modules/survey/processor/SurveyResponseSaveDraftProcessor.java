@@ -14,6 +14,7 @@ import com.sme.be_sme.shared.gateway.core.BizContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.Set;
 
 @Component
@@ -43,7 +44,10 @@ public class SurveyResponseSaveDraftProcessor extends BaseBizProcessor<BizContex
         if (instance == null) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "Survey instance not found");
         }
-
+        if (instance.getScheduledAt() != null
+                && instance.getScheduledAt().toInstant().isAfter(Instant.now())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "Survey is not open yet");
+        }
         if (!ALLOW_STATUSES.contains(String.valueOf(instance.getStatus()).toUpperCase())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "Survey is not available for draft saving");
         }

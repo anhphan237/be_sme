@@ -1,5 +1,6 @@
 package com.sme.be_sme.modules.survey.infrastructure.mapper;
 
+import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyInstanceEntity;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyInstanceDetailRow;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyInstanceListRow;
 import org.apache.ibatis.annotations.Mapper;
@@ -32,14 +33,6 @@ public interface SurveyInstanceMapperExt {
             @Param("responderUserId") String responderUserId
     );
 
-    @Select("""
-        select count(*) 
-        from survey_instances
-        where company_id = #{companyId}
-          and (#{templateId} is null or survey_template_id = #{templateId})
-          and (#{startDate} is null or created_at >= #{startDate})
-          and (#{endDate} is null or created_at <= #{endDate})
-    """)
     int countSent(
             @Param("companyId") String companyId,
             @Param("templateId") String templateId,
@@ -49,6 +42,12 @@ public interface SurveyInstanceMapperExt {
     SurveyInstanceDetailRow selectDetailById(
             @Param("companyId") String companyId,
             @Param("instanceId") String instanceId,
+            @Param("responderUserId") String responderUserId
+    );
+    SurveyInstanceEntity findActiveByUniqueKey(
+            @Param("companyId") String companyId,
+            @Param("onboardingId") String onboardingId,
+            @Param("templateId") String templateId,
             @Param("responderUserId") String responderUserId
     );
 

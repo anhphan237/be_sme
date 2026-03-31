@@ -26,4 +26,7 @@ public interface UserMapperExt {
     );
 
     int countByEmail(@Param("email") String email);
+
+
+    String selectManagerUserIdByUserId(@Param("userId") String userId);
 }

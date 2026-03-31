@@ -21,6 +21,15 @@
     <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+    <result column="require_ack" jdbcType="BIT" property="requireAck" />
+    <result column="acknowledged_at" jdbcType="TIMESTAMP" property="acknowledgedAt" />
+    <result column="acknowledged_by" jdbcType="VARCHAR" property="acknowledgedBy" />
+    <result column="requires_manager_approval" jdbcType="BIT" property="requiresManagerApproval" />
+    <result column="approval_status" jdbcType="VARCHAR" property="approvalStatus" />
+    <result column="approved_by" jdbcType="VARCHAR" property="approvedBy" />
+    <result column="approved_at" jdbcType="TIMESTAMP" property="approvedAt" />
+    <result column="rejection_reason" jdbcType="VARCHAR" property="rejectionReason" />
+    <result column="approver_user_id" jdbcType="VARCHAR" property="approverUserId" />
   </resultMap>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
     <!--
@@ -41,12 +50,16 @@
       task_template_id, title, description, 
       status, due_date, assigned_user_id, 
       assigned_department_id, completed_at, created_by, 
-      created_at, updated_at)
+      created_at, updated_at, require_ack, acknowledged_at, acknowledged_by,
+      requires_manager_approval, approval_status, approved_by, approved_at, rejection_reason, approver_user_id)
     values (#{taskId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{checklistId,jdbcType=VARCHAR}, 
       #{taskTemplateId,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR}, #{description,jdbcType=VARCHAR}, 
       #{status,jdbcType=VARCHAR}, #{dueDate,jdbcType=DATE}, #{assignedUserId,jdbcType=VARCHAR}, 
       #{assignedDepartmentId,jdbcType=VARCHAR}, #{completedAt,jdbcType=TIMESTAMP}, #{createdBy,jdbcType=VARCHAR}, 
-      #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
+      #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP},
+      #{requireAck,jdbcType=BIT}, #{acknowledgedAt,jdbcType=TIMESTAMP}, #{acknowledgedBy,jdbcType=VARCHAR},
+      #{requiresManagerApproval,jdbcType=BIT}, #{approvalStatus,jdbcType=VARCHAR}, #{approvedBy,jdbcType=VARCHAR},
+      #{approvedAt,jdbcType=TIMESTAMP}, #{rejectionReason,jdbcType=VARCHAR}, #{approverUserId,jdbcType=VARCHAR})
   </insert>
   <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity">
     <!--
@@ -67,7 +80,16 @@
       completed_at = #{completedAt,jdbcType=TIMESTAMP},
       created_by = #{createdBy,jdbcType=VARCHAR},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
-      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      require_ack = #{requireAck,jdbcType=BIT},
+      acknowledged_at = #{acknowledgedAt,jdbcType=TIMESTAMP},
+      acknowledged_by = #{acknowledgedBy,jdbcType=VARCHAR},
+      requires_manager_approval = #{requiresManagerApproval,jdbcType=BIT},
+      approval_status = #{approvalStatus,jdbcType=VARCHAR},
+      approved_by = #{approvedBy,jdbcType=VARCHAR},
+      approved_at = #{approvedAt,jdbcType=TIMESTAMP},
+      rejection_reason = #{rejectionReason,jdbcType=VARCHAR},
+      approver_user_id = #{approverUserId,jdbcType=VARCHAR}
     where task_id = #{taskId,jdbcType=VARCHAR}
   </update>
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
@@ -78,7 +100,8 @@
     -->
     select task_id, company_id, checklist_id, task_template_id, title, description, status, 
     due_date, assigned_user_id, assigned_department_id, completed_at, created_by, created_at, 
-    updated_at
+    updated_at, require_ack, acknowledged_at, acknowledged_by, requires_manager_approval, approval_status,
+    approved_by, approved_at, rejection_reason, approver_user_id
     from task_instances
     where task_id = #{taskId,jdbcType=VARCHAR}
   </select>
@@ -90,13 +113,15 @@
     -->
     select task_id, company_id, checklist_id, task_template_id, title, description, status, 
     due_date, assigned_user_id, assigned_department_id, completed_at, created_by, created_at, 
-    updated_at
+    updated_at, require_ack, acknowledged_at, acknowledged_by, requires_manager_approval, approval_status,
+    approved_by, approved_at, rejection_reason, approver_user_id
     from task_instances
   </select>
   <select id="selectByCompanyIdAndOnboardingId" resultMap="BaseResultMap">
     select ti.task_id, ti.company_id, ti.checklist_id, ti.task_template_id, ti.title, ti.description, ti.status,
     ti.due_date, ti.assigned_user_id, ti.assigned_department_id, ti.completed_at, ti.created_by, ti.created_at,
-    ti.updated_at
+    ti.updated_at, ti.require_ack, ti.acknowledged_at, ti.acknowledged_by, ti.requires_manager_approval,
+    ti.approval_status, ti.approved_by, ti.approved_at, ti.rejection_reason, ti.approver_user_id
     from task_instances ti
     join checklist_instances ci on ci.checklist_id = ti.checklist_id and ci.company_id = ti.company_id
     where ti.company_id = #{companyId,jdbcType=VARCHAR}

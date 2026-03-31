@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.survey.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
 import com.sme.be_sme.modules.survey.api.request.SurveyScheduleRequest;
 import com.sme.be_sme.modules.survey.api.response.SurveyScheduleResponse;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapper;
@@ -32,11 +33,13 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
     private final SurveyTemplateMapper surveyTemplateMapper;
     private final SurveyInstanceMapper surveyInstanceMapper;
     private final UserMapper userMapper;
+    private final UserMapperExt userMapperExt;
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
         SurveyScheduleRequest request =
                 objectMapper.convertValue(payload, SurveyScheduleRequest.class);
         validate(context, request);
+
         SurveyTemplateEntity template =
                 surveyTemplateMapper.selectByPrimaryKey(request.getTemplateId().trim());
 
@@ -50,34 +53,46 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         Date scheduledAt = request.getScheduledAt();
         Date closedAt = plusDays(scheduledAt, dueDays);
 
-        SurveyInstanceEntity entity = new SurveyInstanceEntity();
-        entity.setSurveyInstanceId(UuidGenerator.generate());
-        entity.setCompanyId(context.getTenantId());
-        entity.setOnboardingId(request.getOnboardingId());
-        entity.setSurveyTemplateId(template.getSurveyTemplateId());
-        entity.setScheduledAt(scheduledAt);
-        entity.setClosedAt(closedAt);
-        entity.setStatus("SCHEDULED");
-        entity.setResponderUserId(request.getResponderUserId());
-        entity.setCreatedAt(now);
+        String targetRole = request.getTargetRole();
+        if (!StringUtils.hasText(targetRole)) {
+            targetRole = template.getTargetRole();
+        }
+        if (!StringUtils.hasText(targetRole)) {
+            targetRole = "EMPLOYEE";
+        }
 
-        int inserted = surveyInstanceMapper.insert(entity);
-        if (inserted != 1) {
-            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "schedule survey instance failed");
+        String employeeId = request.getResponderUserId();
+        String createdInstanceId = null;
+
+        String managerId = userMapperExt.selectManagerUserIdByUserId(employeeId);
+
+        if (("MANAGER".equalsIgnoreCase(targetRole) || "BOTH".equalsIgnoreCase(targetRole))
+                && !StringUtils.hasText(managerId)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "Manager not found for user");
+        }
+
+        if ("MANAGER".equalsIgnoreCase(targetRole)) {
+            createdInstanceId = createInstance(context, template, request, managerId, scheduledAt, closedAt);
+        } else if ("BOTH".equalsIgnoreCase(targetRole)) {
+            createInstance(context, template, request, employeeId, scheduledAt, closedAt);
+            createdInstanceId = createInstance(context, template, request, managerId, scheduledAt, closedAt);
+        } else {
+            createdInstanceId = createInstance(context, template, request, employeeId, scheduledAt, closedAt);
         }
 
         UserEntity user = null;
         if (StringUtils.hasText(request.getResponderUserId())) {
             user = userMapper.selectByPrimaryKey(request.getResponderUserId());
         }
+
         SurveyScheduleResponse response = new SurveyScheduleResponse();
-        response.setScheduleId(entity.getSurveyInstanceId());
-        response.setStatus(entity.getStatus());
+        response.setScheduleId(createdInstanceId);
+        response.setStatus("SCHEDULED");
         response.setOpenAt(scheduledAt);
         response.setDueAt(closedAt);
         response.setTemplateId(template.getSurveyTemplateId());
         response.setResponderUserId(request.getResponderUserId());
-        response.setInstanceId(entity.getSurveyInstanceId());
+        response.setInstanceId(createdInstanceId);
 
         if (user != null) {
             response.setEmployeeName(user.getFullName());
@@ -87,6 +102,36 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         return response;
     }
 
+    private String createInstance(
+            BizContext context,
+            SurveyTemplateEntity template,
+            SurveyScheduleRequest request,
+            String responderUserId,
+            Date scheduledAt,
+            Date closedAt
+    ) {
+        if (!StringUtils.hasText(responderUserId)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "responderUserId is required");
+        }
+
+        SurveyInstanceEntity entity = new SurveyInstanceEntity();
+        entity.setSurveyInstanceId(UuidGenerator.generate());
+        entity.setCompanyId(context.getTenantId());
+        entity.setOnboardingId(request.getOnboardingId());
+        entity.setSurveyTemplateId(template.getSurveyTemplateId());
+        entity.setScheduledAt(scheduledAt);
+        entity.setClosedAt(closedAt);
+        entity.setStatus("SCHEDULED");
+        entity.setResponderUserId(responderUserId);
+        entity.setCreatedAt(new Date());
+
+        int inserted = surveyInstanceMapper.insert(entity);
+        if (inserted != 1) {
+            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "schedule survey instance failed");
+        }
+
+        return entity.getSurveyInstanceId();
+    }
     private static Date plusDays(Date start, int days) {
         return new Date(start.getTime() + (long) days * 24 * 60 * 60 * 1000);
     }

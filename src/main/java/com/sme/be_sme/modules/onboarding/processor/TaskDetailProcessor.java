@@ -192,6 +192,15 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
         response.setCreatedAt(task.getCreatedAt());
         response.setUpdatedAt(task.getUpdatedAt());
         response.setCreatedBy(task.getCreatedBy());
+        response.setRequireAck(task.getRequireAck());
+        response.setAcknowledgedAt(task.getAcknowledgedAt());
+        response.setAcknowledgedBy(task.getAcknowledgedBy());
+        response.setRequiresManagerApproval(task.getRequiresManagerApproval());
+        response.setApprovalStatus(task.getApprovalStatus());
+        response.setApprovedBy(task.getApprovedBy());
+        response.setApprovedAt(task.getApprovedAt());
+        response.setRejectionReason(task.getRejectionReason());
+        response.setApproverUserId(task.getApproverUserId());
 
         // Checklist info
         if (checklist != null) {

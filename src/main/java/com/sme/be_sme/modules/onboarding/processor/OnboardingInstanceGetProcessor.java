@@ -59,8 +59,11 @@ public class OnboardingInstanceGetProcessor extends BaseBizProcessor<BizContext>
         response.setEmployeeId(instance.getEmployeeId());
         EmployeeLinkInfo employeeLinkInfo = resolveEmployeeLinkInfo(companyId, instance.getEmployeeId());
         response.setEmployeeUserId(employeeLinkInfo.employeeUserId);
-        response.setManagerUserId(employeeLinkInfo.managerUserId);
-        response.setManagerName(employeeLinkInfo.managerName);
+        String managerUserId = StringUtils.hasText(instance.getManagerUserId())
+                ? instance.getManagerUserId().trim()
+                : employeeLinkInfo.managerUserId;
+        response.setManagerUserId(managerUserId);
+        response.setManagerName(resolveManagerName(companyId, managerUserId, employeeLinkInfo.managerName));
         response.setTemplateId(instance.getOnboardingTemplateId());
         response.setStatus(instance.getStatus());
         response.setStartDate(instance.getStartDate());
@@ -102,6 +105,12 @@ public class OnboardingInstanceGetProcessor extends BaseBizProcessor<BizContext>
         item.setAssignedUserId(t.getAssignedUserId());
         item.setDueDate(t.getDueDate());
         item.setCompletedAt(t.getCompletedAt());
+        item.setRequireAck(t.getRequireAck());
+        item.setAcknowledgedAt(t.getAcknowledgedAt());
+        item.setRequiresManagerApproval(t.getRequiresManagerApproval());
+        item.setApprovalStatus(t.getApprovalStatus());
+        item.setRejectionReason(t.getRejectionReason());
+        item.setApproverUserId(t.getApproverUserId());
         return item;
     }
 
@@ -141,6 +150,17 @@ public class OnboardingInstanceGetProcessor extends BaseBizProcessor<BizContext>
     private boolean isEmployeeRole(BizContext context) {
         if (context == null || context.getRoles() == null) return false;
         return context.getRoles().stream().anyMatch(r -> "EMPLOYEE".equalsIgnoreCase(r));
+    }
+
+    private String resolveManagerName(String companyId, String managerUserId, String fallbackName) {
+        if (!StringUtils.hasText(managerUserId)) {
+            return fallbackName;
+        }
+        UserEntity manager = userMapperExt.selectByCompanyIdAndUserId(companyId, managerUserId.trim());
+        if (manager != null && StringUtils.hasText(manager.getFullName())) {
+            return manager.getFullName().trim();
+        }
+        return fallbackName;
     }
 
     private EmployeeLinkInfo resolveEmployeeLinkInfo(String companyId, String onboardingEmployeeId) {

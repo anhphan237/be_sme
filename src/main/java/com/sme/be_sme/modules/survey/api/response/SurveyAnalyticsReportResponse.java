@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -23,9 +24,20 @@ public class SurveyAnalyticsReportResponse {
     private List<DimensionStat> dimensionStats;
     private List<QuestionStat> questionStats;
 
+    private List<DimensionStat> lowScoreDimensions;
+    private List<DimensionStat> topPositiveDimensions;
     // 4) trend (option)
     private List<StageTrend> stageTrends;
+    private List<TrendPoint> timeTrends;
 
+    private Integer textResponseCount;
+    private Integer ratingQuestionCount;
+    private Integer textQuestionCount;
+    private Integer choiceQuestionCount;
+
+    private List<QuestionStat> lowestQuestions;
+    private List<QuestionStat> highestQuestions;
+    private List<ResponseSummary> responseSummaries;
     @Getter @Setter
     public static class DimensionStat {
         private String dimensionCode;     // e.g. IT_SETUP / HR_SUPPORT
@@ -50,6 +62,9 @@ public class SurveyAnalyticsReportResponse {
 
         // text (simple)
         private Integer textAnswerCount;
+
+        private BigDecimal completionRate;
+        private List<String> sampleTexts;
     }
 
     @Getter @Setter
@@ -57,5 +72,22 @@ public class SurveyAnalyticsReportResponse {
         private String stage;                 // D7/D30...
         private Integer submittedCount;
         private BigDecimal averageOverall;    // avg overall_score theo stage
+    }
+
+    @Getter @Setter
+    public static class TrendPoint {
+        private String bucket;
+        private Integer submittedCount;
+        private BigDecimal averageScore;
+    }
+    @Getter
+    @Setter
+    public static class ResponseSummary {
+        private String surveyResponseId;
+        private String surveyInstanceId;
+        private String templateName;
+        private String employeeName;
+        private BigDecimal overallScore;
+        private Date submittedAt;
     }
 }

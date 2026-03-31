@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.survey.infrastructure.mapper;
 
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyTemplateEntity;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -46,4 +47,22 @@ public interface SurveyTemplateMapper {
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
     int updateByPrimaryKey(SurveyTemplateEntity row);
+
+    SurveyTemplateEntity findActiveDefaultByCompanyStageAndTargetRoleExcludingTemplateId(
+            @org.apache.ibatis.annotations.Param("companyId") String companyId,
+            @org.apache.ibatis.annotations.Param("stage") String stage,
+            @org.apache.ibatis.annotations.Param("targetRole") String targetRole,
+            @org.apache.ibatis.annotations.Param("excludeTemplateId") String excludeTemplateId
+    );
+    SurveyTemplateEntity findActiveDefaultByCompanyStageAndTargetRole(
+            @org.apache.ibatis.annotations.Param("companyId") String companyId,
+            @org.apache.ibatis.annotations.Param("stage") String stage,
+            @org.apache.ibatis.annotations.Param("targetRole") String targetRole
+    );
+    int clearDefaultByCompanyStageAndTargetRoleExcludingTemplateId(
+            @org.apache.ibatis.annotations.Param("companyId") String companyId,
+            @org.apache.ibatis.annotations.Param("stage") String stage,
+            @org.apache.ibatis.annotations.Param("targetRole") String targetRole,
+            @org.apache.ibatis.annotations.Param("excludeTemplateId") String excludeTemplateId
+    );
 }

@@ -4,18 +4,17 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskUpdateStatusRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
-import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstanceMapper;
-import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
-import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.ChecklistInstanceEntity;
-import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
+import com.sme.be_sme.modules.onboarding.service.OnboardingTaskApprovalAuthority;
+import com.sme.be_sme.modules.onboarding.support.OnboardingTaskAuth;
+import com.sme.be_sme.modules.onboarding.support.OnboardingTaskWorkflow;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import java.util.Date;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -26,8 +25,8 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
 
     private final ObjectMapper objectMapper;
     private final TaskInstanceMapper taskInstanceMapper;
-    private final ChecklistInstanceMapper checklistInstanceMapper;
-    private final OnboardingInstanceMapper onboardingInstanceMapper;
+    private final OnboardingInstanceProgressService progressService;
+    private final OnboardingTaskApprovalAuthority approvalAuthority;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -43,22 +42,53 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
             throw AppException.of(ErrorCodes.FORBIDDEN, "task does not belong to tenant");
         }
 
+        enforceAssigneeIfEmployee(context, task);
+
         String newStatus = request.getStatus().trim();
-        task.setStatus(newStatus);
-        if ("DONE".equalsIgnoreCase(newStatus)) {
-            task.setCompletedAt(new Date());
+        Date now = new Date();
+
+        if (OnboardingTaskWorkflow.STATUS_PENDING_APPROVAL.equalsIgnoreCase(newStatus)) {
+            if (!Boolean.TRUE.equals(task.getRequiresManagerApproval())) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "task does not require manager approval");
+            }
+            task.setStatus(OnboardingTaskWorkflow.STATUS_PENDING_APPROVAL);
+            task.setApprovalStatus(OnboardingTaskWorkflow.APPROVAL_PENDING);
+            task.setCompletedAt(null);
+            task.setApprovedBy(null);
+            task.setApprovedAt(null);
+            task.setRejectionReason(null);
+        } else if ("DONE".equalsIgnoreCase(newStatus)) {
+            if (Boolean.TRUE.equals(task.getRequireAck()) && task.getAcknowledgedAt() == null) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "acknowledge task before marking done");
+            }
+            if (Boolean.TRUE.equals(task.getRequiresManagerApproval())) {
+                if (OnboardingTaskAuth.isEmployeeOnly(context.getRoles())) {
+                    throw AppException.of(
+                            ErrorCodes.BAD_REQUEST,
+                            "use status " + OnboardingTaskWorkflow.STATUS_PENDING_APPROVAL + " for manager review");
+                }
+                approvalAuthority.assertMayApproveOrRejectOrForceDone(context, companyId, task);
+                task.setApprovalStatus(OnboardingTaskWorkflow.APPROVAL_APPROVED);
+                task.setApprovedBy(context.getOperatorId());
+                task.setApprovedAt(now);
+            }
+            task.setStatus("DONE");
+            task.setCompletedAt(now);
+        } else {
+            task.setStatus(newStatus);
+            if (!"DONE".equalsIgnoreCase(newStatus)) {
+                task.setCompletedAt(null);
+            }
         }
-        task.setUpdatedAt(new Date());
+
+        task.setUpdatedAt(now);
 
         int updated = taskInstanceMapper.updateByPrimaryKey(task);
         if (updated != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "update task status failed");
         }
 
-        updateParentInstanceProgress(companyId, task);
-        if (context.getOperatorId() != null) {
-            // Audit: status change could be logged to task_activity_logs here if needed
-        }
+        progressService.recalculateFromTask(companyId, task);
 
         OnboardingTaskResponse response = new OnboardingTaskResponse();
         response.setTaskId(task.getTaskId());
@@ -67,29 +97,16 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
         return response;
     }
 
-    private void updateParentInstanceProgress(String companyId, TaskInstanceEntity task) {
-        ChecklistInstanceEntity checklist = checklistInstanceMapper.selectByPrimaryKey(task.getChecklistId());
-        if (checklist == null || !companyId.equals(checklist.getCompanyId())) {
+    private static void enforceAssigneeIfEmployee(BizContext context, TaskInstanceEntity task) {
+        if (OnboardingTaskAuth.isHrManagerAdmin(context.getRoles())) {
             return;
         }
-        String onboardingId = checklist.getOnboardingId();
-        if (onboardingId == null) {
-            return;
+        if (OnboardingTaskAuth.isEmployeeOnly(context.getRoles())) {
+            if (!StringUtils.hasText(task.getAssignedUserId())
+                    || !task.getAssignedUserId().equals(context.getOperatorId())) {
+                throw AppException.of(ErrorCodes.FORBIDDEN, "only assignee can update this task");
+            }
         }
-        OnboardingInstanceEntity instance = onboardingInstanceMapper.selectByPrimaryKey(onboardingId);
-        if (instance == null || !companyId.equals(instance.getCompanyId())) {
-            return;
-        }
-        List<TaskInstanceEntity> tasks = taskInstanceMapper.selectByCompanyIdAndOnboardingId(companyId, onboardingId);
-        int total = tasks == null ? 0 : tasks.size();
-        if (total == 0) {
-            return;
-        }
-        long doneCount = tasks.stream().filter(t -> "DONE".equalsIgnoreCase(t.getStatus())).count();
-        int progressPercent = (int) ((doneCount * 100) / total);
-        instance.setProgressPercent(progressPercent);
-        instance.setUpdatedAt(new Date());
-        onboardingInstanceMapper.updateByPrimaryKey(instance);
     }
 
     private static void validate(BizContext context, OnboardingTaskUpdateStatusRequest request) {

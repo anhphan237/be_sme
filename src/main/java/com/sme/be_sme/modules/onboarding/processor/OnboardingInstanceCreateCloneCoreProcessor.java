@@ -44,6 +44,12 @@ public class OnboardingInstanceCreateCloneCoreProcessor
         inst.setUpdatedAt(now);
         inst.setProgressPercent(0);
         inst.setRequestNo(ctx.getRequest().getRequestNo());
+        if (ctx.getRequest().getManagerId() != null && !ctx.getRequest().getManagerId().isBlank()) {
+            inst.setManagerUserId(ctx.getRequest().getManagerId().trim());
+        }
+        if (ctx.getRequest().getItStaffUserId() != null && !ctx.getRequest().getItStaffUserId().isBlank()) {
+            inst.setItStaffUserId(ctx.getRequest().getItStaffUserId().trim());
+        }
         onboardingInstanceMapper.insert(inst);
         return null;
     }

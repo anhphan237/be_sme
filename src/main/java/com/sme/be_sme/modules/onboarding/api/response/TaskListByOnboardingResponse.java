@@ -29,5 +29,9 @@ public class TaskListByOnboardingResponse {
         private String assignedDepartmentId;
         private Date completedAt;
         private Date createdAt;
+        private Boolean requireAck;
+        private Boolean requiresManagerApproval;
+        private String approvalStatus;
+        private String approverUserId;
     }
 }

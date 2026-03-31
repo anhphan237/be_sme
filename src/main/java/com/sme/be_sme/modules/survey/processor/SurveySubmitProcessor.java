@@ -27,6 +27,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -63,11 +64,17 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
         if (instance == null || !tenantId.equals(instance.getCompanyId())) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey instance not found");
         }
-
+        if (instance.getScheduledAt() != null
+                && instance.getScheduledAt().toInstant().isAfter(Instant.now())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "Survey is not open yet");
+        }
         if (STATUS_COMPLETED.equalsIgnoreCase(instance.getStatus())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "survey already submitted");
         }
-
+        if (StringUtils.hasText(instance.getResponderUserId())
+                && !instance.getResponderUserId().equals(context.getOperatorId())) {
+            throw AppException.of(ErrorCodes.FORBIDDEN, "You are not allowed to submit this survey");
+        }
         SurveyTemplateEntity template =
                 surveyTemplateMapper.selectByPrimaryKey(instance.getSurveyTemplateId());
 
