@@ -20,6 +20,10 @@ public class CompanyRegisterRequest {
         private String code;
         private String address;
         private String timezone;
+        /** Industry/sector of the company (e.g. Công nghệ, Bán lẻ, Sản xuất). Used by AI to generate onboarding template. */
+        private String industry;
+        /** Company size: STARTUP, SME, ENTERPRISE. Used by AI to generate onboarding template. */
+        private String companySize;
     }
 
     @Getter

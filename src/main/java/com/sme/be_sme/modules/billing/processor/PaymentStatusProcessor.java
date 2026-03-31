@@ -5,8 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.billing.api.request.PaymentStatusRequest;
 import com.sme.be_sme.modules.billing.api.response.PaymentStatusResponse;
 import com.sme.be_sme.modules.billing.infrastructure.gateway.PaymentGatewayPort;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PaymentTransactionMapperExt;
+import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.InvoiceEntity;
+import com.sme.be_sme.modules.company.infrastructure.mapper.CompanyMapper;
+import com.sme.be_sme.modules.company.infrastructure.persistence.entity.CompanyEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PaymentTransactionEntity;
+import java.util.Date;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -26,6 +31,8 @@ public class PaymentStatusProcessor extends BaseBizProcessor<BizContext> {
 
     private final ObjectMapper objectMapper;
     private final PaymentTransactionMapperExt paymentTransactionMapperExt;
+    private final InvoiceMapper invoiceMapper;
+    private final CompanyMapper companyMapper;
 
     @Value("${app.stripe.secret-key:}")
     private String stripeSecretKey;
@@ -50,14 +57,36 @@ public class PaymentStatusProcessor extends BaseBizProcessor<BizContext> {
         }
 
         String liveStatus = fetchLiveStatus(paymentIntentId);
+        String effectiveStatus = liveStatus != null ? liveStatus : txn.getStatus();
+
+        if ("succeeded".equalsIgnoreCase(effectiveStatus) && StringUtils.hasText(txn.getInvoiceId())) {
+            activateCompanyIfPending(txn.getInvoiceId());
+        }
 
         PaymentStatusResponse response = new PaymentStatusResponse();
         response.setId(txn.getProviderTxnId());
         response.setAmount(txn.getAmount());
         response.setCurrency(txn.getCurrency());
-        response.setStatus(liveStatus != null ? liveStatus : txn.getStatus());
+        response.setStatus(effectiveStatus);
         response.setInvoiceId(txn.getInvoiceId());
         return response;
+    }
+
+    private void activateCompanyIfPending(String invoiceId) {
+        try {
+            InvoiceEntity invoice = invoiceMapper.selectByPrimaryKey(invoiceId);
+            if (invoice == null || !StringUtils.hasText(invoice.getCompanyId())) return;
+            CompanyEntity company = companyMapper.selectByPrimaryKey(invoice.getCompanyId());
+            if (company == null) return;
+            if ("PENDING_PAYMENT".equals(company.getStatus())) {
+                company.setStatus("ACTIVE");
+                company.setUpdatedAt(new Date());
+                companyMapper.updateByPrimaryKey(company);
+                log.info("Company {} activated after payment status sync (invoice {})", company.getCompanyId(), invoiceId);
+            }
+        } catch (Exception e) {
+            log.error("activateCompanyIfPending failed for invoice {}: {}", invoiceId, e.getMessage(), e);
+        }
     }
 
     private String fetchLiveStatus(String paymentIntentId) {

@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.company.api.request.CompanyRegisterRequest;
 import com.sme.be_sme.modules.company.api.response.CompanyRegisterResponse;
 import com.sme.be_sme.modules.company.context.CompanyRegisterContext;
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterAssignAdminRoleCoreProcessor;
+import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterGenerateOnboardingCoreProcessor;
 import com.sme.be_sme.modules.billing.service.CompanyRegistrationSubscriptionService;
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterCheckDupCoreProcessor;
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterCreateAdminUserCoreProcessor;
@@ -45,6 +46,7 @@ public class CompanyRegisterProcessor extends BaseCoreProcessor<CompanyRegisterC
     private final CompanyRegisterAssignAdminRoleCoreProcessor assignAdminRole;
     private final CompanyRegistrationSubscriptionService subscriptionService;
     private final NotificationService notificationService;
+    private final CompanyRegisterGenerateOnboardingCoreProcessor generateOnboarding;
 
     @Override
     protected CompanyRegisterContext buildContext(BizContext biz, JsonNode payload) {
@@ -68,6 +70,7 @@ public class CompanyRegisterProcessor extends BaseCoreProcessor<CompanyRegisterC
         createDefaultRoles.processWith(ctx);
         seedRolePermissions.processWith(ctx);
         assignAdminRole.processWith(ctx);
+        generateOnboarding.processWith(ctx);
 
         String companyId = ctx.getCompany().getCompanyId();
         String adminUserId = ctx.getAdminUser().getUserId();

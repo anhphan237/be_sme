@@ -34,7 +34,11 @@ public class CompanyRegisterCreateCompanyCoreProcessor extends BaseCoreProcessor
         entity.setCode(companyCode);
         entity.setAddress(company.getAddress());
         entity.setTimezone(company.getTimezone() == null ? "Asia/Ho_Chi_Minh" : company.getTimezone());
-        entity.setStatus("ACTIVE");
+        String planCode = ctx.getRequest().getPlanCode();
+        boolean isFree = planCode == null || planCode.isBlank() || "FREE".equalsIgnoreCase(planCode.trim());
+        entity.setStatus(isFree ? "ACTIVE" : "PENDING_PAYMENT");
+        entity.setIndustry(company.getIndustry());
+        entity.setCompanySize(company.getCompanySize());
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
 

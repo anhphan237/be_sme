@@ -1,13 +1,16 @@
 package com.sme.be_sme.modules.onboarding.facade.impl;
 
+import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateAIGenerateRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateCreateRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateGetRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateListRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateUpdateRequest;
+import com.sme.be_sme.modules.onboarding.api.response.OnboardingTemplateAIGenerateResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTemplateGetResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTemplateListResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTemplateResponse;
 import com.sme.be_sme.modules.onboarding.facade.OnboardingTemplateFacade;
+import com.sme.be_sme.modules.onboarding.processor.OnboardingTemplateAIGenerateProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTemplateCreateProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTemplateUpdateProcessor;
 import com.sme.be_sme.modules.onboarding.processor.template.OnboardingTemplateGetProcessor;
@@ -24,6 +27,7 @@ public class OnboardingTemplateFacadeImpl extends BaseOperationFacade implements
     private final OnboardingTemplateUpdateProcessor onboardingTemplateUpdateProcessor;
     private final OnboardingTemplateListProcessor onboardingTemplateListProcessor;
     private final OnboardingTemplateGetProcessor onboardingTemplateGetProcessor;
+    private final OnboardingTemplateAIGenerateProcessor onboardingTemplateAIGenerateProcessor;
 
     @Override
     public OnboardingTemplateResponse createOnboardingTemplate(OnboardingTemplateCreateRequest request) {
@@ -43,5 +47,10 @@ public class OnboardingTemplateFacadeImpl extends BaseOperationFacade implements
     @Override
     public OnboardingTemplateGetResponse getOnboardingTemplate(OnboardingTemplateGetRequest request) {
         return call(onboardingTemplateGetProcessor, request, OnboardingTemplateGetResponse.class);
+    }
+
+    @Override
+    public OnboardingTemplateAIGenerateResponse generateTemplateWithAI(OnboardingTemplateAIGenerateRequest request) {
+        return call(onboardingTemplateAIGenerateProcessor, request, OnboardingTemplateAIGenerateResponse.class);
     }
 }

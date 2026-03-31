@@ -8,6 +8,8 @@ import com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PaymentTransactionMapperExt;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.InvoiceEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PaymentTransactionEntity;
+import com.sme.be_sme.modules.company.infrastructure.mapper.CompanyMapper;
+import com.sme.be_sme.modules.company.infrastructure.persistence.entity.CompanyEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +33,7 @@ public class StripeWebhookController {
     private final ObjectMapper objectMapper;
     private final PaymentTransactionMapperExt paymentTransactionMapperExt;
     private final InvoiceMapper invoiceMapper;
+    private final CompanyMapper companyMapper;
 
     @Value("${app.stripe.webhook-secret:}")
     private String webhookSecret;
@@ -94,8 +97,26 @@ public class StripeWebhookController {
                 invoiceMapper.updateByPrimaryKey(invoice);
                 log.info("Invoice {} marked as PAID via Stripe webhook", invoice.getInvoiceId());
             }
+            activateCompanyIfPending(txn.getInvoiceId());
         }
         log.info("PaymentIntent {} succeeded, txn {} updated", paymentIntentId, txn.getPaymentTransactionId());
+    }
+
+    private void activateCompanyIfPending(String invoiceId) {
+        try {
+            InvoiceEntity invoice = invoiceMapper.selectByPrimaryKey(invoiceId);
+            if (invoice == null || !StringUtils.hasText(invoice.getCompanyId())) return;
+            CompanyEntity company = companyMapper.selectByPrimaryKey(invoice.getCompanyId());
+            if (company == null) return;
+            if ("PENDING_PAYMENT".equals(company.getStatus())) {
+                company.setStatus("ACTIVE");
+                company.setUpdatedAt(new Date());
+                companyMapper.updateByPrimaryKey(company);
+                log.info("Company {} activated after payment (invoice {})", company.getCompanyId(), invoiceId);
+            }
+        } catch (Exception e) {
+            log.error("activateCompanyIfPending failed for invoice {}: {}", invoiceId, e.getMessage(), e);
+        }
     }
 
     private void handlePaymentIntentFailed(JsonNode piNode) {
