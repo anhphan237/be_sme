@@ -2,13 +2,12 @@ package com.sme.be_sme.modules.onboarding.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sme.be_sme.modules.onboarding.OnboardTaskEnum;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskAcknowledgeRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
-import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
 import com.sme.be_sme.modules.onboarding.support.OnboardingTaskAuth;
+import com.sme.be_sme.modules.onboarding.support.OnboardingTaskWorkflow;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -25,7 +24,6 @@ public class OnboardingTaskAcknowledgeProcessor extends BaseBizProcessor<BizCont
 
     private final ObjectMapper objectMapper;
     private final TaskInstanceMapper taskInstanceMapper;
-    private final OnboardingInstanceProgressService progressService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -61,12 +59,10 @@ public class OnboardingTaskAcknowledgeProcessor extends BaseBizProcessor<BizCont
         task.setAcknowledgedAt(now);
         task.setAcknowledgedBy(context.getOperatorId());
         task.setUpdatedAt(now);
-        task.setStatus(OnboardTaskEnum.DONE.toString());
+        task.setStatus(OnboardingTaskWorkflow.STATUS_WAIT_ACK);
         if (taskInstanceMapper.updateByPrimaryKey(task) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "acknowledge task failed");
         }
-
-        progressService.recalculateFromTask(companyId, task);
 
         OnboardingTaskResponse response = new OnboardingTaskResponse();
         response.setTaskId(task.getTaskId());

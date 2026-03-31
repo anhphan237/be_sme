@@ -107,6 +107,7 @@ public class TaskListByAssigneeProcessor extends BaseBizProcessor<BizContext> {
     private static boolean isValidStatus(String status) {
         return "TODO".equals(status)
                 || "IN_PROGRESS".equals(status)
+                || "WAIT_ACK".equals(status)
                 || "DONE".equals(status)
                 || "PENDING".equals(status)
                 || "PENDING_APPROVAL".equals(status);
