@@ -158,4 +158,23 @@
       </if>
   </select>
 
+  <select id="selectTimelineByOnboardingId" resultMap="AssigneeListRowMap">
+    SELECT t.task_id, t.company_id, t.checklist_id, c.onboarding_id, c.name AS checklist_name,
+           t.title, t.description, t.status, t.due_date, t.assigned_user_id, t.assigned_department_id,
+           t.completed_at, t.created_at, t.require_ack, t.requires_manager_approval, t.approval_status, t.approver_user_id
+    FROM task_instances t
+    INNER JOIN checklist_instances c ON t.checklist_id = c.checklist_id AND t.company_id = c.company_id
+    WHERE t.company_id = #{companyId,jdbcType=VARCHAR}
+      AND c.onboarding_id = #{onboardingId,jdbcType=VARCHAR}
+      <if test="includeDone == null or includeDone == false">
+        AND (t.status IS NULL OR UPPER(TRIM(t.status)) != 'DONE')
+      </if>
+    ORDER BY
+      CASE WHEN t.assigned_user_id IS NULL OR TRIM(t.assigned_user_id) = '' THEN 1 ELSE 0 END ASC,
+      t.assigned_user_id ASC,
+      CASE WHEN t.due_date IS NULL THEN 1 ELSE 0 END ASC,
+      t.due_date ASC,
+      t.created_at ASC
+  </select>
+
 </mapper>

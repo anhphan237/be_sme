@@ -80,4 +80,10 @@ public interface TaskInstanceMapperExt {
             @Param("assigneeUserId") String assigneeUserId,
             @Param("status") String status
     );
+
+    List<TaskAssigneeListRow> selectTimelineByOnboardingId(
+            @Param("companyId") String companyId,
+            @Param("onboardingId") String onboardingId,
+            @Param("includeDone") Boolean includeDone
+    );
 }
