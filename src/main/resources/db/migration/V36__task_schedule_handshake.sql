@@ -29,5 +29,5 @@ INSERT INTO permissions (permission_id, company_id, code, description, status) V
 ('202604010000000090003', NULL, 'com.sme.onboarding.task.schedule.reschedule', 'Reschedule onboarding task after confirmation', 'ACTIVE'),
 ('202604010000000090004', NULL, 'com.sme.onboarding.task.schedule.cancel', 'Cancel confirmed/proposed onboarding task schedule', 'ACTIVE'),
 ('202604010000000090005', NULL, 'com.sme.onboarding.task.schedule.markNoShow', 'Mark onboarding task schedule as no-show', 'ACTIVE')
-ON CONFLICT (code) DO NOTHING;
+ON CONFLICT (permission_id) DO NOTHING;
 
