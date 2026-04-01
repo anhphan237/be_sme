@@ -10,16 +10,21 @@ import com.sme.be_sme.modules.identity.processor.IdentityUserUpdateProcessor;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceCompleteRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
+import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.Date;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -27,10 +32,12 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
 
     private final ObjectMapper objectMapper;
     private final OnboardingInstanceMapper onboardingInstanceMapper;
+    private final TaskInstanceMapper taskInstanceMapper;
     private final EmployeeProfileMapper employeeProfileMapper;
     private final IdentityUserUpdateProcessor identityUserUpdateProcessor;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     protected Object doProcess(BizContext context, JsonNode payload) {
         OnboardingInstanceCompleteRequest request = objectMapper.convertValue(payload, OnboardingInstanceCompleteRequest.class);
         validate(context, request);
@@ -42,6 +49,15 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
         }
         if (!companyId.equals(instance.getCompanyId())) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "instance does not belong to tenant");
+        }
+        List<TaskInstanceEntity> tasks =
+                taskInstanceMapper.selectByCompanyIdAndOnboardingId(companyId, instance.getOnboardingId());
+        if (tasks == null || tasks.isEmpty()) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "cannot complete onboarding without generated tasks");
+        }
+        boolean hasIncompleteTask = tasks.stream().anyMatch(t -> !OnboardingInstanceProgressService.isEffectivelyComplete(t));
+        if (hasIncompleteTask) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "cannot complete onboarding while tasks are pending");
         }
 
         Date now = new Date();

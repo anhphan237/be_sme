@@ -8,6 +8,7 @@ import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
 import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.support.OnboardingTaskWorkflow;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -18,11 +19,14 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class OnboardingTaskAssignProcessor extends BaseBizProcessor<BizContext> {
 
     private static final String TEMPLATE_TASK_ASSIGNED = "TASK_ASSIGNED";
@@ -33,6 +37,7 @@ public class OnboardingTaskAssignProcessor extends BaseBizProcessor<BizContext> 
     private final NotificationService notificationService;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     protected Object doProcess(BizContext context, JsonNode payload) {
         OnboardingTaskAssignRequest request = objectMapper.convertValue(payload, OnboardingTaskAssignRequest.class);
         validate(context, request);
@@ -44,9 +49,12 @@ public class OnboardingTaskAssignProcessor extends BaseBizProcessor<BizContext> 
         if (!context.getTenantId().equals(task.getCompanyId())) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "task does not belong to tenant");
         }
+        if (OnboardingTaskWorkflow.STATUS_DONE.equalsIgnoreCase(task.getStatus())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "cannot reassign a completed task");
+        }
 
         task.setAssignedUserId(request.getAssigneeUserId().trim());
-        task.setStatus("ASSIGNED");
+        task.setStatus(OnboardingTaskWorkflow.STATUS_ASSIGNED);
         task.setUpdatedAt(new Date());
 
         int updated = taskInstanceMapper.updateByPrimaryKey(task);
@@ -73,7 +81,11 @@ public class OnboardingTaskAssignProcessor extends BaseBizProcessor<BizContext> 
                 .emailTemplate(TEMPLATE_TASK_ASSIGNED)
                 .emailPlaceholders(placeholders)
                 .build();
-        notificationService.create(params);
+        try {
+            notificationService.create(params);
+        } catch (Exception e) {
+            log.warn("Failed to notify task assignment for {}: {}", task.getTaskId(), e.getMessage());
+        }
 
         OnboardingTaskResponse response = new OnboardingTaskResponse();
         response.setTaskId(task.getTaskId());

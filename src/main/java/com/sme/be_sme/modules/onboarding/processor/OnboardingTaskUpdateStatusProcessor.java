@@ -14,10 +14,12 @@ import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
-import java.util.Date;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
+import java.util.Date;
 
 @Component
 @RequiredArgsConstructor
@@ -29,6 +31,7 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
     private final OnboardingTaskApprovalAuthority approvalAuthority;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     protected Object doProcess(BizContext context, JsonNode payload) {
         OnboardingTaskUpdateStatusRequest request = objectMapper.convertValue(payload, OnboardingTaskUpdateStatusRequest.class);
         validate(context, request);
@@ -44,7 +47,16 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
 
         enforceAssigneeUnlessElevated(context, task);
 
-        String newStatus = request.getStatus().trim();
+        String newStatus = OnboardingTaskWorkflow.normalizeStatus(request.getStatus());
+        if (!OnboardingTaskWorkflow.isKnownStatus(newStatus)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid status value");
+        }
+        String currentStatus = OnboardingTaskWorkflow.normalizeStatus(task.getStatus());
+        if (!OnboardingTaskWorkflow.canTransition(currentStatus, newStatus)) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "invalid status transition from " + currentStatus + " to " + newStatus);
+        }
         Date now = new Date();
 
         if (OnboardingTaskWorkflow.STATUS_PENDING_APPROVAL.equalsIgnoreCase(newStatus)) {
@@ -57,7 +69,7 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
             task.setApprovedBy(null);
             task.setApprovedAt(null);
             task.setRejectionReason(null);
-        } else if ("DONE".equalsIgnoreCase(newStatus)) {
+        } else if (OnboardingTaskWorkflow.STATUS_DONE.equalsIgnoreCase(newStatus)) {
             if (Boolean.TRUE.equals(task.getRequireAck()) && task.getAcknowledgedAt() == null) {
                 throw AppException.of(ErrorCodes.BAD_REQUEST, "acknowledge task before marking done");
             }
@@ -72,11 +84,11 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
                 task.setApprovedBy(context.getOperatorId());
                 task.setApprovedAt(now);
             }
-            task.setStatus("DONE");
+            task.setStatus(OnboardingTaskWorkflow.STATUS_DONE);
             task.setCompletedAt(now);
         } else {
             task.setStatus(newStatus);
-            if (!"DONE".equalsIgnoreCase(newStatus)) {
+            if (!OnboardingTaskWorkflow.STATUS_DONE.equalsIgnoreCase(newStatus)) {
                 task.setCompletedAt(null);
             }
         }

@@ -12,6 +12,7 @@ import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstance
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.ChecklistInstanceEntity;
+import com.sme.be_sme.modules.onboarding.support.OnboardingTaskWorkflow;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -67,10 +68,11 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
         String sortOrder = "DESC".equalsIgnoreCase(request.getSortOrder()) ? "DESC" : "ASC";
 
         // 4. Query tasks from DB
+        String normalizedStatus = normalizeStatus(request.getStatus());
         List<TaskInstanceEntity> tasks = taskInstanceMapperExt.selectByOnboardingId(
             tenantId,
             request.getOnboardingId().trim(),
-            request.getStatus(),
+            normalizedStatus,
             request.getAssignedUserId(),
             sortBy,
             sortOrder,
@@ -81,7 +83,7 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
         Integer totalCount = taskInstanceMapperExt.countByOnboardingId(
             tenantId,
             request.getOnboardingId().trim(),
-            request.getStatus(),
+            normalizedStatus,
             request.getAssignedUserId()
         );
 
@@ -114,8 +116,14 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
     }
 
     private boolean isValidStatus(String status) {
-        return "TODO".equals(status) || "IN_PROGRESS".equals(status) || "WAIT_ACK".equals(status)
-               || "DONE".equals(status) || "PENDING".equals(status);
+        return OnboardingTaskWorkflow.isKnownStatus(status) || "PENDING".equalsIgnoreCase(status);
+    }
+
+    private String normalizeStatus(String status) {
+        if (!StringUtils.hasText(status)) {
+            return status;
+        }
+        return OnboardingTaskWorkflow.normalizeStatus(status);
     }
 
     private boolean isValidSortBy(String sortBy) {
@@ -130,10 +138,14 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
             .collect(Collectors.toSet());
         
         Map<String, String> result = new HashMap<>();
-        for (String checklistId : checklistIds) {
-            ChecklistInstanceEntity checklist = checklistInstanceMapper.selectByPrimaryKey(checklistId);
-            if (checklist != null) {
-                result.put(checklistId, checklist.getName());
+        if (checklistIds.isEmpty()) {
+            return result;
+        }
+        List<ChecklistInstanceEntity> checklists =
+                checklistInstanceMapper.selectByCompanyIdAndChecklistIds(companyId, new ArrayList<>(checklistIds));
+        for (ChecklistInstanceEntity checklist : checklists) {
+            if (checklist != null && StringUtils.hasText(checklist.getChecklistId())) {
+                result.put(checklist.getChecklistId(), checklist.getName());
             }
         }
         return result;

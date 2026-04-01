@@ -52,4 +52,9 @@ public interface ChecklistInstanceMapper {
             @Param("companyId") String companyId,
             @Param("onboardingId") String onboardingId
     );
+
+    List<ChecklistInstanceEntity> selectByCompanyIdAndChecklistIds(
+            @Param("companyId") String companyId,
+            @Param("checklistIds") List<String> checklistIds
+    );
 }

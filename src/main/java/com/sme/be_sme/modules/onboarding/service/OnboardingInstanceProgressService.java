@@ -53,6 +53,9 @@ public class OnboardingInstanceProgressService {
         List<TaskInstanceEntity> tasks = taskInstanceMapper.selectByCompanyIdAndOnboardingId(companyId, onboardingId);
         int total = tasks == null ? 0 : tasks.size();
         if (total == 0) {
+            instance.setProgressPercent(0);
+            instance.setUpdatedAt(new Date());
+            onboardingInstanceMapper.updateByPrimaryKey(instance);
             return;
         }
         long doneCount = tasks.stream().filter(OnboardingInstanceProgressService::isEffectivelyComplete).count();

@@ -54,4 +54,6 @@ public interface TaskTemplateMapper {
             @Param("status") String status,
             @Param("updatedAt") Date updatedAt
     );
+
+    List<TaskTemplateEntity> selectByCompanyId(@Param("companyId") String companyId);
 }
