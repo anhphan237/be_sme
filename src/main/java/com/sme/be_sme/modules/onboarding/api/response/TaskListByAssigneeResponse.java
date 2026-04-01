@@ -30,6 +30,12 @@ public class TaskListByAssigneeResponse {
         private String assignedDepartmentId;
         private Date completedAt;
         private Date createdAt;
+        private Date scheduledStartAt;
+        private Date scheduledEndAt;
+        private String scheduleStatus;
+        private String scheduleRescheduleReason;
+        private String scheduleCancelReason;
+        private String scheduleNoShowReason;
         private Boolean requireAck;
         private Boolean requiresManagerApproval;
         private String approvalStatus;

@@ -31,6 +31,12 @@ public final class OnboardingTaskWorkflow {
 
     /** Set after {@code acknowledge} when {@code requireAck}; employee then calls {@code updateStatus} → {@code DONE}. */
     public static final String STATUS_WAIT_ACK = "WAIT_ACK";
+    public static final String SCHEDULE_UNSCHEDULED = "UNSCHEDULED";
+    public static final String SCHEDULE_PROPOSED = "PROPOSED";
+    public static final String SCHEDULE_CONFIRMED = "CONFIRMED";
+    public static final String SCHEDULE_RESCHEDULED = "RESCHEDULED";
+    public static final String SCHEDULE_CANCELLED = "CANCELLED";
+    public static final String SCHEDULE_MISSED = "MISSED";
 
     private static final Set<String> KNOWN_STATUSES = Set.of(
             STATUS_TODO,

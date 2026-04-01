@@ -6,8 +6,10 @@ import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskApproveReques
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.service.OnboardingTaskActivityLogService;
 import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
 import com.sme.be_sme.modules.onboarding.service.OnboardingTaskApprovalAuthority;
+import com.sme.be_sme.modules.onboarding.service.OnboardingTaskWorkflowNotificationService;
 import com.sme.be_sme.modules.onboarding.support.OnboardingTaskWorkflow;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -27,6 +29,8 @@ public class OnboardingTaskApproveProcessor extends BaseBizProcessor<BizContext>
     private final TaskInstanceMapper taskInstanceMapper;
     private final OnboardingInstanceProgressService progressService;
     private final OnboardingTaskApprovalAuthority approvalAuthority;
+    private final OnboardingTaskActivityLogService activityLogService;
+    private final OnboardingTaskWorkflowNotificationService workflowNotificationService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -58,6 +62,7 @@ public class OnboardingTaskApproveProcessor extends BaseBizProcessor<BizContext>
             throw AppException.of(ErrorCodes.BAD_REQUEST, "task is not pending approval");
         }
 
+        TaskInstanceEntity before = snapshot(task);
         Date now = new Date();
         task.setStatus(OnboardingTaskWorkflow.STATUS_DONE);
         task.setApprovalStatus(OnboardingTaskWorkflow.APPROVAL_APPROVED);
@@ -70,6 +75,9 @@ public class OnboardingTaskApproveProcessor extends BaseBizProcessor<BizContext>
         if (taskInstanceMapper.updateByPrimaryKey(task) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "approve task failed");
         }
+        activityLogService.logApproved(before, task, context.getOperatorId());
+        activityLogService.logStatusChanged(before, task, context.getOperatorId());
+        workflowNotificationService.notifyApproved(task, companyId);
 
         progressService.recalculateFromTask(companyId, task);
 
@@ -78,5 +86,15 @@ public class OnboardingTaskApproveProcessor extends BaseBizProcessor<BizContext>
         response.setAssigneeUserId(task.getAssignedUserId());
         response.setStatus(task.getStatus());
         return response;
+    }
+
+    private static TaskInstanceEntity snapshot(TaskInstanceEntity task) {
+        TaskInstanceEntity copy = new TaskInstanceEntity();
+        copy.setTaskId(task.getTaskId());
+        copy.setCompanyId(task.getCompanyId());
+        copy.setStatus(task.getStatus());
+        copy.setApprovalStatus(task.getApprovalStatus());
+        copy.setAssignedUserId(task.getAssignedUserId());
+        return copy;
     }
 }

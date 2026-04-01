@@ -5,6 +5,7 @@ import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
 import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
+import com.sme.be_sme.modules.onboarding.service.OnboardingTaskActivityLogService;
 import com.sme.be_sme.modules.onboarding.support.OnboardingTaskWorkflow;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -29,11 +30,14 @@ class OnboardingTaskAcknowledgeProcessorTest {
     private TaskInstanceMapper taskInstanceMapper;
     @Mock
     private OnboardingInstanceProgressService progressService;
+    @Mock
+    private OnboardingTaskActivityLogService activityLogService;
 
     @Test
     void acknowledge_rejects_doneTask() {
         OnboardingTaskAcknowledgeProcessor processor =
-                new OnboardingTaskAcknowledgeProcessor(new ObjectMapper(), taskInstanceMapper, progressService);
+                new OnboardingTaskAcknowledgeProcessor(
+                        new ObjectMapper(), taskInstanceMapper, progressService, activityLogService);
         BizContext context = buildContext();
         context.setPayload(new ObjectMapper().createObjectNode().put("taskId", "t1"));
 
@@ -48,7 +52,8 @@ class OnboardingTaskAcknowledgeProcessorTest {
     @Test
     void acknowledge_isIdempotent_whenAlreadyWaitAck() {
         OnboardingTaskAcknowledgeProcessor processor =
-                new OnboardingTaskAcknowledgeProcessor(new ObjectMapper(), taskInstanceMapper, progressService);
+                new OnboardingTaskAcknowledgeProcessor(
+                        new ObjectMapper(), taskInstanceMapper, progressService, activityLogService);
         BizContext context = buildContext();
         context.setPayload(new ObjectMapper().createObjectNode().put("taskId", "t1"));
 
@@ -61,6 +66,7 @@ class OnboardingTaskAcknowledgeProcessorTest {
         assertEquals("t1", response.getTaskId());
         assertEquals(OnboardingTaskWorkflow.STATUS_WAIT_ACK, response.getStatus());
         verify(taskInstanceMapper, never()).updateByPrimaryKey(task);
+        verify(activityLogService, never()).logAcknowledged(task, "u1", task.getAcknowledgedAt());
     }
 
     private static BizContext buildContext() {

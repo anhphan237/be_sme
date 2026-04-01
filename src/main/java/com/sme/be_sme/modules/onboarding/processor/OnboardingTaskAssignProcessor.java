@@ -8,6 +8,7 @@ import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
 import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.service.OnboardingTaskActivityLogService;
 import com.sme.be_sme.modules.onboarding.support.OnboardingTaskWorkflow;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -35,6 +36,7 @@ public class OnboardingTaskAssignProcessor extends BaseBizProcessor<BizContext> 
     private final ObjectMapper objectMapper;
     private final TaskInstanceMapper taskInstanceMapper;
     private final NotificationService notificationService;
+    private final OnboardingTaskActivityLogService activityLogService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -53,6 +55,7 @@ public class OnboardingTaskAssignProcessor extends BaseBizProcessor<BizContext> 
             throw AppException.of(ErrorCodes.BAD_REQUEST, "cannot reassign a completed task");
         }
 
+        TaskInstanceEntity before = snapshot(task);
         task.setAssignedUserId(request.getAssigneeUserId().trim());
         task.setStatus(OnboardingTaskWorkflow.STATUS_ASSIGNED);
         task.setUpdatedAt(new Date());
@@ -61,6 +64,8 @@ public class OnboardingTaskAssignProcessor extends BaseBizProcessor<BizContext> 
         if (updated != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "assign task failed");
         }
+        activityLogService.logAssigned(before, task, context.getOperatorId());
+        activityLogService.logStatusChanged(before, task, context.getOperatorId());
 
         String taskTitle = StringUtils.hasText(task.getTitle()) ? task.getTitle() : "Task";
         String dueStr = task.getDueDate() != null
@@ -107,5 +112,15 @@ public class OnboardingTaskAssignProcessor extends BaseBizProcessor<BizContext> 
         if (!StringUtils.hasText(request.getAssigneeUserId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "assigneeUserId is required");
         }
+    }
+
+    private static TaskInstanceEntity snapshot(TaskInstanceEntity task) {
+        TaskInstanceEntity copy = new TaskInstanceEntity();
+        copy.setTaskId(task.getTaskId());
+        copy.setCompanyId(task.getCompanyId());
+        copy.setStatus(task.getStatus());
+        copy.setApprovalStatus(task.getApprovalStatus());
+        copy.setAssignedUserId(task.getAssignedUserId());
+        return copy;
     }
 }

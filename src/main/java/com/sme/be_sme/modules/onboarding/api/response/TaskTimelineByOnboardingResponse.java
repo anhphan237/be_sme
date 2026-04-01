@@ -1,46 +1,48 @@
 package com.sme.be_sme.modules.onboarding.api.response;
 
+import java.util.Date;
+import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
-import java.util.List;
-import java.util.Date;
 
 @Getter
 @Setter
-public class TaskListByOnboardingResponse {
+public class TaskTimelineByOnboardingResponse {
     private String onboardingId;
-    private List<TaskItem> tasks;
-    private Integer totalCount;
-    private Integer page;
-    private Integer size;
+    private Integer totalTasks;
+    private List<AssigneeTimeline> assignees;
+
+    @Getter
+    @Setter
+    public static class AssigneeTimeline {
+        private String assigneeUserId;
+        private String assigneeUserName;
+        private Integer taskCount;
+        private List<TaskItem> tasks;
+    }
 
     @Getter
     @Setter
     public static class TaskItem {
         private String taskId;
         private String checklistId;
-        private String checklistName;      // Tên checklist chứa task
+        private String checklistName;
         private String title;
-        private String description;
         private String status;
         private Date dueDate;
-        private String assignedUserId;
-        private String assignedUserName;    // Enriched - Tên user được gán
-        private String assignedDepartmentId;
-        private Date completedAt;
-        private Date createdAt;
         private Date scheduledStartAt;
         private Date scheduledEndAt;
         private String scheduleStatus;
         private String scheduleRescheduleReason;
         private String scheduleCancelReason;
         private String scheduleNoShowReason;
+        private Date createdAt;
         private Long dueInHours;
         private Boolean overdue;
         private String dueCategory;
         private Boolean requireAck;
         private Boolean requiresManagerApproval;
         private String approvalStatus;
-        private String approverUserId;
     }
 }
+

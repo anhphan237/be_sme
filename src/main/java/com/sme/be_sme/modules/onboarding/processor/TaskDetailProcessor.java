@@ -18,6 +18,7 @@ import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskA
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskAttachmentEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskCommentEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.service.OnboardingTaskSlaService;
 import com.sme.be_sme.modules.onboarding.support.OnboardingTaskAuth;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -42,6 +43,7 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
     private final TaskActivityLogMapperExt taskActivityLogMapperExt;
     private final UserMapper userMapper;
     private final DepartmentMapper departmentMapper;
+    private final OnboardingTaskSlaService slaService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -204,6 +206,10 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
         response.setDescription(task.getDescription());
         response.setStatus(task.getStatus());
         response.setDueDate(task.getDueDate());
+        long dueInHours = slaService.dueInHours(task.getDueDate());
+        response.setDueInHours(dueInHours == Long.MAX_VALUE ? null : dueInHours);
+        response.setOverdue(slaService.isOverdue(task.getDueDate(), task.getStatus()));
+        response.setDueCategory(slaService.dueCategory(task.getDueDate(), task.getStatus()));
         response.setCompletedAt(task.getCompletedAt());
         response.setCreatedAt(task.getCreatedAt());
         response.setUpdatedAt(task.getUpdatedAt());
@@ -217,6 +223,16 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
         response.setApprovedAt(task.getApprovedAt());
         response.setRejectionReason(task.getRejectionReason());
         response.setApproverUserId(task.getApproverUserId());
+        response.setScheduledStartAt(task.getScheduledStartAt());
+        response.setScheduledEndAt(task.getScheduledEndAt());
+        response.setScheduleStatus(task.getScheduleStatus());
+        response.setScheduleProposedBy(task.getScheduleProposedBy());
+        response.setScheduleProposedAt(task.getScheduleProposedAt());
+        response.setScheduleConfirmedBy(task.getScheduleConfirmedBy());
+        response.setScheduleConfirmedAt(task.getScheduleConfirmedAt());
+        response.setScheduleRescheduleReason(task.getScheduleRescheduleReason());
+        response.setScheduleCancelReason(task.getScheduleCancelReason());
+        response.setScheduleNoShowReason(task.getScheduleNoShowReason());
 
         // Checklist info
         if (checklist != null) {

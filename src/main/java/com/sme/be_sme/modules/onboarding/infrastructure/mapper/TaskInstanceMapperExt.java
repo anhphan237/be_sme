@@ -19,6 +19,15 @@ public interface TaskInstanceMapperExt {
             @Param("toDate") Date toDate
     );
 
+    List<TaskInstanceEntity> selectOverdueAndStatusNotDone(@Param("today") Date today);
+
+    List<TaskInstanceEntity> selectScheduledBetweenAndStatusNotDone(
+            @Param("fromTime") Date fromTime,
+            @Param("toTime") Date toTime
+    );
+
+    List<TaskInstanceEntity> selectScheduledStartedBeforeAndStatusNotDone(@Param("now") Date now);
+
     /**
      * Select tasks by onboarding instance ID with filters and pagination
      * 
@@ -79,5 +88,11 @@ public interface TaskInstanceMapperExt {
             @Param("companyId") String companyId,
             @Param("assigneeUserId") String assigneeUserId,
             @Param("status") String status
+    );
+
+    List<TaskAssigneeListRow> selectTimelineByOnboardingId(
+            @Param("companyId") String companyId,
+            @Param("onboardingId") String onboardingId,
+            @Param("includeDone") Boolean includeDone
     );
 }
