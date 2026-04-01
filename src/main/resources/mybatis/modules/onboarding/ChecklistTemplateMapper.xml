@@ -85,4 +85,11 @@
         updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where onboarding_template_id = #{onboardingTemplateId,jdbcType=VARCHAR}
   </update>
+  <select id="selectByCompanyIdAndOnboardingTemplateId" resultMap="BaseResultMap">
+    select checklist_template_id, company_id, onboarding_template_id, name, stage, sort_order,
+    status, created_at, updated_at
+    from checklist_templates
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and onboarding_template_id = #{onboardingTemplateId,jdbcType=VARCHAR}
+  </select>
 </mapper>

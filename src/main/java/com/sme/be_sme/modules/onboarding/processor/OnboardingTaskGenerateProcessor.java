@@ -124,7 +124,7 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
                 taskInstance.setTaskTemplateId(taskTemplate.getTaskTemplateId());
                 taskInstance.setTitle(taskTemplate.getTitle());
                 taskInstance.setDescription(taskTemplate.getDescription());
-                taskInstance.setStatus("TODO");
+                taskInstance.setStatus(OnboardingTaskWorkflow.STATUS_TODO);
                 taskInstance.setDueDate(calculateDueDate(now, taskTemplate.getDueDaysOffset()));
                 applyOwnerAssignment(taskInstance, taskTemplate, instance, effective);
                 taskInstance.setRequireAck(Boolean.TRUE.equals(taskTemplate.getRequireAck()));
@@ -211,36 +211,14 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
         if (!StringUtils.hasText(onboardingTemplateId)) {
             return List.of();
         }
-        List<ChecklistTemplateEntity> templates = checklistTemplateMapper.selectAll();
-        List<ChecklistTemplateEntity> filtered = new ArrayList<>();
-        for (ChecklistTemplateEntity template : templates) {
-            if (template == null) {
-                continue;
-            }
-            if (!tenantId.equals(template.getCompanyId())) {
-                continue;
-            }
-            if (!onboardingTemplateId.equals(template.getOnboardingTemplateId())) {
-                continue;
-            }
-            filtered.add(template);
-        }
-        return filtered;
+        List<ChecklistTemplateEntity> templates =
+                checklistTemplateMapper.selectByCompanyIdAndOnboardingTemplateId(tenantId, onboardingTemplateId);
+        return templates == null ? List.of() : templates;
     }
 
     private List<TaskTemplateEntity> filterTaskTemplates(String tenantId) {
-        List<TaskTemplateEntity> templates = taskTemplateMapper.selectAll();
-        List<TaskTemplateEntity> filtered = new ArrayList<>();
-        for (TaskTemplateEntity template : templates) {
-            if (template == null) {
-                continue;
-            }
-            if (!tenantId.equals(template.getCompanyId())) {
-                continue;
-            }
-            filtered.add(template);
-        }
-        return filtered;
+        List<TaskTemplateEntity> templates = taskTemplateMapper.selectByCompanyId(tenantId);
+        return templates == null ? List.of() : templates;
     }
 
     private static Date calculateDueDate(Date start, Integer daysOffset) {

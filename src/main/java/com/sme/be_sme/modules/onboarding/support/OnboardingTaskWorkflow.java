@@ -1,5 +1,8 @@
 package com.sme.be_sme.modules.onboarding.support;
 
+import java.util.Locale;
+import java.util.Set;
+
 /**
  * FE contract (task lifecycle):
  * <ul>
@@ -15,6 +18,10 @@ package com.sme.be_sme.modules.onboarding.support;
  */
 public final class OnboardingTaskWorkflow {
 
+    public static final String STATUS_TODO = "TODO";
+    public static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
+    public static final String STATUS_ASSIGNED = "ASSIGNED";
+    public static final String STATUS_DONE = "DONE";
     public static final String APPROVAL_NONE = "NONE";
     public static final String APPROVAL_PENDING = "PENDING";
     public static final String APPROVAL_APPROVED = "APPROVED";
@@ -25,5 +32,86 @@ public final class OnboardingTaskWorkflow {
     /** Set after {@code acknowledge} when {@code requireAck}; employee then calls {@code updateStatus} → {@code DONE}. */
     public static final String STATUS_WAIT_ACK = "WAIT_ACK";
 
+    private static final Set<String> KNOWN_STATUSES = Set.of(
+            STATUS_TODO,
+            STATUS_IN_PROGRESS,
+            STATUS_ASSIGNED,
+            STATUS_WAIT_ACK,
+            STATUS_PENDING_APPROVAL,
+            STATUS_DONE
+    );
+
     private OnboardingTaskWorkflow() {}
+
+    public static String normalizeStatus(String status) {
+        if (status == null) {
+            return null;
+        }
+        String normalized = status.trim().toUpperCase(Locale.ROOT);
+        if ("PENDING".equals(normalized)) {
+            return STATUS_PENDING_APPROVAL;
+        }
+        return normalized;
+    }
+
+    public static boolean isKnownStatus(String status) {
+        String normalized = normalizeStatus(status);
+        return normalized != null && KNOWN_STATUSES.contains(normalized);
+    }
+
+    public static boolean canAcknowledgeFrom(String status) {
+        String normalized = normalizeStatus(status);
+        if (normalized == null) {
+            return false;
+        }
+        return STATUS_TODO.equals(normalized)
+                || STATUS_IN_PROGRESS.equals(normalized)
+                || STATUS_ASSIGNED.equals(normalized)
+                || STATUS_WAIT_ACK.equals(normalized);
+    }
+
+    public static boolean canTransition(String currentStatus, String targetStatus) {
+        String current = normalizeStatus(currentStatus);
+        String target = normalizeStatus(targetStatus);
+        if (target == null || !isKnownStatus(target)) {
+            return false;
+        }
+        if (current == null) {
+            return true;
+        }
+        if (current.equals(target)) {
+            return true;
+        }
+        switch (current) {
+            case STATUS_TODO:
+                return STATUS_IN_PROGRESS.equals(target)
+                        || STATUS_ASSIGNED.equals(target)
+                        || STATUS_WAIT_ACK.equals(target)
+                        || STATUS_PENDING_APPROVAL.equals(target)
+                        || STATUS_DONE.equals(target);
+            case STATUS_IN_PROGRESS:
+                return STATUS_TODO.equals(target)
+                        || STATUS_ASSIGNED.equals(target)
+                        || STATUS_WAIT_ACK.equals(target)
+                        || STATUS_PENDING_APPROVAL.equals(target)
+                        || STATUS_DONE.equals(target);
+            case STATUS_ASSIGNED:
+                return STATUS_TODO.equals(target)
+                        || STATUS_IN_PROGRESS.equals(target)
+                        || STATUS_WAIT_ACK.equals(target)
+                        || STATUS_PENDING_APPROVAL.equals(target)
+                        || STATUS_DONE.equals(target);
+            case STATUS_WAIT_ACK:
+                return STATUS_TODO.equals(target)
+                        || STATUS_IN_PROGRESS.equals(target)
+                        || STATUS_ASSIGNED.equals(target)
+                        || STATUS_DONE.equals(target);
+            case STATUS_PENDING_APPROVAL:
+                return STATUS_TODO.equals(target) || STATUS_DONE.equals(target);
+            case STATUS_DONE:
+                return false;
+            default:
+                return false;
+        }
+    }
 }

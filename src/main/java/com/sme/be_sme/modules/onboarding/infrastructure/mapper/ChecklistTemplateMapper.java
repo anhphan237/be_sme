@@ -54,4 +54,9 @@ public interface ChecklistTemplateMapper {
             @Param("status") String status,
             @Param("updatedAt") Date updatedAt
     );
+
+    List<ChecklistTemplateEntity> selectByCompanyIdAndOnboardingTemplateId(
+            @Param("companyId") String companyId,
+            @Param("onboardingTemplateId") String onboardingTemplateId
+    );
 }

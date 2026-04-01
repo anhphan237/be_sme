@@ -81,6 +81,15 @@
     created_at, updated_at
     from users
   </select>
+  <select id="selectByUserIds" resultMap="BaseResultMap">
+    select user_id, company_id, email, password_hash, full_name, phone, status, last_login_at,
+    created_at, updated_at
+    from users
+    where user_id in
+    <foreach collection="userIds" item="id" open="(" separator="," close=")">
+      #{id,jdbcType=VARCHAR}
+    </foreach>
+  </select>
 
   <select id="selectByCompanyIdAndEmail" resultMap="BaseResultMap">
     select *

@@ -75,8 +75,6 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
 
         // 5. Load related data
         ChecklistInstanceEntity checklist = loadChecklist(task.getChecklistId());
-        UserEntity assignedUser = loadUser(task.getAssignedUserId());
-        UserEntity createdByUser = loadUser(task.getCreatedBy());
         DepartmentEntity department = loadDepartment(task.getAssignedDepartmentId());
 
         // 6. Load optional collections based on request flags
@@ -92,8 +90,12 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
             ? taskActivityLogMapperExt.selectByTaskId(tenantId, task.getTaskId())
             : Collections.emptyList();
 
-        // 7. Enrich user names for comments/attachments/logs
-        Map<String, String> userNameMap = loadUserNames(comments, attachments, activityLogs);
+        // 7. Enrich users for task + comments/attachments/logs in one batch
+        Map<String, UserEntity> userMap = loadUsers(task, comments, attachments, activityLogs);
+        UserEntity assignedUser = userMap.get(task.getAssignedUserId());
+        UserEntity createdByUser = userMap.get(task.getCreatedBy());
+        Map<String, String> userNameMap = userMap.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue() != null ? e.getValue().getFullName() : null));
 
         // 8. Build Response
         return buildResponse(task, checklist, assignedUser, createdByUser, department,
@@ -128,13 +130,6 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
         return checklistInstanceMapper.selectByPrimaryKey(checklistId);
     }
 
-    private UserEntity loadUser(String userId) {
-        if (!StringUtils.hasText(userId)) {
-            return null;
-        }
-        return userMapper.selectByPrimaryKey(userId);
-    }
-
     private DepartmentEntity loadDepartment(String departmentId) {
         if (!StringUtils.hasText(departmentId)) {
             return null;
@@ -142,13 +137,22 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
         return departmentMapper.selectByPrimaryKey(departmentId);
     }
 
-    private Map<String, String> loadUserNames(
+    private Map<String, UserEntity> loadUsers(
+        TaskInstanceEntity task,
         List<TaskCommentEntity> comments,
         List<TaskAttachmentEntity> attachments,
         List<TaskActivityLogEntity> activityLogs
     ) {
         // Collect all unique user IDs
         Set<String> userIds = new HashSet<>();
+        if (task != null) {
+            if (StringUtils.hasText(task.getAssignedUserId())) {
+                userIds.add(task.getAssignedUserId());
+            }
+            if (StringUtils.hasText(task.getCreatedBy())) {
+                userIds.add(task.getCreatedBy());
+            }
+        }
 
         comments.forEach(c -> {
             if (StringUtils.hasText(c.getCreatedBy())) {
@@ -168,12 +172,14 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
             }
         });
 
-        // Load user names
-        Map<String, String> result = new HashMap<>();
-        for (String userId : userIds) {
-            UserEntity user = userMapper.selectByPrimaryKey(userId);
-            if (user != null) {
-                result.put(userId, user.getFullName());
+        if (userIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<UserEntity> users = userMapper.selectByUserIds(new ArrayList<>(userIds));
+        Map<String, UserEntity> result = new HashMap<>();
+        for (UserEntity user : users) {
+            if (user != null && StringUtils.hasText(user.getUserId())) {
+                result.put(user.getUserId(), user);
             }
         }
         return result;

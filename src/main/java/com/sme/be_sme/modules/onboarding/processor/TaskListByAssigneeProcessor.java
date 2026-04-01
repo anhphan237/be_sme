@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.onboarding.api.request.TaskListByAssigneeRequest;
 import com.sme.be_sme.modules.onboarding.api.response.TaskListByAssigneeResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskAssigneeListRow;
+import com.sme.be_sme.modules.onboarding.support.OnboardingTaskWorkflow;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -61,7 +62,9 @@ public class TaskListByAssigneeProcessor extends BaseBizProcessor<BizContext> {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid sortBy value");
         }
 
-        String status = StringUtils.hasText(request.getStatus()) ? request.getStatus().trim() : null;
+        String status = StringUtils.hasText(request.getStatus())
+                ? OnboardingTaskWorkflow.normalizeStatus(request.getStatus())
+                : null;
         if (status != null && !isValidStatus(status)) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid status value");
         }
@@ -105,12 +108,8 @@ public class TaskListByAssigneeProcessor extends BaseBizProcessor<BizContext> {
     }
 
     private static boolean isValidStatus(String status) {
-        return "TODO".equals(status)
-                || "IN_PROGRESS".equals(status)
-                || "WAIT_ACK".equals(status)
-                || "DONE".equals(status)
-                || "PENDING".equals(status)
-                || "PENDING_APPROVAL".equals(status);
+        return OnboardingTaskWorkflow.isKnownStatus(status)
+                || "PENDING".equalsIgnoreCase(status);
     }
 
     private static boolean isValidSortBy(String sortBy) {

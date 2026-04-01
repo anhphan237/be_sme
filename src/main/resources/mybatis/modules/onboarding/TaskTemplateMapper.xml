@@ -103,4 +103,10 @@
       where onboarding_template_id = #{onboardingTemplateId,jdbcType=VARCHAR}
     )
   </update>
+  <select id="selectByCompanyId" resultMap="BaseResultMap">
+    select task_template_id, company_id, checklist_template_id, title, description, owner_type,
+    owner_ref_id, due_days_offset, require_ack, requires_manager_approval, approver_user_id, sort_order, status, created_at, updated_at
+    from task_templates
+    where company_id = #{companyId,jdbcType=VARCHAR}
+  </select>
 </mapper>

@@ -16,6 +16,7 @@ import com.sme.be_sme.shared.gateway.core.BizContext;
 import java.util.Date;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -28,6 +29,7 @@ public class OnboardingTaskApproveProcessor extends BaseBizProcessor<BizContext>
     private final OnboardingTaskApprovalAuthority approvalAuthority;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     protected Object doProcess(BizContext context, JsonNode payload) {
         OnboardingTaskApproveRequest request = objectMapper.convertValue(payload, OnboardingTaskApproveRequest.class);
         if (context == null || !StringUtils.hasText(context.getTenantId())) {
@@ -57,7 +59,7 @@ public class OnboardingTaskApproveProcessor extends BaseBizProcessor<BizContext>
         }
 
         Date now = new Date();
-        task.setStatus("DONE");
+        task.setStatus(OnboardingTaskWorkflow.STATUS_DONE);
         task.setApprovalStatus(OnboardingTaskWorkflow.APPROVAL_APPROVED);
         task.setApprovedBy(context.getOperatorId());
         task.setApprovedAt(now);
