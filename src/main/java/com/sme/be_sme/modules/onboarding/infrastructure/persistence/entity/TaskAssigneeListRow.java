@@ -29,4 +29,10 @@ public class TaskAssigneeListRow {
     private Boolean requiresManagerApproval;
     private String approvalStatus;
     private String approverUserId;
+    private Date scheduledStartAt;
+    private Date scheduledEndAt;
+    private String scheduleStatus;
+    private String scheduleRescheduleReason;
+    private String scheduleCancelReason;
+    private String scheduleNoShowReason;
 }

@@ -15,6 +15,9 @@ public class TaskDetailResponse {
     private String description;
     private String status;
     private Date dueDate;
+    private Long dueInHours;
+    private Boolean overdue;
+    private String dueCategory;
     private Date completedAt;
     private Date createdAt;
     private Date updatedAt;
@@ -29,6 +32,16 @@ public class TaskDetailResponse {
     private Date approvedAt;
     private String rejectionReason;
     private String approverUserId;
+    private Date scheduledStartAt;
+    private Date scheduledEndAt;
+    private String scheduleStatus;
+    private String scheduleProposedBy;
+    private Date scheduleProposedAt;
+    private String scheduleConfirmedBy;
+    private Date scheduleConfirmedAt;
+    private String scheduleRescheduleReason;
+    private String scheduleCancelReason;
+    private String scheduleNoShowReason;
 
     // Related entities (enriched)
     private ChecklistInfo checklist;

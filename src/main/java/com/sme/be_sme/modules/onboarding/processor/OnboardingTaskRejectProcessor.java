@@ -6,8 +6,10 @@ import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskRejectRequest
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.service.OnboardingTaskActivityLogService;
 import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
 import com.sme.be_sme.modules.onboarding.service.OnboardingTaskApprovalAuthority;
+import com.sme.be_sme.modules.onboarding.service.OnboardingTaskWorkflowNotificationService;
 import com.sme.be_sme.modules.onboarding.support.OnboardingTaskWorkflow;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -27,6 +29,8 @@ public class OnboardingTaskRejectProcessor extends BaseBizProcessor<BizContext> 
     private final TaskInstanceMapper taskInstanceMapper;
     private final OnboardingInstanceProgressService progressService;
     private final OnboardingTaskApprovalAuthority approvalAuthority;
+    private final OnboardingTaskActivityLogService activityLogService;
+    private final OnboardingTaskWorkflowNotificationService workflowNotificationService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -58,10 +62,12 @@ public class OnboardingTaskRejectProcessor extends BaseBizProcessor<BizContext> 
             throw AppException.of(ErrorCodes.BAD_REQUEST, "task is not pending approval");
         }
 
+        TaskInstanceEntity before = snapshot(task);
+        String reason = StringUtils.hasText(request.getReason()) ? request.getReason().trim() : null;
         Date now = new Date();
         task.setStatus(OnboardingTaskWorkflow.STATUS_TODO);
         task.setApprovalStatus(OnboardingTaskWorkflow.APPROVAL_REJECTED);
-        task.setRejectionReason(StringUtils.hasText(request.getReason()) ? request.getReason().trim() : null);
+        task.setRejectionReason(reason);
         task.setCompletedAt(null);
         task.setApprovedBy(null);
         task.setApprovedAt(null);
@@ -70,6 +76,9 @@ public class OnboardingTaskRejectProcessor extends BaseBizProcessor<BizContext> 
         if (taskInstanceMapper.updateByPrimaryKey(task) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "reject task failed");
         }
+        activityLogService.logRejected(before, task, context.getOperatorId(), reason);
+        activityLogService.logStatusChanged(before, task, context.getOperatorId());
+        workflowNotificationService.notifyRejected(task, companyId, reason);
 
         progressService.recalculateFromTask(companyId, task);
 
@@ -78,5 +87,15 @@ public class OnboardingTaskRejectProcessor extends BaseBizProcessor<BizContext> 
         response.setAssigneeUserId(task.getAssignedUserId());
         response.setStatus(task.getStatus());
         return response;
+    }
+
+    private static TaskInstanceEntity snapshot(TaskInstanceEntity task) {
+        TaskInstanceEntity copy = new TaskInstanceEntity();
+        copy.setTaskId(task.getTaskId());
+        copy.setCompanyId(task.getCompanyId());
+        copy.setStatus(task.getStatus());
+        copy.setApprovalStatus(task.getApprovalStatus());
+        copy.setAssignedUserId(task.getAssignedUserId());
+        return copy;
     }
 }

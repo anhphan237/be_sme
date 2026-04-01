@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskAcknowledgeRe
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.service.OnboardingTaskActivityLogService;
 import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
 import com.sme.be_sme.modules.onboarding.support.OnboardingTaskAuth;
 import com.sme.be_sme.modules.onboarding.support.OnboardingTaskWorkflow;
@@ -27,6 +28,7 @@ public class OnboardingTaskAcknowledgeProcessor extends BaseBizProcessor<BizCont
     private final ObjectMapper objectMapper;
     private final TaskInstanceMapper taskInstanceMapper;
     private final OnboardingInstanceProgressService progressService;
+    private final OnboardingTaskActivityLogService activityLogService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -67,6 +69,7 @@ public class OnboardingTaskAcknowledgeProcessor extends BaseBizProcessor<BizCont
             return buildResponse(task);
         }
 
+        TaskInstanceEntity before = snapshot(task);
         Date now = new Date();
         task.setAcknowledgedAt(now);
         task.setAcknowledgedBy(context.getOperatorId());
@@ -75,6 +78,8 @@ public class OnboardingTaskAcknowledgeProcessor extends BaseBizProcessor<BizCont
         if (taskInstanceMapper.updateByPrimaryKey(task) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "acknowledge task failed");
         }
+        activityLogService.logAcknowledged(task, context.getOperatorId(), now);
+        activityLogService.logStatusChanged(before, task, context.getOperatorId());
         progressService.recalculateFromTask(companyId, task);
 
         return buildResponse(task);
@@ -86,5 +91,18 @@ public class OnboardingTaskAcknowledgeProcessor extends BaseBizProcessor<BizCont
         response.setAssigneeUserId(task.getAssignedUserId());
         response.setStatus(task.getStatus());
         return response;
+    }
+
+    private static TaskInstanceEntity snapshot(TaskInstanceEntity task) {
+        TaskInstanceEntity copy = new TaskInstanceEntity();
+        copy.setTaskId(task.getTaskId());
+        copy.setCompanyId(task.getCompanyId());
+        copy.setStatus(task.getStatus());
+        copy.setApprovalStatus(task.getApprovalStatus());
+        copy.setAssignedUserId(task.getAssignedUserId());
+        copy.setAcknowledgedAt(task.getAcknowledgedAt());
+        copy.setAcknowledgedBy(task.getAcknowledgedBy());
+        copy.setCompletedAt(task.getCompletedAt());
+        return copy;
     }
 }

@@ -134,6 +134,7 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
                                 ? taskTemplate.getApproverUserId().trim()
                                 : null);
                 taskInstance.setApprovalStatus(OnboardingTaskWorkflow.APPROVAL_NONE);
+                taskInstance.setScheduleStatus(OnboardingTaskWorkflow.SCHEDULE_UNSCHEDULED);
                 taskInstance.setCreatedBy("system");
                 taskInstance.setCreatedAt(now);
                 taskInstance.setUpdatedAt(now);

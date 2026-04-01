@@ -8,6 +8,7 @@ import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanc
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskAssigneeListRow;
+import com.sme.be_sme.modules.onboarding.service.OnboardingTaskSlaService;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import java.util.List;
 import java.util.Set;
@@ -39,7 +40,8 @@ class TaskTimelineByOnboardingProcessorTest {
                 onboardingInstanceMapper,
                 taskInstanceMapperExt,
                 userMapper,
-                employeeProfileMapperExt
+                employeeProfileMapperExt,
+                new OnboardingTaskSlaService()
         );
         BizContext context = new BizContext();
         context.setTenantId("c1");

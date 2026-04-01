@@ -29,6 +29,15 @@ public class TaskListByOnboardingResponse {
         private String assignedDepartmentId;
         private Date completedAt;
         private Date createdAt;
+        private Date scheduledStartAt;
+        private Date scheduledEndAt;
+        private String scheduleStatus;
+        private String scheduleRescheduleReason;
+        private String scheduleCancelReason;
+        private String scheduleNoShowReason;
+        private Long dueInHours;
+        private Boolean overdue;
+        private String dueCategory;
         private Boolean requireAck;
         private Boolean requiresManagerApproval;
         private String approvalStatus;

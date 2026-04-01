@@ -30,7 +30,16 @@ public class TaskTimelineByOnboardingResponse {
         private String title;
         private String status;
         private Date dueDate;
+        private Date scheduledStartAt;
+        private Date scheduledEndAt;
+        private String scheduleStatus;
+        private String scheduleRescheduleReason;
+        private String scheduleCancelReason;
+        private String scheduleNoShowReason;
         private Date createdAt;
+        private Long dueInHours;
+        private Boolean overdue;
+        private String dueCategory;
         private Boolean requireAck;
         private Boolean requiresManagerApproval;
         private String approvalStatus;

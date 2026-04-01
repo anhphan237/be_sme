@@ -12,6 +12,7 @@ import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstance
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.ChecklistInstanceEntity;
+import com.sme.be_sme.modules.onboarding.service.OnboardingTaskSlaService;
 import com.sme.be_sme.modules.onboarding.support.OnboardingTaskWorkflow;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -33,6 +34,7 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
     private final TaskInstanceMapperExt taskInstanceMapperExt;
     private final ChecklistInstanceMapper checklistInstanceMapper;
     private final EmployeeProfileMapperExt employeeProfileMapperExt;
+    private final OnboardingTaskSlaService slaService;
 
     private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_SIZE = 20;
@@ -179,6 +181,16 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
                 item.setAssignedDepartmentId(e.getAssignedDepartmentId());
                 item.setCompletedAt(e.getCompletedAt());
                 item.setCreatedAt(e.getCreatedAt());
+                item.setScheduledStartAt(e.getScheduledStartAt());
+                item.setScheduledEndAt(e.getScheduledEndAt());
+                item.setScheduleStatus(e.getScheduleStatus());
+                item.setScheduleRescheduleReason(e.getScheduleRescheduleReason());
+                item.setScheduleCancelReason(e.getScheduleCancelReason());
+                item.setScheduleNoShowReason(e.getScheduleNoShowReason());
+                long dueInHours = slaService.dueInHours(e.getDueDate());
+                item.setDueInHours(dueInHours == Long.MAX_VALUE ? null : dueInHours);
+                item.setOverdue(slaService.isOverdue(e.getDueDate(), e.getStatus()));
+                item.setDueCategory(slaService.dueCategory(e.getDueDate(), e.getStatus()));
                 item.setRequireAck(e.getRequireAck());
                 item.setRequiresManagerApproval(e.getRequiresManagerApproval());
                 item.setApprovalStatus(e.getApprovalStatus());

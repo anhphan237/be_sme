@@ -12,6 +12,7 @@ import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanc
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskAssigneeListRow;
+import com.sme.be_sme.modules.onboarding.service.OnboardingTaskSlaService;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -37,6 +38,7 @@ public class TaskTimelineByOnboardingProcessor extends BaseBizProcessor<BizConte
     private final TaskInstanceMapperExt taskInstanceMapperExt;
     private final UserMapper userMapper;
     private final EmployeeProfileMapperExt employeeProfileMapperExt;
+    private final OnboardingTaskSlaService slaService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -59,7 +61,7 @@ public class TaskTimelineByOnboardingProcessor extends BaseBizProcessor<BizConte
                 taskInstanceMapperExt.selectTimelineByOnboardingId(context.getTenantId(), onboardingId, includeDone);
 
         Map<String, String> userNames = loadAssigneeNames(rows);
-        return buildResponse(onboardingId, rows, userNames);
+        return buildResponse(onboardingId, rows, userNames, slaService);
     }
 
     private static void validate(BizContext context, TaskTimelineByOnboardingRequest request) {
@@ -72,7 +74,10 @@ public class TaskTimelineByOnboardingProcessor extends BaseBizProcessor<BizConte
     }
 
     private static TaskTimelineByOnboardingResponse buildResponse(
-            String onboardingId, List<TaskAssigneeListRow> rows, Map<String, String> userNames) {
+            String onboardingId,
+            List<TaskAssigneeListRow> rows,
+            Map<String, String> userNames,
+            OnboardingTaskSlaService slaService) {
         List<TaskAssigneeListRow> safeRows = rows == null ? List.of() : rows;
         Map<String, List<TaskAssigneeListRow>> grouped = safeRows.stream()
                 .collect(Collectors.groupingBy(
@@ -91,7 +96,7 @@ public class TaskTimelineByOnboardingProcessor extends BaseBizProcessor<BizConte
             timeline.setAssigneeUserName(assigneeUserId == null ? "Unassigned" : userNames.get(assigneeUserId));
 
             List<TaskTimelineByOnboardingResponse.TaskItem> items = assigneeRows.stream()
-                    .map(TaskTimelineByOnboardingProcessor::toItem)
+                    .map(row -> toItem(row, slaService))
                     .collect(Collectors.toList());
             timeline.setTasks(items);
             timeline.setTaskCount(items.size());
@@ -105,7 +110,8 @@ public class TaskTimelineByOnboardingProcessor extends BaseBizProcessor<BizConte
         return response;
     }
 
-    private static TaskTimelineByOnboardingResponse.TaskItem toItem(TaskAssigneeListRow row) {
+    private static TaskTimelineByOnboardingResponse.TaskItem toItem(
+            TaskAssigneeListRow row, OnboardingTaskSlaService slaService) {
         TaskTimelineByOnboardingResponse.TaskItem item = new TaskTimelineByOnboardingResponse.TaskItem();
         item.setTaskId(row.getTaskId());
         item.setChecklistId(row.getChecklistId());
@@ -113,7 +119,17 @@ public class TaskTimelineByOnboardingProcessor extends BaseBizProcessor<BizConte
         item.setTitle(row.getTitle());
         item.setStatus(row.getStatus());
         item.setDueDate(row.getDueDate());
+        item.setScheduledStartAt(row.getScheduledStartAt());
+        item.setScheduledEndAt(row.getScheduledEndAt());
+        item.setScheduleStatus(row.getScheduleStatus());
+        item.setScheduleRescheduleReason(row.getScheduleRescheduleReason());
+        item.setScheduleCancelReason(row.getScheduleCancelReason());
+        item.setScheduleNoShowReason(row.getScheduleNoShowReason());
         item.setCreatedAt(row.getCreatedAt());
+        long dueInHours = slaService.dueInHours(row.getDueDate());
+        item.setDueInHours(dueInHours == Long.MAX_VALUE ? null : dueInHours);
+        item.setOverdue(slaService.isOverdue(row.getDueDate(), row.getStatus()));
+        item.setDueCategory(slaService.dueCategory(row.getDueDate(), row.getStatus()));
         item.setRequireAck(row.getRequireAck());
         item.setRequiresManagerApproval(row.getRequiresManagerApproval());
         item.setApprovalStatus(row.getApprovalStatus());

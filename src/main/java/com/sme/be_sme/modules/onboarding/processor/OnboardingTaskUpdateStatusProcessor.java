@@ -6,8 +6,10 @@ import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskUpdateStatusR
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.service.OnboardingTaskActivityLogService;
 import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
 import com.sme.be_sme.modules.onboarding.service.OnboardingTaskApprovalAuthority;
+import com.sme.be_sme.modules.onboarding.service.OnboardingTaskWorkflowNotificationService;
 import com.sme.be_sme.modules.onboarding.support.OnboardingTaskAuth;
 import com.sme.be_sme.modules.onboarding.support.OnboardingTaskWorkflow;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -29,6 +31,8 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
     private final TaskInstanceMapper taskInstanceMapper;
     private final OnboardingInstanceProgressService progressService;
     private final OnboardingTaskApprovalAuthority approvalAuthority;
+    private final OnboardingTaskActivityLogService activityLogService;
+    private final OnboardingTaskWorkflowNotificationService workflowNotificationService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -47,6 +51,7 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
 
         enforceAssigneeUnlessElevated(context, task);
 
+        TaskInstanceEntity before = snapshot(task);
         String newStatus = OnboardingTaskWorkflow.normalizeStatus(request.getStatus());
         if (!OnboardingTaskWorkflow.isKnownStatus(newStatus)) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid status value");
@@ -70,6 +75,12 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
             task.setApprovedAt(null);
             task.setRejectionReason(null);
         } else if (OnboardingTaskWorkflow.STATUS_DONE.equalsIgnoreCase(newStatus)) {
+            if (isScheduleRequired(task)
+                    && !OnboardingTaskWorkflow.SCHEDULE_CONFIRMED.equalsIgnoreCase(task.getScheduleStatus())) {
+                throw AppException.of(
+                        ErrorCodes.BAD_REQUEST,
+                        "confirm task schedule before marking done");
+            }
             if (Boolean.TRUE.equals(task.getRequireAck()) && task.getAcknowledgedAt() == null) {
                 throw AppException.of(ErrorCodes.BAD_REQUEST, "acknowledge task before marking done");
             }
@@ -98,6 +109,14 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
         int updated = taskInstanceMapper.updateByPrimaryKey(task);
         if (updated != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "update task status failed");
+        }
+        activityLogService.logStatusChanged(before, task, context.getOperatorId());
+        if (OnboardingTaskWorkflow.STATUS_PENDING_APPROVAL.equalsIgnoreCase(task.getStatus())) {
+            workflowNotificationService.notifyPendingApproval(task, companyId);
+        } else if (OnboardingTaskWorkflow.STATUS_DONE.equalsIgnoreCase(task.getStatus())
+                && Boolean.TRUE.equals(task.getRequiresManagerApproval())
+                && OnboardingTaskWorkflow.APPROVAL_APPROVED.equalsIgnoreCase(task.getApprovalStatus())) {
+            workflowNotificationService.notifyApproved(task, companyId);
         }
 
         progressService.recalculateFromTask(companyId, task);
@@ -142,5 +161,27 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
         if (!StringUtils.hasText(request.getStatus())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "status is required");
         }
+    }
+
+    private static TaskInstanceEntity snapshot(TaskInstanceEntity task) {
+        TaskInstanceEntity copy = new TaskInstanceEntity();
+        copy.setTaskId(task.getTaskId());
+        copy.setCompanyId(task.getCompanyId());
+        copy.setStatus(task.getStatus());
+        copy.setApprovalStatus(task.getApprovalStatus());
+        copy.setAssignedUserId(task.getAssignedUserId());
+        copy.setCompletedAt(task.getCompletedAt());
+        return copy;
+    }
+
+    private static boolean isScheduleRequired(TaskInstanceEntity task) {
+        if (task == null) {
+            return false;
+        }
+        if (task.getScheduledStartAt() != null || task.getScheduledEndAt() != null) {
+            return true;
+        }
+        return StringUtils.hasText(task.getScheduleStatus())
+                && !OnboardingTaskWorkflow.SCHEDULE_UNSCHEDULED.equalsIgnoreCase(task.getScheduleStatus());
     }
 }
