@@ -106,7 +106,7 @@ public class DunningRetryJob {
     }
 
     private void notifyAccountSuspended(String companyId) {
-        List<String> adminUserIds = userRoleMapperExt.selectUserIdsByCompanyAndRoleCode(companyId, "ADMIN");
+        List<String> adminUserIds = userRoleMapperExt.selectUserIdsByCompanyAndRoleCode(companyId, "HR");
         if (adminUserIds == null) return;
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("message", "Account suspended due to repeated payment failures.");

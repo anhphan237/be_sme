@@ -30,7 +30,6 @@ public class CompanyRegisterCreateDefaultRolesCoreProcessor extends BaseCoreProc
         Date now = new Date();
         List<RoleEntity> roles = new ArrayList<>();
 
-        roles.add(buildRole(companyId, "ADMIN", "ADMIN", now));
         roles.add(buildRole(companyId, "HR", "HR", now));
         roles.add(buildRole(companyId, "MANAGER", "MANAGER", now));
         roles.add(buildRole(companyId, "IT", "IT", now));

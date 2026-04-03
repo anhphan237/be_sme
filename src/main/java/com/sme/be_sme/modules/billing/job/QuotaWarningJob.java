@@ -76,7 +76,7 @@ public class QuotaWarningJob {
         int percent = limit == 0 ? 0 : (int) Math.round(100.0 * count / limit);
         if (percent < APPROACHING_THRESHOLD) return;
 
-        List<String> adminUserIds = userRoleMapperExt.selectUserIdsByCompanyAndRoleCode(companyId, "ADMIN");
+        List<String> adminUserIds = userRoleMapperExt.selectUserIdsByCompanyAndRoleCode(companyId, "HR");
         if (adminUserIds == null || adminUserIds.isEmpty()) return;
 
         String message = percent >= EXCEEDED_THRESHOLD ? "Limit exceeded." : "Approaching limit.";

@@ -58,7 +58,7 @@ public class InvoicePaymentReminderJob {
 
     private void sendReminder(InvoiceEntity invoice) {
         String companyId = invoice.getCompanyId();
-        List<String> adminUserIds = userRoleMapperExt.selectUserIdsByCompanyAndRoleCode(companyId, "ADMIN");
+        List<String> adminUserIds = userRoleMapperExt.selectUserIdsByCompanyAndRoleCode(companyId, "HR");
         if (adminUserIds == null || adminUserIds.isEmpty()) return;
         String dueStr = invoice.getDueAt() != null
                 ? invoice.getDueAt().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().format(DATE_FMT)
