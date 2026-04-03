@@ -15,7 +15,7 @@ public final class OnboardingTaskAuth {
                 .map(r -> r != null ? r.trim().toUpperCase() : "")
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toSet());
-        return upper.contains("ADMIN") || upper.contains("HR") || upper.contains("HR_ADMIN") || upper.contains("MANAGER");
+        return upper.contains("HR") || upper.contains("MANAGER");
     }
 
     /**

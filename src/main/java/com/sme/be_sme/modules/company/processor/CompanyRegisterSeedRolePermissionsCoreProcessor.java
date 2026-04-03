@@ -18,36 +18,11 @@ import java.util.*;
 @RequiredArgsConstructor
 public class CompanyRegisterSeedRolePermissionsCoreProcessor extends BaseCoreProcessor<CompanyRegisterContext> {
 
-    private static final String ROLE_ADMIN = "ADMIN";
     private static final String ROLE_HR = "HR";
     private static final String ROLE_MANAGER = "MANAGER";
 
     private final PermissionMapper permissionMapper;
     private final RolePermissionMapper rolePermissionMapper;
-
-    /**
-     * NOTE theo permission catalog:
-     * - Không có *.list cho department/role => tạm dùng *.read
-     * - Assign role cho user dùng: com.sme.identity.role.assign
-     */
-    private static final List<String> HR_PERMISSION_CODES = List.of(
-            // Department
-            "com.sme.company.department.create",
-            "com.sme.company.department.read",
-            "com.sme.company.department.update",
-            "com.sme.company.department.assignUser",
-
-            // User
-            "com.sme.identity.user.create",
-            "com.sme.identity.user.read",
-            "com.sme.identity.user.list",
-            "com.sme.identity.user.update",
-            "com.sme.identity.user.disable",
-
-            // Role/RBAC (assign role)
-            "com.sme.identity.role.read",
-            "com.sme.identity.role.assign"
-    );
 
     private static final List<String> MANAGER_PERMISSION_CODES = List.of(
             "com.sme.identity.user.list",
@@ -60,22 +35,19 @@ public class CompanyRegisterSeedRolePermissionsCoreProcessor extends BaseCorePro
         String companyId = requireCompanyId(ctx);
 
         Map<String, String> roleIdByCode = indexRoleIds(ctx.getDefaultRoles());
-        String adminRoleId = mustRole(roleIdByCode, ROLE_ADMIN);
         String hrRoleId = mustRole(roleIdByCode, ROLE_HR);
         String managerRoleId = mustRole(roleIdByCode, ROLE_MANAGER);
 
-        // ADMIN -> all global active permissions
+        // HR -> all global active permissions (highest tenant role)
         List<String> allPermIds = permissionMapper.selectAllGlobalActivePermissionIds();
         if (allPermIds == null || allPermIds.isEmpty()) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "global permissions empty");
         }
 
-        List<String> hrPermIds = resolvePermIdsByCodesOrThrow(HR_PERMISSION_CODES, "HR");
         List<String> managerPermIds = resolvePermIdsByCodesOrThrow(MANAGER_PERMISSION_CODES, "MANAGER");
 
-        List<RolePermissionEntity> rows = new ArrayList<>(allPermIds.size() + hrPermIds.size() + managerPermIds.size());
-        rows.addAll(buildRows(companyId, adminRoleId, allPermIds));
-        rows.addAll(buildRows(companyId, hrRoleId, hrPermIds));
+        List<RolePermissionEntity> rows = new ArrayList<>(allPermIds.size() + managerPermIds.size());
+        rows.addAll(buildRows(companyId, hrRoleId, allPermIds));
         rows.addAll(buildRows(companyId, managerRoleId, managerPermIds));
 
         int inserted = rolePermissionMapper.insertBatch(rows);

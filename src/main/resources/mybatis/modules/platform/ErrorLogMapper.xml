@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.platform.infrastructure.mapper.ErrorLogMapper">
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.platform.infrastructure.persistence.entity.ErrorLogEntity">
+    <id column="error_id" jdbcType="VARCHAR" property="errorId" />
+    <result column="error_code" jdbcType="VARCHAR" property="errorCode" />
+    <result column="message" jdbcType="VARCHAR" property="message" />
+    <result column="stack_trace" jdbcType="VARCHAR" property="stackTrace" />
+    <result column="request_id" jdbcType="VARCHAR" property="requestId" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select error_id, error_code, message, stack_trace, request_id, created_at
+    from error_logs
+    where error_id = #{errorId,jdbcType=VARCHAR}
+  </select>
+
+  <select id="selectAll" resultMap="BaseResultMap">
+    select error_id, error_code, message, stack_trace, request_id, created_at
+    from error_logs
+    order by created_at desc
+  </select>
+
+  <insert id="insert" parameterType="com.sme.be_sme.modules.platform.infrastructure.persistence.entity.ErrorLogEntity">
+    insert into error_logs (error_id, error_code, message, stack_trace, request_id, created_at)
+    values (#{errorId,jdbcType=VARCHAR}, #{errorCode,jdbcType=VARCHAR}, #{message,jdbcType=VARCHAR},
+      #{stackTrace,jdbcType=VARCHAR}, #{requestId,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP})
+  </insert>
+</mapper>

@@ -67,6 +67,8 @@ app:
   stripe:
     secret-key: ${STRIPE_SECRET_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  platform:
+    admin-password: ${PLATFORM_ADMIN_PASSWORD:Admin@123}
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:}

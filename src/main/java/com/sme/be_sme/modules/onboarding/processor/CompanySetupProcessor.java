@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CompanySetupProcessor extends BaseCoreProcessor<CompanySetupContext> {
 
-    private static final String ADMIN_ROLE_CODE = "ADMIN";
+    private static final String HR_ROLE_CODE = "HR";
 
     private final ObjectMapper objectMapper;
 

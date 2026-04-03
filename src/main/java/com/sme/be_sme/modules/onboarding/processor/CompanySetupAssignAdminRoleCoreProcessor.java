@@ -14,7 +14,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class CompanySetupAssignAdminRoleCoreProcessor extends BaseCoreProcessor<CompanySetupContext> {
 
-    private static final String ADMIN_ROLE_CODE = "ADMIN";
+    private static final String HR_ROLE_CODE = "HR";
     private final AssignRoleProcessor assignRoleProcessor;
 
     @Override
@@ -23,12 +23,12 @@ public class CompanySetupAssignAdminRoleCoreProcessor extends BaseCoreProcessor<
                 ctx.getCompany().getCompanyId(),
                 ctx.getBiz() != null ? ctx.getBiz().getRequestId() : null,
                 ctx.getAdminUser().getUserId(),   
-                Set.of("ADMIN")
+                Set.of("HR")
         );
 
         AssignRoleRequest r = new AssignRoleRequest();
         r.setUserId(ctx.getAdminUser().getUserId());
-        r.setRoleCode(ADMIN_ROLE_CODE);
+        r.setRoleCode(HR_ROLE_CODE);
 
         assignRoleProcessor.process(tenantCtx, r);
         return null;

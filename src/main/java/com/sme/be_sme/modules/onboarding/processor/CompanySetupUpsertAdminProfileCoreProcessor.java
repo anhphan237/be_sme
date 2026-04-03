@@ -35,7 +35,7 @@ public class CompanySetupUpsertAdminProfileCoreProcessor extends BaseCoreProcess
         BizContext tenantCtx = BizContext.internal(companyId,
                 requestId,
                 ctx.getAdminUser().getUserId(),
-                Set.of("ADMIN")
+                Set.of("HR")
         );
 
         // build upsert employee profile request
