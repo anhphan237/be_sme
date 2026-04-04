@@ -8,4 +8,5 @@ public class PlatformCompanyListRequest {
     private Integer size;
     private String status;
     private String search;
+    private String planCode;
 }
