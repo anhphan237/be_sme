@@ -77,6 +77,12 @@ public class PlatformCompanyListProcessor extends BaseBizProcessor<BizContext> {
                         || !company.getName().toLowerCase().contains(request.getSearch().toLowerCase()))) {
                 continue;
             }
+            if (StringUtils.hasText(request.getPlanCode())) {
+                SubscriptionEntity sub = subscriptionByCompany.get(company.getCompanyId());
+                if (sub == null) continue;
+                PlanEntity plan = sub.getPlanId() != null ? plansById.get(sub.getPlanId()) : null;
+                if (plan == null || !request.getPlanCode().equalsIgnoreCase(plan.getCode())) continue;
+            }
             filtered.add(company);
         }
 
