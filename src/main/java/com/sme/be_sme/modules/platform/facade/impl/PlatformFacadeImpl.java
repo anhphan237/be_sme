@@ -3,12 +3,9 @@ package com.sme.be_sme.modules.platform.facade.impl;
 import com.sme.be_sme.modules.platform.api.request.*;
 import com.sme.be_sme.modules.platform.api.response.*;
 import com.sme.be_sme.modules.platform.facade.PlatformFacade;
-import com.sme.be_sme.modules.platform.processor.analytics.PlatformOnboardingAnalyticsProcessor;
-import com.sme.be_sme.modules.platform.processor.company.PlatformCompanyActivateProcessor;
-import com.sme.be_sme.modules.platform.processor.company.PlatformCompanyDeactivateProcessor;
-import com.sme.be_sme.modules.platform.processor.company.PlatformCompanyDeleteProcessor;
-import com.sme.be_sme.modules.platform.processor.company.PlatformCompanyDetailProcessor;
-import com.sme.be_sme.modules.platform.processor.company.PlatformCompanyListProcessor;
+import com.sme.be_sme.modules.platform.processor.analytics.*;
+import com.sme.be_sme.modules.platform.processor.audit.PlatformAdminAuditLogProcessor;
+import com.sme.be_sme.modules.platform.processor.company.*;
 import com.sme.be_sme.modules.platform.processor.dashboard.PlatformFinancialDashboardProcessor;
 import com.sme.be_sme.modules.platform.processor.feedback.FeedbackSubmitProcessor;
 import com.sme.be_sme.modules.platform.processor.feedback.PlatformFeedbackDetailProcessor;
@@ -16,6 +13,7 @@ import com.sme.be_sme.modules.platform.processor.feedback.PlatformFeedbackListPr
 import com.sme.be_sme.modules.platform.processor.feedback.PlatformFeedbackResolveProcessor;
 import com.sme.be_sme.modules.platform.processor.monitoring.PlatformActivityLogListProcessor;
 import com.sme.be_sme.modules.platform.processor.monitoring.PlatformErrorLogListProcessor;
+import com.sme.be_sme.modules.platform.processor.monitoring.PlatformMonitoringMetricsProcessor;
 import com.sme.be_sme.modules.platform.processor.monitoring.PlatformSystemHealthProcessor;
 import com.sme.be_sme.modules.platform.processor.plan.PlatformPlanCreateProcessor;
 import com.sme.be_sme.modules.platform.processor.plan.PlatformPlanDeleteProcessor;
@@ -55,6 +53,14 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     private final PlatformFeedbackDetailProcessor feedbackDetailProcessor;
     private final PlatformFeedbackResolveProcessor feedbackResolveProcessor;
     private final FeedbackSubmitProcessor feedbackSubmitProcessor;
+    private final PlatformRevenueAnalyticsProcessor revenueAnalyticsProcessor;
+    private final PlatformSubscriptionAnalyticsProcessor subscriptionAnalyticsProcessor;
+    private final PlatformCompanyAnalyticsProcessor companyAnalyticsProcessor;
+    private final PlatformUsageAnalyticsProcessor usageAnalyticsProcessor;
+    private final PlatformMonitoringMetricsProcessor monitoringMetricsProcessor;
+    private final PlatformCompanySuspendProcessor companySuspendProcessor;
+    private final PlatformCompanyChangePlanProcessor companyChangePlanProcessor;
+    private final PlatformAdminAuditLogProcessor adminAuditLogProcessor;
 
     @Override
     public PlatformCompanyListResponse listCompanies(PlatformCompanyListRequest request) {
@@ -164,5 +170,45 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     @Override
     public FeedbackSubmitResponse submitFeedback(FeedbackSubmitRequest request) {
         return call(feedbackSubmitProcessor, request, FeedbackSubmitResponse.class);
+    }
+
+    @Override
+    public PlatformRevenueAnalyticsResponse getRevenueAnalytics(PlatformRevenueAnalyticsRequest request) {
+        return call(revenueAnalyticsProcessor, request, PlatformRevenueAnalyticsResponse.class);
+    }
+
+    @Override
+    public PlatformSubscriptionAnalyticsResponse getSubscriptionAnalytics(PlatformSubscriptionAnalyticsRequest request) {
+        return call(subscriptionAnalyticsProcessor, request, PlatformSubscriptionAnalyticsResponse.class);
+    }
+
+    @Override
+    public PlatformCompanyAnalyticsResponse getCompanyAnalytics(PlatformCompanyAnalyticsRequest request) {
+        return call(companyAnalyticsProcessor, request, PlatformCompanyAnalyticsResponse.class);
+    }
+
+    @Override
+    public PlatformUsageAnalyticsResponse getUsageAnalytics(PlatformUsageAnalyticsRequest request) {
+        return call(usageAnalyticsProcessor, request, PlatformUsageAnalyticsResponse.class);
+    }
+
+    @Override
+    public PlatformMonitoringMetricsResponse getMonitoringMetrics(PlatformMonitoringMetricsRequest request) {
+        return call(monitoringMetricsProcessor, request, PlatformMonitoringMetricsResponse.class);
+    }
+
+    @Override
+    public PlatformCompanySuspendResponse suspendCompany(PlatformCompanySuspendRequest request) {
+        return call(companySuspendProcessor, request, PlatformCompanySuspendResponse.class);
+    }
+
+    @Override
+    public PlatformCompanyChangePlanResponse changeCompanyPlan(PlatformCompanyChangePlanRequest request) {
+        return call(companyChangePlanProcessor, request, PlatformCompanyChangePlanResponse.class);
+    }
+
+    @Override
+    public PlatformAdminAuditLogResponse getAdminAuditLog(PlatformAdminAuditLogRequest request) {
+        return call(adminAuditLogProcessor, request, PlatformAdminAuditLogResponse.class);
     }
 }
