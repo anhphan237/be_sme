@@ -1,43 +1,7 @@
 package com.sme.be_sme.modules.platform.facade;
 
-import com.sme.be_sme.modules.platform.api.request.FeedbackSubmitRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformActivityLogListRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformCompanyDetailRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformCompanyListRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformCompanyStatusRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformErrorLogListRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformFeedbackDetailRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformFeedbackListRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformFeedbackResolveRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformFinancialDashboardRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformInvoiceListRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformOnboardingAnalyticsRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformPaymentListRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformPlanCreateRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformPlanDeleteRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformPlanListRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformPlanUpdateRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformSubscriptionDetailRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformSubscriptionListRequest;
-import com.sme.be_sme.modules.platform.api.request.PlatformSystemHealthRequest;
-import com.sme.be_sme.modules.platform.api.response.FeedbackSubmitResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformActivityLogListResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformCompanyDetailResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformCompanyListResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformCompanyStatusResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformErrorLogListResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformFeedbackDetailResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformFeedbackListResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformFeedbackResolveResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformFinancialDashboardResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformInvoiceListResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformOnboardingAnalyticsResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformPaymentListResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformPlanListResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformPlanResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformSubscriptionDetailResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformSubscriptionListResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformSystemHealthResponse;
+import com.sme.be_sme.modules.platform.api.request.*;
+import com.sme.be_sme.modules.platform.api.response.*;
 import com.sme.be_sme.shared.gateway.annotation.OperationType;
 import com.sme.be_sme.shared.gateway.core.OperationFacadeProvider;
 
@@ -108,4 +72,28 @@ public interface PlatformFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.feedback.submit")
     FeedbackSubmitResponse submitFeedback(FeedbackSubmitRequest request);
+
+    @OperationType("com.sme.platform.analytics.revenue")
+    PlatformRevenueAnalyticsResponse getRevenueAnalytics(PlatformRevenueAnalyticsRequest request);
+
+    @OperationType("com.sme.platform.analytics.subscription")
+    PlatformSubscriptionAnalyticsResponse getSubscriptionAnalytics(PlatformSubscriptionAnalyticsRequest request);
+
+    @OperationType("com.sme.platform.analytics.company")
+    PlatformCompanyAnalyticsResponse getCompanyAnalytics(PlatformCompanyAnalyticsRequest request);
+
+    @OperationType("com.sme.platform.analytics.usage")
+    PlatformUsageAnalyticsResponse getUsageAnalytics(PlatformUsageAnalyticsRequest request);
+
+    @OperationType("com.sme.platform.monitoring.metrics")
+    PlatformMonitoringMetricsResponse getMonitoringMetrics(PlatformMonitoringMetricsRequest request);
+
+    @OperationType("com.sme.platform.company.suspend")
+    PlatformCompanySuspendResponse suspendCompany(PlatformCompanySuspendRequest request);
+
+    @OperationType("com.sme.platform.company.changePlan")
+    PlatformCompanyChangePlanResponse changeCompanyPlan(PlatformCompanyChangePlanRequest request);
+
+    @OperationType("com.sme.platform.audit.adminLog")
+    PlatformAdminAuditLogResponse getAdminAuditLog(PlatformAdminAuditLogRequest request);
 }
