@@ -28,16 +28,16 @@ spring:
     validate-on-migrate: false
 
   mail:
-    host: ${MAIL_HOST:localhost}
-    port: ${MAIL_PORT:3025}
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
-          auth: ${MAIL_SMTP_AUTH:false}
+          auth: ${MAIL_SMTP_AUTH:true}
           starttls:
-            enable: ${MAIL_STARTTLS:false}
+            enable: ${MAIL_STARTTLS:true}
 
 mybatis:
   mapper-locations: classpath*:mybatis/**/*.xml

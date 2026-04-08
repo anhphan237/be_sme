@@ -9,3 +9,10 @@ services:
       POSTGRES_PASSWORD: 123456
     ports:
       - "5432:5432"
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: be_sme_mailhog
+    ports:
+      - "3025:1025"
+      - "8025:8025"
