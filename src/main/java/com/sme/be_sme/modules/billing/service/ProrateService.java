@@ -19,8 +19,8 @@ import java.util.Date;
 public class ProrateService {
 
     /**
-     * @param subscription subscription with currentPeriodStart, currentPeriodEnd
-     * @param oldPlan       plan before change (monthly price used for prorate)
+     * @param subscription subscription with currentPeriodStart, currentPeriodEnd, billingCycle
+     * @param oldPlan       plan before change
      * @param newPlan       plan after change
      * @return creditVnd (positive = amount to credit/refund), chargeVnd (positive = amount to charge)
      */
@@ -46,9 +46,11 @@ public class ProrateService {
         }
         double ratio = (double) daysRemaining / totalDays;
 
-        int oldMonthly = safePrice(oldPlan.getPriceVndMonthly());
-        int newMonthly = safePrice(newPlan.getPriceVndMonthly());
-        int diff = newMonthly - oldMonthly;
+        boolean yearly = "YEARLY".equalsIgnoreCase(
+                subscription.getBillingCycle() == null ? "MONTHLY" : subscription.getBillingCycle().trim());
+        int oldPrice = yearly ? safePrice(oldPlan.getPriceVndYearly()) : safePrice(oldPlan.getPriceVndMonthly());
+        int newPrice = yearly ? safePrice(newPlan.getPriceVndYearly()) : safePrice(newPlan.getPriceVndMonthly());
+        int diff = newPrice - oldPrice;
         if (diff == 0) {
             return ProrateResult.zero();
         }

@@ -8,5 +8,6 @@ import lombok.Setter;
 public class SubscriptionUpdateRequest {
     private String subscriptionId;
     private String planCode;
+    private String billingCycle;
     private String status;
 }

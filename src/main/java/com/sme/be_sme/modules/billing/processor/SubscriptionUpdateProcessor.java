@@ -57,6 +57,14 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
                 entity.setPlanId(newPlan.getPlanId());
             }
 
+            if (StringUtils.hasText(request.getBillingCycle())) {
+                String cycle = request.getBillingCycle().trim().toUpperCase();
+                if (!"MONTHLY".equals(cycle) && !"YEARLY".equals(cycle)) {
+                    throw AppException.of(ErrorCodes.BAD_REQUEST, "billingCycle must be MONTHLY or YEARLY");
+                }
+                entity.setBillingCycle(cycle);
+            }
+
             if (StringUtils.hasText(request.getStatus())) {
                 entity.setStatus(request.getStatus().trim());
             }
@@ -67,6 +75,7 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
             int updated = subscriptionMapperExt.updatePlanAndStatus(
                     entity.getSubscriptionId(),
                     entity.getPlanId(),
+                    entity.getBillingCycle(),
                     statusToUpdate,
                     updatedAt);
             if (updated != 1) {
