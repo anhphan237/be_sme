@@ -51,4 +51,14 @@ public interface SurveyInstanceMapperExt {
             @Param("responderUserId") String responderUserId
     );
 
+    List<SurveyInstanceEntity> selectScheduledReadyToDispatch(
+            @Param("now") Date now,
+            @Param("limit") Integer limit
+    );
+
+    int markAsSentIfScheduled(
+            @Param("surveyInstanceId") String surveyInstanceId,
+            @Param("sentAt") Date sentAt
+    );
+
 }
