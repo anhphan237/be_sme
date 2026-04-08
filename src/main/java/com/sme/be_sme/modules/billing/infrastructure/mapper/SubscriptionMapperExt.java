@@ -13,10 +13,11 @@ import java.util.Date;
 public interface SubscriptionMapperExt {
 
     /**
-     * Update only plan_id, status, updated_at. Avoids overwriting other columns.
+     * Update only plan_id, billing_cycle, status, updated_at. Avoids overwriting other columns.
      */
     int updatePlanAndStatus(@Param("subscriptionId") String subscriptionId,
                            @Param("planId") String planId,
+                           @Param("billingCycle") String billingCycle,
                            @Param("status") String status,
                            @Param("updatedAt") Date updatedAt);
 }

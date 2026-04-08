@@ -5,6 +5,7 @@
     <update id="updatePlanAndStatus">
         update subscriptions
         set plan_id = #{planId,jdbcType=VARCHAR},
+            billing_cycle = #{billingCycle,jdbcType=VARCHAR},
             status = #{status,jdbcType=VARCHAR},
             updated_at = #{updatedAt,jdbcType=TIMESTAMP}
         where subscription_id = #{subscriptionId,jdbcType=VARCHAR}
