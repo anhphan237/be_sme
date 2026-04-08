@@ -3,6 +3,11 @@ package com.sme.be_sme.modules.survey.processor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapper;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
+import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
+import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
+import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.survey.api.request.SurveySubmitRequest;
 import com.sme.be_sme.modules.survey.api.response.SurveySubmitResponse;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyAnswerMapper;
@@ -48,6 +53,9 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
     private final SurveyResponseMapper surveyResponseMapper;
     private final SurveyAnswerMapper surveyAnswerMapper;
     private final SurveyResponseDraftMapperExt surveyResponseDraftMapperExt;
+    private final UserMapperExt userMapperExt;
+    private final UserMapper userMapper;
+    private final NotificationService notificationService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -75,6 +83,7 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
                 && !instance.getResponderUserId().equals(context.getOperatorId())) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "You are not allowed to submit this survey");
         }
+
         SurveyTemplateEntity template =
                 surveyTemplateMapper.selectByPrimaryKey(instance.getSurveyTemplateId());
 
@@ -138,10 +147,55 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
             );
         }
 
+        notifyHrWhenSubmitted(tenantId, operatorId, instance, template);
+
         SurveySubmitResponse response = new SurveySubmitResponse();
         response.setSurveyInstanceId(instance.getSurveyInstanceId());
         response.setStatus(STATUS_COMPLETED);
         return response;
+    }
+
+    private void notifyHrWhenSubmitted(
+            String tenantId,
+            String operatorId,
+            SurveyInstanceEntity instance,
+            SurveyTemplateEntity template
+    ) {
+        List<String> hrUserIds = userMapperExt.selectHrUserIdsByCompanyId(tenantId);
+        if (hrUserIds == null || hrUserIds.isEmpty()) {
+            return;
+        }
+
+        String responderName = "A user";
+        if (StringUtils.hasText(operatorId)) {
+            UserEntity responder = userMapper.selectByPrimaryKey(operatorId);
+            if (responder != null && StringUtils.hasText(responder.getFullName())) {
+                responderName = responder.getFullName();
+            }
+        }
+
+        String templateName = template != null ? template.getName() : "";
+
+        for (String hrUserId : hrUserIds) {
+            if (!StringUtils.hasText(hrUserId)) {
+                continue;
+            }
+
+            NotificationCreateParams params = NotificationCreateParams.builder()
+                    .companyId(tenantId)
+                    .userId(hrUserId)
+                    .type("SURVEY_SUBMITTED")
+                    .title("Survey submitted")
+                    .content(responderName + " has submitted survey"
+                            + (StringUtils.hasText(templateName) ? ": " + templateName : "."))
+                    .refType("SURVEY")
+                    .refId(instance.getSurveyInstanceId())
+                    .sendEmail(false)
+                    .onboardingId(instance.getOnboardingId())
+                    .build();
+
+            notificationService.create(params);
+        }
     }
 
     private static void validate(BizContext context, SurveySubmitRequest request) {

@@ -75,5 +75,12 @@
         WHERE user_id = #{userId}
         LIMIT 1
     </select>
+    <select id="selectHrUserIdsByCompanyId" resultType="java.lang.String">
+        SELECT u.user_id
+        FROM users u
+        WHERE u.company_id = #{companyId}
+        AND u.status = 'ACTIVE'
+        AND u.role IN ('HR', 'HR_ADMIN')
+    </select>
 
 </mapper>

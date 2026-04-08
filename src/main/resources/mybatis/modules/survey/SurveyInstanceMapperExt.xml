@@ -136,4 +136,32 @@
             and coalesce(sent_at, scheduled_at, created_at) &lt;= #{endDate,jdbcType=TIMESTAMP}
         </if>
     </select>
+
+    <select id="selectScheduledReadyToDispatch"
+            resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyInstanceEntity">
+        SELECT survey_instance_id,
+        company_id,
+        survey_template_id,
+        onboarding_id,
+        responder_user_id,
+        scheduled_at,
+        sent_at,
+        closed_at,
+        status,
+        created_at
+        FROM survey_instances
+        WHERE status = 'SCHEDULED'
+        AND scheduled_at IS NOT NULL
+        AND scheduled_at &lt;= #{now}
+        ORDER BY scheduled_at ASC
+        LIMIT #{limit}
+    </select>
+
+    <update id="markAsSentIfScheduled">
+        UPDATE survey_instances
+        SET status = 'SENT',
+        sent_at = #{sentAt}
+        WHERE survey_instance_id = #{surveyInstanceId}
+        AND status = 'SCHEDULED'
+    </update>
 </mapper>
