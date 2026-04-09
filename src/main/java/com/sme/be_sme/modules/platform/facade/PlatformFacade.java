@@ -96,4 +96,34 @@ public interface PlatformFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.platform.audit.adminLog")
     PlatformAdminAuditLogResponse getAdminAuditLog(PlatformAdminAuditLogRequest request);
+
+    @OperationType("com.sme.platform.dashboard.overview")
+    PlatformDashboardOverviewResponse getDashboardOverview(PlatformDashboardOverviewRequest request);
+
+    @OperationType("com.sme.platform.analytics.company.trend")
+    PlatformCompanyTrendResponse getCompanyTrend(PlatformCompanyTrendRequest request);
+
+    @OperationType("com.sme.platform.analytics.revenue.trend")
+    PlatformRevenueTrendResponse getRevenueTrend(PlatformRevenueTrendRequest request);
+
+    @OperationType("com.sme.platform.analytics.plan.trend")
+    PlatformPlanTrendResponse getPlanTrend(PlatformPlanTrendRequest request);
+
+    @OperationType("com.sme.platform.analytics.employee")
+    PlatformEmployeeAnalyticsResponse getEmployeeAnalytics(PlatformEmployeeAnalyticsRequest request);
+
+    @OperationType("com.sme.platform.analytics.employee.trend")
+    PlatformEmployeeTrendResponse getEmployeeTrend(PlatformEmployeeTrendRequest request);
+
+    @OperationType("com.sme.platform.analytics.plan.distribution")
+    PlatformPlanDistributionResponse getPlanDistribution(PlatformPlanDistributionRequest request);
+
+    @OperationType("com.sme.platform.analytics.forecast")
+    PlatformForecastResponse getForecast(PlatformForecastRequest request);
+
+    @OperationType("com.sme.platform.analytics.onboarding.trend")
+    PlatformOnboardingTrendResponse getOnboardingTrend(PlatformOnboardingTrendRequest request);
+
+    @OperationType("com.sme.platform.dashboard.risk")
+    PlatformRiskDashboardResponse getRiskDashboard(PlatformRiskDashboardRequest request);
 }
