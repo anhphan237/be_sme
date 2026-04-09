@@ -13,8 +13,6 @@ import com.sme.be_sme.modules.platform.api.response.PlatformRevenueAnalyticsResp
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import java.lang.reflect.Method;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -22,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 @Component
 @RequiredArgsConstructor
@@ -39,11 +36,10 @@ public class PlatformRevenueAnalyticsProcessor extends BaseBizProcessor<BizConte
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
-        PlatformRevenueAnalyticsRequest request =
-                objectMapper.convertValue(payload, PlatformRevenueAnalyticsRequest.class);
+        PlatformRevenueAnalyticsRequest request = objectMapper.convertValue(payload, PlatformRevenueAnalyticsRequest.class);
 
-        Date startDate = parseDate(request.getStartDate(), true);
-        Date endDate = parseDate(request.getEndDate(), false);
+        Date startDate = PlatformAnalyticsSupport.parseDate(request.getStartDate(), true);
+        Date endDate = PlatformAnalyticsSupport.parseDate(request.getEndDate(), false);
 
         List<SubscriptionEntity> allSubs = subscriptionMapper.selectAll();
         List<PlanEntity> allPlans = planMapper.selectAll();
@@ -58,52 +54,41 @@ public class PlatformRevenueAnalyticsProcessor extends BaseBizProcessor<BizConte
 
         double mrr = 0.0;
         double totalRevenue = 0.0;
-
         Map<String, RevenueAccumulator> byPlan = new LinkedHashMap<>();
 
         for (SubscriptionEntity sub : allSubs) {
             if (sub == null || !STATUS_ACTIVE.equalsIgnoreCase(sub.getStatus())) {
                 continue;
             }
-
             PlanEntity plan = planCache.get(sub.getPlanId());
             if (plan == null) {
                 continue;
             }
-
             double monthlyRevenue = toMonthlyRevenue(sub, plan);
             mrr += monthlyRevenue;
 
-            RevenueAccumulator acc = byPlan.computeIfAbsent(
-                    safe(sub.getPlanId()),
-                    k -> new RevenueAccumulator(safe(sub.getPlanId()))
-            );
+            RevenueAccumulator acc = byPlan.computeIfAbsent(sub.getPlanId(), RevenueAccumulator::new);
+            acc.planCode = PlatformAnalyticsSupport.planCode(plan);
+            acc.planName = PlatformAnalyticsSupport.planName(plan);
             acc.subscriptionCount++;
             acc.revenue += monthlyRevenue;
-            acc.planName = readString(plan, "getName");
-            acc.planCode = readString(plan, "getCode");
         }
 
         for (InvoiceEntity inv : allInvoices) {
-            if (inv == null) {
-                continue;
-            }
-            if (STATUS_PAID.equalsIgnoreCase(inv.getStatus()) && inRange(inv.getCreatedAt(), startDate, endDate)) {
+            if (inv != null && STATUS_PAID.equalsIgnoreCase(inv.getStatus())
+                    && PlatformAnalyticsSupport.inRange(inv.getCreatedAt(), startDate, endDate)) {
                 totalRevenue += inv.getAmountTotal() != null ? inv.getAmountTotal() : 0.0;
             }
         }
 
         List<PlatformRevenueAnalyticsResponse.RevenueByPlanItem> revenueByPlans = new ArrayList<>();
         for (RevenueAccumulator acc : byPlan.values()) {
-            PlatformRevenueAnalyticsResponse.RevenueByPlanItem item =
-                    new PlatformRevenueAnalyticsResponse.RevenueByPlanItem();
-
+            PlatformRevenueAnalyticsResponse.RevenueByPlanItem item = new PlatformRevenueAnalyticsResponse.RevenueByPlanItem();
             invokeSetterIfExists(item, "setPlanId", String.class, acc.planId);
             invokeSetterIfExists(item, "setPlanCode", String.class, acc.planCode);
             invokeSetterIfExists(item, "setPlanName", String.class, acc.planName);
             invokeSetterIfExists(item, "setRevenue", Double.class, acc.revenue);
             invokeSetterIfExists(item, "setSubscriptionCount", Integer.class, acc.subscriptionCount);
-
             revenueByPlans.add(item);
         }
 
@@ -122,56 +107,12 @@ public class PlatformRevenueAnalyticsProcessor extends BaseBizProcessor<BizConte
         return plan.getPriceVndMonthly() != null ? plan.getPriceVndMonthly() : 0.0;
     }
 
-    private boolean inRange(Date value, Date start, Date end) {
-        if (value == null) {
-            return false;
-        }
-        if (start != null && value.before(start)) {
-            return false;
-        }
-        if (end != null && !value.before(end)) {
-            return false;
-        }
-        return true;
-    }
-
-    private Date parseDate(String isoDate, boolean startOfDay) {
-        if (!StringUtils.hasText(isoDate)) {
-            return null;
-        }
-        LocalDate ld = LocalDate.parse(isoDate);
-        if (startOfDay) {
-            return Date.from(ld.atStartOfDay(ZoneId.systemDefault()).toInstant());
-        }
-        return Date.from(ld.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
-    }
-
-    private String readString(Object target, String getterName) {
-        if (target == null) {
-            return null;
-        }
-        try {
-            Method method = target.getClass().getMethod(getterName);
-            Object value = method.invoke(target);
-            return value != null ? String.valueOf(value) : null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
     private void invokeSetterIfExists(Object target, String methodName, Class<?> paramType, Object value) {
-        if (target == null) {
-            return;
-        }
         try {
             Method method = target.getClass().getMethod(methodName, paramType);
             method.invoke(target, value);
         } catch (Exception ignored) {
         }
-    }
-
-    private String safe(String value) {
-        return value != null ? value : "";
     }
 
     private static class RevenueAccumulator {
