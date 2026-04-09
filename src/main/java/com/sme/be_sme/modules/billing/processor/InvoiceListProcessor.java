@@ -11,6 +11,8 @@ import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -43,6 +45,7 @@ public class InvoiceListProcessor extends BaseBizProcessor<BizContext> {
                         || subscriptionId.trim().equals(row.getSubscriptionId()))
                 .filter(row -> !StringUtils.hasText(statusNormalized)
                         || (row.getStatus() != null && row.getStatus().trim().toLowerCase(Locale.ROOT).equals(statusNormalized)))
+                .sorted(invoiceRecencyComparator())
                 .map(this::toSummary)
                 .collect(Collectors.toList());
 
@@ -67,5 +70,13 @@ public class InvoiceListProcessor extends BaseBizProcessor<BizContext> {
         response.setIssuedAt(entity.getIssuedAt());
         response.setDueAt(entity.getDueAt());
         return response;
+    }
+
+    private static Comparator<InvoiceEntity> invoiceRecencyComparator() {
+        Comparator<Date> descDate = Comparator.nullsLast(Comparator.reverseOrder());
+        Comparator<String> descString = Comparator.nullsLast(Comparator.reverseOrder());
+        return Comparator.comparing(InvoiceEntity::getIssuedAt, descDate)
+                .thenComparing(InvoiceEntity::getCreatedAt, descDate)
+                .thenComparing(InvoiceEntity::getInvoiceId, descString);
     }
 }

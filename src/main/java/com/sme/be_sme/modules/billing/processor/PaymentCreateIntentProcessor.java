@@ -51,6 +51,9 @@ public class PaymentCreateIntentProcessor extends BaseBizProcessor<BizContext> {
         }
 
         Integer amount = invoice.getAmountTotal() != null ? invoice.getAmountTotal() : 0;
+        if (amount <= 0) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "invoice amount must be greater than 0");
+        }
         String currency = StringUtils.hasText(invoice.getCurrency()) ? invoice.getCurrency() : "VND";
 
         PaymentGatewayPort.CreateIntentResult result = paymentGateway.createIntent(companyId, invoiceId, amount, currency);
