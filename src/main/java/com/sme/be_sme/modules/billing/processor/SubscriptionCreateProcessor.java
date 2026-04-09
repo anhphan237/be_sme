@@ -19,11 +19,13 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class SubscriptionCreateProcessor extends BaseBizProcessor<BizContext> {
 
     private final ObjectMapper objectMapper;
@@ -64,7 +66,17 @@ public class SubscriptionCreateProcessor extends BaseBizProcessor<BizContext> {
         if (inserted != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create subscription failed");
         }
-        saveInitialHistory(entity, context.getOperatorId(), now);
+        try {
+            saveInitialHistory(entity, context.getOperatorId(), now);
+        } catch (Exception historyEx) {
+            // Do not fail subscription creation when history persistence is unavailable.
+            log.warn(
+                    "SubscriptionCreateProcessor: initial history write failed tenantId={} subscriptionId={} - {}",
+                    entity.getCompanyId(),
+                    entity.getSubscriptionId(),
+                    historyEx.getMessage(),
+                    historyEx);
+        }
 
         SubscriptionResponse response = new SubscriptionResponse();
         response.setSubscriptionId(entity.getSubscriptionId());
