@@ -6,8 +6,10 @@ import com.sme.be_sme.modules.billing.api.request.SubscriptionCreateRequest;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionResponse;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionPlanHistoryMapper;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
+import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionPlanHistoryEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -27,6 +29,7 @@ public class SubscriptionCreateProcessor extends BaseBizProcessor<BizContext> {
     private final ObjectMapper objectMapper;
     private final SubscriptionMapper subscriptionMapper;
     private final PlanMapper planMapper;
+    private final SubscriptionPlanHistoryMapper subscriptionPlanHistoryMapper;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -61,6 +64,7 @@ public class SubscriptionCreateProcessor extends BaseBizProcessor<BizContext> {
         if (inserted != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create subscription failed");
         }
+        saveInitialHistory(entity, context.getOperatorId(), now);
 
         SubscriptionResponse response = new SubscriptionResponse();
         response.setSubscriptionId(entity.getSubscriptionId());
@@ -96,5 +100,21 @@ public class SubscriptionCreateProcessor extends BaseBizProcessor<BizContext> {
 
     private static Date toDate(LocalDate localDate) {
         return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    private void saveInitialHistory(SubscriptionEntity entity, String changedBy, Date now) {
+        SubscriptionPlanHistoryEntity history = new SubscriptionPlanHistoryEntity();
+        history.setSubscriptionPlanHistoryId(UuidGenerator.generate());
+        history.setCompanyId(entity.getCompanyId());
+        history.setSubscriptionId(entity.getSubscriptionId());
+        history.setOldPlanId(null);
+        history.setNewPlanId(entity.getPlanId());
+        history.setBillingCycle(entity.getBillingCycle());
+        history.setChangedBy(changedBy);
+        history.setChangedAt(now);
+        history.setEffectiveFrom(now);
+        history.setEffectiveTo(null);
+        history.setCreatedAt(now);
+        subscriptionPlanHistoryMapper.insert(history);
     }
 }

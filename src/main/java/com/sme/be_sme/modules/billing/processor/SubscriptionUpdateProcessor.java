@@ -7,13 +7,16 @@ import com.sme.be_sme.modules.billing.api.response.SubscriptionResponse;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapperExt;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionPlanHistoryMapper;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
+import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionPlanHistoryEntity;
 import com.sme.be_sme.modules.billing.service.ProrateService;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import com.sme.be_sme.shared.util.UuidGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,6 +32,7 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
     private final ObjectMapper objectMapper;
     private final SubscriptionMapper subscriptionMapper;
     private final SubscriptionMapperExt subscriptionMapperExt;
+    private final SubscriptionPlanHistoryMapper subscriptionPlanHistoryMapper;
     private final PlanMapper planMapper;
     private final ProrateService prorateService;
 
@@ -43,11 +47,13 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
             if (entity == null || !context.getTenantId().trim().equals(entity.getCompanyId())) {
                 throw AppException.of(ErrorCodes.NOT_FOUND, "subscription not found");
             }
+            String oldPlanId = entity.getPlanId();
 
             PlanEntity oldPlan = null;
             if (StringUtils.hasText(entity.getPlanId())) {
                 oldPlan = planMapper.selectByPrimaryKey(entity.getPlanId());
             }
+            String oldPlanCode = oldPlan == null ? null : oldPlan.getCode();
 
             if (StringUtils.hasText(request.getPlanCode())) {
                 PlanEntity newPlan = findPlanByCode(context.getTenantId().trim(), request.getPlanCode().trim());
@@ -69,6 +75,7 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
                 entity.setStatus(request.getStatus().trim());
             }
             String statusToUpdate = entity.getStatus() != null ? entity.getStatus() : "ACTIVE";
+            entity.setStatus(statusToUpdate);
             Date updatedAt = new Date();
             entity.setUpdatedAt(updatedAt);
 
@@ -78,19 +85,44 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
                     entity.getBillingCycle(),
                     statusToUpdate,
                     updatedAt);
-            if (updated != 1) {
-                log.warn("SubscriptionUpdateProcessor: selective update returned {}, trying full update for subscriptionId={}", updated, subscriptionId);
-                entity.setStatus(statusToUpdate);
-                updated = subscriptionMapper.updateByPrimaryKey(entity);
-            }
-            if (updated != 1) {
+            if (updated == 0) {
+                // Some databases report 0 affected rows when values are unchanged.
+                SubscriptionEntity latest = subscriptionMapper.selectByPrimaryKey(subscriptionId);
+                if (latest == null) {
+                    throw AppException.of(ErrorCodes.NOT_FOUND, "subscription not found");
+                }
+                if (!matchesDesiredState(latest, entity)) {
+                    log.error("SubscriptionUpdateProcessor: update returned 0 and database state differs for subscriptionId={}", subscriptionId);
+                    throw AppException.of(ErrorCodes.INTERNAL_ERROR, "update subscription failed");
+                }
+                log.info("SubscriptionUpdateProcessor: no-op update for subscription {}", subscriptionId);
+                entity = latest;
+            } else if (updated == 1) {
+                SubscriptionEntity latest = subscriptionMapper.selectByPrimaryKey(subscriptionId);
+                if (latest != null) {
+                    entity = latest;
+                }
+            } else {
                 log.error("SubscriptionUpdateProcessor: update failed (returned {}) for subscriptionId={}", updated, subscriptionId);
                 throw AppException.of(ErrorCodes.INTERNAL_ERROR, "update subscription failed");
             }
 
+            if (!equalsTrimmed(oldPlanId, entity.getPlanId())) {
+                savePlanChangeHistory(entity, oldPlanId, context.getOperatorId(), updatedAt);
+            }
+
             SubscriptionResponse response = buildResponse(entity, request, oldPlan);
 
-            log.info("SubscriptionUpdateProcessor: updated subscription {} to plan {}", subscriptionId, resolvePlanCode(entity.getPlanId()));
+            String newPlanCode = resolvePlanCode(entity.getPlanId());
+            log.info(
+                    "SubscriptionUpdateProcessor: plan change tenantId={} operatorId={} subscriptionId={} oldPlan={} newPlan={} billingCycle={} status={}",
+                    context.getTenantId(),
+                    context.getOperatorId(),
+                    subscriptionId,
+                    oldPlanCode,
+                    newPlanCode,
+                    entity.getBillingCycle(),
+                    entity.getStatus());
             return response;
         } catch (AppException e) {
             throw e;
@@ -149,5 +181,41 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
         }
         PlanEntity plan = planMapper.selectByPrimaryKey(planId);
         return plan == null ? null : plan.getCode();
+    }
+
+    private static boolean matchesDesiredState(SubscriptionEntity actual, SubscriptionEntity desired) {
+        if (actual == null || desired == null) {
+            return false;
+        }
+        return equalsTrimmed(actual.getPlanId(), desired.getPlanId())
+                && equalsTrimmed(actual.getBillingCycle(), desired.getBillingCycle())
+                && equalsTrimmed(actual.getStatus(), desired.getStatus());
+    }
+
+    private static boolean equalsTrimmed(String left, String right) {
+        String l = left == null ? null : left.trim();
+        String r = right == null ? null : right.trim();
+        if (l == null) {
+            return r == null;
+        }
+        return l.equals(r);
+    }
+
+    private void savePlanChangeHistory(SubscriptionEntity entity, String oldPlanId, String changedBy, Date changeTime) {
+        subscriptionPlanHistoryMapper.closeOpenBySubscription(entity.getCompanyId(), entity.getSubscriptionId(), changeTime);
+
+        SubscriptionPlanHistoryEntity history = new SubscriptionPlanHistoryEntity();
+        history.setSubscriptionPlanHistoryId(UuidGenerator.generate());
+        history.setCompanyId(entity.getCompanyId());
+        history.setSubscriptionId(entity.getSubscriptionId());
+        history.setOldPlanId(oldPlanId);
+        history.setNewPlanId(entity.getPlanId());
+        history.setBillingCycle(entity.getBillingCycle());
+        history.setChangedBy(changedBy);
+        history.setChangedAt(changeTime);
+        history.setEffectiveFrom(changeTime);
+        history.setEffectiveTo(null);
+        history.setCreatedAt(changeTime);
+        subscriptionPlanHistoryMapper.insert(history);
     }
 }
