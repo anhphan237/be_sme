@@ -108,7 +108,19 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
             }
 
             if (!equalsTrimmed(oldPlanId, entity.getPlanId())) {
-                savePlanChangeHistory(entity, oldPlanId, context.getOperatorId(), updatedAt);
+                try {
+                    savePlanChangeHistory(entity, oldPlanId, context.getOperatorId(), updatedAt);
+                } catch (Exception historyEx) {
+                    // Keep plan change successful even if history table/migration is unavailable.
+                    log.warn(
+                            "SubscriptionUpdateProcessor: history write failed tenantId={} subscriptionId={} oldPlanId={} newPlanId={} - {}",
+                            context.getTenantId(),
+                            entity.getSubscriptionId(),
+                            oldPlanId,
+                            entity.getPlanId(),
+                            historyEx.getMessage(),
+                            historyEx);
+                }
             }
 
             SubscriptionResponse response = buildResponse(entity, request, oldPlan);
