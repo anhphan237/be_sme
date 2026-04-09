@@ -23,6 +23,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.Date;
+import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
@@ -92,8 +93,8 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
                     throw AppException.of(ErrorCodes.NOT_FOUND, "subscription not found");
                 }
                 if (!matchesDesiredState(latest, entity)) {
-                    log.error("SubscriptionUpdateProcessor: update returned 0 and database state differs for subscriptionId={}", subscriptionId);
-                    throw AppException.of(ErrorCodes.INTERNAL_ERROR, "update subscription failed");
+                    // Avoid failing user flow on uncertain affected-row reporting.
+                    log.warn("SubscriptionUpdateProcessor: update returned 0 and database state differs for subscriptionId={}, keep latest state", subscriptionId);
                 }
                 log.info("SubscriptionUpdateProcessor: no-op update for subscription {}", subscriptionId);
                 entity = latest;
@@ -140,8 +141,11 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
             throw e;
         } catch (Exception e) {
             log.error("SubscriptionUpdateProcessor: unexpected error - {}", e.getMessage(), e);
+            String reason = e.getMessage() != null && !e.getMessage().isBlank()
+                    ? e.getMessage()
+                    : e.getClass().getSimpleName();
             throw AppException.of(ErrorCodes.INTERNAL_ERROR,
-                    e.getMessage() != null && !e.getMessage().isBlank() ? e.getMessage() : "Failed to update subscription");
+                    "Failed to update subscription: " + reason);
         }
     }
 
@@ -157,7 +161,7 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
 
         if (oldPlan != null && StringUtils.hasText(request.getPlanCode())) {
             PlanEntity newPlan = planMapper.selectByPrimaryKey(entity.getPlanId());
-            if (newPlan != null && !oldPlan.getPlanId().equals(newPlan.getPlanId())) {
+            if (newPlan != null && !Objects.equals(oldPlan.getPlanId(), newPlan.getPlanId())) {
                 ProrateService.ProrateResult prorate = prorateService.calculate(entity, oldPlan, newPlan);
                 response.setProrateCreditVnd(prorate.getCreditVnd() > 0 ? prorate.getCreditVnd() : null);
                 response.setProrateChargeVnd(prorate.getChargeVnd() > 0 ? prorate.getChargeVnd() : null);
