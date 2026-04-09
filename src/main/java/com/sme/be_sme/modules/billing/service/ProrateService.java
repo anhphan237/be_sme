@@ -4,7 +4,6 @@ import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEnti
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
 import lombok.Getter;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -63,6 +62,9 @@ public class ProrateService {
     }
 
     private static LocalDate toLocalDate(Date date) {
+        if (date instanceof java.sql.Date sqlDate) {
+            return sqlDate.toLocalDate();
+        }
         return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
     }
 
