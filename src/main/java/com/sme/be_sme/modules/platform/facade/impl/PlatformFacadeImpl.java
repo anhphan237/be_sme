@@ -6,7 +6,9 @@ import com.sme.be_sme.modules.platform.facade.PlatformFacade;
 import com.sme.be_sme.modules.platform.processor.analytics.*;
 import com.sme.be_sme.modules.platform.processor.audit.PlatformAdminAuditLogProcessor;
 import com.sme.be_sme.modules.platform.processor.company.*;
+import com.sme.be_sme.modules.platform.processor.dashboard.PlatformDashboardOverviewProcessor;
 import com.sme.be_sme.modules.platform.processor.dashboard.PlatformFinancialDashboardProcessor;
+import com.sme.be_sme.modules.platform.processor.dashboard.PlatformRiskDashboardProcessor;
 import com.sme.be_sme.modules.platform.processor.feedback.FeedbackSubmitProcessor;
 import com.sme.be_sme.modules.platform.processor.feedback.PlatformFeedbackDetailProcessor;
 import com.sme.be_sme.modules.platform.processor.feedback.PlatformFeedbackListProcessor;
@@ -61,6 +63,16 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     private final PlatformCompanySuspendProcessor companySuspendProcessor;
     private final PlatformCompanyChangePlanProcessor companyChangePlanProcessor;
     private final PlatformAdminAuditLogProcessor adminAuditLogProcessor;
+    private final PlatformDashboardOverviewProcessor platformDashboardOverviewProcessor;
+    private final PlatformCompanyTrendProcessor platformCompanyTrendProcessor;
+    private final PlatformRevenueTrendProcessor platformRevenueTrendProcessor;
+    private final PlatformPlanTrendProcessor platformPlanTrendProcessor;
+    private final PlatformEmployeeAnalyticsProcessor platformEmployeeAnalyticsProcessor;
+    private final PlatformEmployeeTrendProcessor platformEmployeeTrendProcessor;
+    private final PlatformPlanDistributionProcessor platformPlanDistributionProcessor;
+    private final PlatformForecastProcessor platformForecastProcessor;
+    private final PlatformOnboardingTrendProcessor platformOnboardingTrendProcessor;
+    private final PlatformRiskDashboardProcessor platformRiskDashboardProcessor;
 
     @Override
     public PlatformCompanyListResponse listCompanies(PlatformCompanyListRequest request) {
@@ -210,5 +222,55 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     @Override
     public PlatformAdminAuditLogResponse getAdminAuditLog(PlatformAdminAuditLogRequest request) {
         return call(adminAuditLogProcessor, request, PlatformAdminAuditLogResponse.class);
+    }
+
+    @Override
+    public PlatformDashboardOverviewResponse getDashboardOverview(PlatformDashboardOverviewRequest request) {
+        return call(platformDashboardOverviewProcessor, request, PlatformDashboardOverviewResponse.class);
+    }
+
+    @Override
+    public PlatformCompanyTrendResponse getCompanyTrend(PlatformCompanyTrendRequest request) {
+        return call(platformCompanyTrendProcessor, request, PlatformCompanyTrendResponse.class);
+    }
+
+    @Override
+    public PlatformRevenueTrendResponse getRevenueTrend(PlatformRevenueTrendRequest request) {
+        return call(platformRevenueTrendProcessor, request, PlatformRevenueTrendResponse.class);
+    }
+
+    @Override
+    public PlatformPlanTrendResponse getPlanTrend(PlatformPlanTrendRequest request) {
+        return call(platformPlanTrendProcessor, request, PlatformPlanTrendResponse.class);
+    }
+
+    @Override
+    public PlatformEmployeeAnalyticsResponse getEmployeeAnalytics(PlatformEmployeeAnalyticsRequest request) {
+        return call(platformEmployeeAnalyticsProcessor, request, PlatformEmployeeAnalyticsResponse.class);
+    }
+
+    @Override
+    public PlatformEmployeeTrendResponse getEmployeeTrend(PlatformEmployeeTrendRequest request) {
+        return call(platformEmployeeTrendProcessor, request, PlatformEmployeeTrendResponse.class);
+    }
+
+    @Override
+    public PlatformPlanDistributionResponse getPlanDistribution(PlatformPlanDistributionRequest request) {
+        return call(platformPlanDistributionProcessor, request, PlatformPlanDistributionResponse.class);
+    }
+
+    @Override
+    public PlatformForecastResponse getForecast(PlatformForecastRequest request) {
+        return call(platformForecastProcessor, request, PlatformForecastResponse.class);
+    }
+
+    @Override
+    public PlatformOnboardingTrendResponse getOnboardingTrend(PlatformOnboardingTrendRequest request) {
+        return call(platformOnboardingTrendProcessor, request, PlatformOnboardingTrendResponse.class);
+    }
+
+    @Override
+    public PlatformRiskDashboardResponse getRiskDashboard(PlatformRiskDashboardRequest request) {
+        return call(platformRiskDashboardProcessor, request, PlatformRiskDashboardResponse.class);
     }
 }
