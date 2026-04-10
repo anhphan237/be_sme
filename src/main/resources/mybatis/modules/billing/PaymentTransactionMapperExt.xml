@@ -24,6 +24,18 @@
         ORDER BY created_at DESC
     </select>
 
+    <select id="selectByCompanyIdPaged" resultMap="BaseResultMap">
+        SELECT * FROM payment_transactions
+        WHERE company_id = #{companyId}
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByCompanyId" resultType="long">
+        SELECT COUNT(1) FROM payment_transactions
+        WHERE company_id = #{companyId}
+    </select>
+
     <select id="selectByProviderTxnId" resultMap="BaseResultMap">
         SELECT * FROM payment_transactions
         WHERE provider_txn_id = #{providerTxnId}

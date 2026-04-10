@@ -6,5 +6,13 @@ import lombok.Setter;
 @Getter
 @Setter
 public class PaymentTransactionsRequest {
-    // empty payload – lists all transactions for the tenant
+    /**
+     * 1-based page index. Defaults to 1.
+     */
+    private Integer page;
+
+    /**
+     * Number of items per page. Defaults to 20.
+     */
+    private Integer pageSize;
 }
