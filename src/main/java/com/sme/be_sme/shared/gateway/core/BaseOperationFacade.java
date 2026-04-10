@@ -1,6 +1,8 @@
 package com.sme.be_sme.shared.gateway.core;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,11 +60,24 @@ public abstract class BaseOperationFacade implements OperationFacadeProvider {
         ctx.setOperatorId(biz.getOperatorId());
         ctx.setRoles(biz.getRoles());
 
-        // Copy payload
-        ctx.setPayload(objectMapper.valueToTree(request));
+        // Copy payload. Some request DTOs are intentionally empty (e.g. list-all APIs).
+        // Jackson may throw FAIL_ON_EMPTY_BEANS during valueToTree, so fallback to {}.
+        ctx.setPayload(toPayloadNode(request));
 
         // Gọi execute
         Object res = processor.execute(ctx);
         return responseType.cast(res);
+    }
+
+    private JsonNode toPayloadNode(Object request) {
+        try {
+            return objectMapper.valueToTree(request);
+        } catch (IllegalArgumentException ex) {
+            Throwable cause = ex.getCause();
+            if (cause instanceof InvalidDefinitionException) {
+                return objectMapper.createObjectNode();
+            }
+            throw ex;
+        }
     }
 }
