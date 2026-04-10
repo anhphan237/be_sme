@@ -19,4 +19,14 @@ public class SubscriptionResponse {
     private Integer prorateCreditVnd;
     /** Prorated charge (VND) when upgrading – charge or add to next invoice */
     private Integer prorateChargeVnd;
+    /** true when plan change is created but waiting for payment success */
+    private Boolean paymentRequired;
+    /** pending subscription change request id (if paymentRequired=true) */
+    private String pendingChangeId;
+    /** issued invoice id for completing pending plan change payment */
+    private String paymentInvoiceId;
+    /** requested plan code waiting to be applied after successful payment */
+    private String pendingPlanCode;
+    /** requested billing cycle waiting to be applied after successful payment */
+    private String pendingBillingCycle;
 }

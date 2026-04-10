@@ -6,13 +6,22 @@ import com.sme.be_sme.modules.billing.enums.InvoiceStatus;
 import com.sme.be_sme.modules.billing.enums.PaymentTransactionStatus;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PaymentTransactionMapperExt;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionChangeRequestMapper;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapperExt;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionPlanHistoryMapper;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.InvoiceEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PaymentTransactionEntity;
+import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionChangeRequestEntity;
+import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
+import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionPlanHistoryEntity;
+import com.sme.be_sme.shared.util.UuidGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,6 +40,10 @@ public class StripeWebhookController {
     private final ObjectMapper objectMapper;
     private final PaymentTransactionMapperExt paymentTransactionMapperExt;
     private final InvoiceMapper invoiceMapper;
+    private final SubscriptionChangeRequestMapper subscriptionChangeRequestMapper;
+    private final SubscriptionMapper subscriptionMapper;
+    private final SubscriptionMapperExt subscriptionMapperExt;
+    private final SubscriptionPlanHistoryMapper subscriptionPlanHistoryMapper;
 
     @Value("${app.stripe.webhook-secret:}")
     private String webhookSecret;
@@ -95,6 +108,7 @@ public class StripeWebhookController {
                 log.info("Invoice {} marked as PAID via Stripe webhook", invoice.getInvoiceId());
             }
         }
+        applyPendingPlanChangeIfAny(txn, now);
         log.info("PaymentIntent {} succeeded, txn {} updated", paymentIntentId, txn.getPaymentTransactionId());
     }
 
@@ -115,7 +129,100 @@ public class StripeWebhookController {
         txn.setStatus(PaymentTransactionStatus.FAILED.getCode());
         txn.setFailureReason(failureMessage.length() > 255 ? failureMessage.substring(0, 255) : failureMessage);
         updateTransaction(txn);
+        markPendingPlanChangeFailed(txn, failureMessage);
         log.warn("PaymentIntent {} failed: {}", paymentIntentId, failureMessage);
+    }
+
+    @Transactional
+    protected void applyPendingPlanChangeIfAny(PaymentTransactionEntity txn, Date now) {
+        if (!StringUtils.hasText(txn.getInvoiceId()) || !StringUtils.hasText(txn.getCompanyId())) {
+            return;
+        }
+        SubscriptionChangeRequestEntity pending = subscriptionChangeRequestMapper.selectPendingByInvoiceId(
+                txn.getCompanyId(), txn.getInvoiceId()
+        );
+        if (pending == null) {
+            return;
+        }
+
+        try {
+            SubscriptionEntity subscription = subscriptionMapper.selectByPrimaryKey(pending.getSubscriptionId());
+            if (subscription == null || !txn.getCompanyId().equals(subscription.getCompanyId())) {
+                subscriptionChangeRequestMapper.markFailed(
+                        pending.getSubscriptionChangeRequestId(),
+                        "subscription not found while applying pending plan change",
+                        now
+                );
+                log.warn("Stripe webhook: pending change {} cannot be applied, subscription missing", pending.getSubscriptionChangeRequestId());
+                return;
+            }
+
+            int updated = subscriptionMapperExt.updatePlanAndStatus(
+                    subscription.getSubscriptionId(),
+                    pending.getNewPlanId(),
+                    pending.getBillingCycle(),
+                    "ACTIVE",
+                    now
+            );
+            if (updated == 0) {
+                SubscriptionEntity latest = subscriptionMapper.selectByPrimaryKey(subscription.getSubscriptionId());
+                if (latest == null) {
+                    subscriptionChangeRequestMapper.markFailed(
+                            pending.getSubscriptionChangeRequestId(),
+                            "subscription missing after update attempt",
+                            now
+                    );
+                    return;
+                }
+                boolean alreadyApplied = equalsTrimmed(latest.getPlanId(), pending.getNewPlanId())
+                        && equalsTrimmed(latest.getBillingCycle(), pending.getBillingCycle());
+                if (!alreadyApplied) {
+                    subscriptionChangeRequestMapper.markFailed(
+                            pending.getSubscriptionChangeRequestId(),
+                            "could not update subscription to requested plan",
+                            now
+                    );
+                    return;
+                }
+            }
+
+            try {
+                savePlanChangeHistory(subscription, pending.getOldPlanId(), pending.getNewPlanId(), pending.getBillingCycle(), pending.getRequestedBy(), now);
+            } catch (Exception historyEx) {
+                log.warn("Stripe webhook: history write failed for pending change {} - {}",
+                        pending.getSubscriptionChangeRequestId(), historyEx.getMessage(), historyEx);
+            }
+
+            subscriptionChangeRequestMapper.markApplied(pending.getSubscriptionChangeRequestId(), now, now);
+            log.info("Stripe webhook: applied pending subscription change {} for subscription {}",
+                    pending.getSubscriptionChangeRequestId(), pending.getSubscriptionId());
+        } catch (Exception e) {
+            String msg = e.getMessage() == null ? "apply pending plan change failed" : e.getMessage();
+            subscriptionChangeRequestMapper.markFailed(
+                    pending.getSubscriptionChangeRequestId(),
+                    msg.length() > 255 ? msg.substring(0, 255) : msg,
+                    now
+            );
+            log.error("Stripe webhook: failed applying pending subscription change {} - {}",
+                    pending.getSubscriptionChangeRequestId(), e.getMessage(), e);
+        }
+    }
+
+    private void markPendingPlanChangeFailed(PaymentTransactionEntity txn, String failureMessage) {
+        if (!StringUtils.hasText(txn.getInvoiceId()) || !StringUtils.hasText(txn.getCompanyId())) {
+            return;
+        }
+        SubscriptionChangeRequestEntity pending = subscriptionChangeRequestMapper.selectPendingByInvoiceId(
+                txn.getCompanyId(), txn.getInvoiceId()
+        );
+        if (pending == null) return;
+        Date now = new Date();
+        String reason = failureMessage == null ? "payment failed" : failureMessage;
+        if (reason.length() > 255) {
+            reason = reason.substring(0, 255);
+        }
+        subscriptionChangeRequestMapper.markFailed(pending.getSubscriptionChangeRequestId(), reason, now);
+        log.info("Stripe webhook: pending subscription change {} marked FAILED", pending.getSubscriptionChangeRequestId());
     }
 
     private void updateTransaction(PaymentTransactionEntity txn) {
@@ -135,6 +242,35 @@ public class StripeWebhookController {
         } catch (Exception e) {
             log.error("Failed to update transaction {}: {}", txn.getPaymentTransactionId(), e.getMessage());
         }
+    }
+
+    private void savePlanChangeHistory(SubscriptionEntity subscription,
+                                       String oldPlanId,
+                                       String newPlanId,
+                                       String billingCycle,
+                                       String changedBy,
+                                       Date changeTime) {
+        subscriptionPlanHistoryMapper.closeOpenBySubscription(subscription.getCompanyId(), subscription.getSubscriptionId(), changeTime);
+        SubscriptionPlanHistoryEntity history = new SubscriptionPlanHistoryEntity();
+        history.setSubscriptionPlanHistoryId(UuidGenerator.generate());
+        history.setCompanyId(subscription.getCompanyId());
+        history.setSubscriptionId(subscription.getSubscriptionId());
+        history.setOldPlanId(oldPlanId);
+        history.setNewPlanId(newPlanId);
+        history.setBillingCycle(billingCycle);
+        history.setChangedBy(changedBy);
+        history.setChangedAt(changeTime);
+        history.setEffectiveFrom(changeTime);
+        history.setEffectiveTo(null);
+        history.setCreatedAt(changeTime);
+        subscriptionPlanHistoryMapper.insert(history);
+    }
+
+    private static boolean equalsTrimmed(String left, String right) {
+        String l = left == null ? null : left.trim();
+        String r = right == null ? null : right.trim();
+        if (l == null) return r == null;
+        return l.equals(r);
     }
 
     private boolean verifySignature(String payload, String sigHeader, String secret) {

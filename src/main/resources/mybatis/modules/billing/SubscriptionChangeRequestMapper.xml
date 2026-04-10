@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionChangeRequestMapper">
+
+    <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionChangeRequestEntity">
+        <id column="subscription_change_request_id" property="subscriptionChangeRequestId"/>
+        <result column="company_id" property="companyId"/>
+        <result column="subscription_id" property="subscriptionId"/>
+        <result column="old_plan_id" property="oldPlanId"/>
+        <result column="new_plan_id" property="newPlanId"/>
+        <result column="billing_cycle" property="billingCycle"/>
+        <result column="invoice_id" property="invoiceId"/>
+        <result column="status" property="status"/>
+        <result column="requested_by" property="requestedBy"/>
+        <result column="failure_reason" property="failureReason"/>
+        <result column="requested_at" property="requestedAt"/>
+        <result column="applied_at" property="appliedAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionChangeRequestEntity">
+        insert into subscription_change_requests (
+            subscription_change_request_id,
+            company_id,
+            subscription_id,
+            old_plan_id,
+            new_plan_id,
+            billing_cycle,
+            invoice_id,
+            status,
+            requested_by,
+            failure_reason,
+            requested_at,
+            applied_at,
+            created_at,
+            updated_at
+        ) values (
+            #{subscriptionChangeRequestId},
+            #{companyId},
+            #{subscriptionId},
+            #{oldPlanId},
+            #{newPlanId},
+            #{billingCycle},
+            #{invoiceId},
+            #{status},
+            #{requestedBy},
+            #{failureReason},
+            #{requestedAt},
+            #{appliedAt},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectOpenBySubscriptionId" resultMap="BaseResultMap">
+        select *
+        from subscription_change_requests
+        where company_id = #{companyId}
+          and subscription_id = #{subscriptionId}
+          and status = 'PENDING_PAYMENT'
+        order by created_at desc
+        limit 1
+    </select>
+
+    <select id="selectPendingByInvoiceId" resultMap="BaseResultMap">
+        select *
+        from subscription_change_requests
+        where company_id = #{companyId}
+          and invoice_id = #{invoiceId}
+          and status = 'PENDING_PAYMENT'
+        limit 1
+    </select>
+
+    <update id="markApplied">
+        update subscription_change_requests
+        set status = 'APPLIED',
+            applied_at = #{appliedAt},
+            updated_at = #{updatedAt}
+        where subscription_change_request_id = #{requestId}
+          and status = 'PENDING_PAYMENT'
+    </update>
+
+    <update id="markFailed">
+        update subscription_change_requests
+        set status = 'FAILED',
+            failure_reason = #{failureReason},
+            updated_at = #{updatedAt}
+        where subscription_change_request_id = #{requestId}
+          and status = 'PENDING_PAYMENT'
+    </update>
+</mapper>
