@@ -50,7 +50,7 @@ app:
     hmacSecret: ${JWT_HMAC_SECRET}
     accessTtlSeconds: 86400  # 1 day
   invite:
-    base-url: ${INVITE_BASE_URL:http://localhost:3000}
+    base-url: ${INVITE_BASE_URL:https://fe-sme.vercel.app}
     token-ttl-hours: ${INVITE_TOKEN_TTL_HOURS:72}
   # payment gateway: stripe | mock (default stripe for real payments; set mock for local dev)
   payment:

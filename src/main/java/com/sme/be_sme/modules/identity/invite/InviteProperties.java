@@ -11,7 +11,7 @@ public class InviteProperties {
     /**
      * Frontend base URL for invite links, e.g. https://app.example.com
      */
-    private String baseUrl = "http://localhost:3000";
+    private String baseUrl = "https://fe-sme.vercel.app";
 
     /**
      * Token validity in hours (default 72)
