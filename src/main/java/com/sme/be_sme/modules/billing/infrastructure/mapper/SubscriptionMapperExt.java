@@ -20,4 +20,8 @@ public interface SubscriptionMapperExt {
                            @Param("billingCycle") String billingCycle,
                            @Param("status") String status,
                            @Param("updatedAt") Date updatedAt);
+
+    int updateAutoRenewAndUpdatedAt(@Param("subscriptionId") String subscriptionId,
+                                    @Param("autoRenew") Boolean autoRenew,
+                                    @Param("updatedAt") Date updatedAt);
 }

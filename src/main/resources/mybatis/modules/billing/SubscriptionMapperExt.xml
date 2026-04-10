@@ -10,4 +10,11 @@
             updated_at = #{updatedAt,jdbcType=TIMESTAMP}
         where subscription_id = #{subscriptionId,jdbcType=VARCHAR}
     </update>
+
+    <update id="updateAutoRenewAndUpdatedAt">
+        update subscriptions
+        set auto_renew = #{autoRenew,jdbcType=BOOLEAN},
+            updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+        where subscription_id = #{subscriptionId,jdbcType=VARCHAR}
+    </update>
 </mapper>
