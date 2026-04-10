@@ -10,6 +10,10 @@ import java.util.List;
 @Mapper
 public interface PaymentTransactionMapperExt {
     List<PaymentTransactionEntity> selectByCompanyId(@Param("companyId") String companyId);
+    List<PaymentTransactionEntity> selectByCompanyIdPaged(@Param("companyId") String companyId,
+                                                          @Param("limit") int limit,
+                                                          @Param("offset") int offset);
+    long countByCompanyId(@Param("companyId") String companyId);
     PaymentTransactionEntity selectByProviderTxnId(@Param("providerTxnId") String providerTxnId);
     int updateStatusByProviderTxnId(@Param("providerTxnId") String providerTxnId,
                                     @Param("status") String status,

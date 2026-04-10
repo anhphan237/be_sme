@@ -10,6 +10,9 @@ import java.util.List;
 @Setter
 public class PaymentTransactionsResponse {
     private List<TransactionItem> transactions;
+    private Integer page;
+    private Integer pageSize;
+    private Long total;
 
     @Getter
     @Setter
@@ -17,9 +20,14 @@ public class PaymentTransactionsResponse {
         private String id;
         private String invoiceId;
         private Integer amount;
+        private Double amountInDecimal;
         private String currency;
         private String status;
+        private String type;
+        private String paymentMethod;
         private String provider;
+        private String providerTransactionId;
+        private String description;
         private Date createdAt;
         private String companyId;
     }
