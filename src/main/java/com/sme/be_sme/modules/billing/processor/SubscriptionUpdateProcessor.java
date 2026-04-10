@@ -4,11 +4,17 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.billing.api.request.SubscriptionUpdateRequest;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionResponse;
+import com.sme.be_sme.modules.billing.enums.InvoiceStatus;
+import com.sme.be_sme.modules.billing.enums.SubscriptionChangeRequestStatus;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionChangeRequestMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapperExt;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionPlanHistoryMapper;
+import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.InvoiceEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
+import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionChangeRequestEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionPlanHistoryEntity;
 import com.sme.be_sme.modules.billing.service.ProrateService;
@@ -22,6 +28,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Objects;
 
@@ -34,6 +43,8 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
     private final SubscriptionMapper subscriptionMapper;
     private final SubscriptionMapperExt subscriptionMapperExt;
     private final SubscriptionPlanHistoryMapper subscriptionPlanHistoryMapper;
+    private final SubscriptionChangeRequestMapper subscriptionChangeRequestMapper;
+    private final InvoiceMapper invoiceMapper;
     private final PlanMapper planMapper;
     private final ProrateService prorateService;
 
@@ -49,6 +60,7 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
                 throw AppException.of(ErrorCodes.NOT_FOUND, "subscription not found");
             }
             String oldPlanId = entity.getPlanId();
+            String oldBillingCycle = entity.getBillingCycle();
 
             PlanEntity oldPlan = null;
             if (StringUtils.hasText(entity.getPlanId())) {
@@ -56,28 +68,42 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
             }
             String oldPlanCode = oldPlan == null ? null : oldPlan.getCode();
 
+            String targetPlanId = entity.getPlanId();
+            PlanEntity targetPlan = oldPlan;
             if (StringUtils.hasText(request.getPlanCode())) {
-                PlanEntity newPlan = findPlanByCode(context.getTenantId().trim(), request.getPlanCode().trim());
-                if (newPlan == null) {
+                targetPlan = findPlanByCode(context.getTenantId().trim(), request.getPlanCode().trim());
+                if (targetPlan == null) {
                     throw AppException.of(ErrorCodes.NOT_FOUND, "plan not found: " + request.getPlanCode());
                 }
-                entity.setPlanId(newPlan.getPlanId());
+                targetPlanId = targetPlan.getPlanId();
             }
 
-            if (StringUtils.hasText(request.getBillingCycle())) {
-                String cycle = request.getBillingCycle().trim().toUpperCase();
-                if (!"MONTHLY".equals(cycle) && !"YEARLY".equals(cycle)) {
-                    throw AppException.of(ErrorCodes.BAD_REQUEST, "billingCycle must be MONTHLY or YEARLY");
-                }
-                entity.setBillingCycle(cycle);
+            String targetBillingCycle = normalizeBillingCycle(request.getBillingCycle(), entity.getBillingCycle());
+            String statusToUpdate = StringUtils.hasText(request.getStatus())
+                    ? request.getStatus().trim()
+                    : (entity.getStatus() != null ? entity.getStatus() : "ACTIVE");
+
+            boolean planChanged = !equalsTrimmed(oldPlanId, targetPlanId);
+            boolean cycleChanged = !equalsTrimmed(oldBillingCycle, targetBillingCycle);
+
+            int chargeAmount = 0;
+            if (planChanged || cycleChanged) {
+                chargeAmount = estimatePlanChangeCharge(entity, oldPlan, targetPlan, targetBillingCycle);
             }
 
-            if (StringUtils.hasText(request.getStatus())) {
-                entity.setStatus(request.getStatus().trim());
-            }
-            String statusToUpdate = entity.getStatus() != null ? entity.getStatus() : "ACTIVE";
-            entity.setStatus(statusToUpdate);
             Date updatedAt = new Date();
+            if ((planChanged || cycleChanged) && chargeAmount > 0) {
+                ensureNoOpenPendingChange(entity);
+                InvoiceEntity invoice = createPlanChangeInvoice(entity, chargeAmount, updatedAt);
+                SubscriptionChangeRequestEntity pending = createPendingChangeRequest(
+                        context, entity, oldPlanId, targetPlanId, targetBillingCycle, invoice.getInvoiceId(), updatedAt
+                );
+                return buildPendingResponse(entity, targetPlan, targetBillingCycle, pending, chargeAmount);
+            }
+
+            entity.setPlanId(targetPlanId);
+            entity.setBillingCycle(targetBillingCycle);
+            entity.setStatus(statusToUpdate);
             entity.setUpdatedAt(updatedAt);
 
             int updated = subscriptionMapperExt.updatePlanAndStatus(
@@ -108,7 +134,7 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
                 throw AppException.of(ErrorCodes.INTERNAL_ERROR, "update subscription failed");
             }
 
-            if (!equalsTrimmed(oldPlanId, entity.getPlanId())) {
+            if (planChanged) {
                 try {
                     savePlanChangeHistory(entity, oldPlanId, context.getOperatorId(), updatedAt);
                 } catch (Exception historyEx) {
@@ -124,7 +150,7 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
                 }
             }
 
-            SubscriptionResponse response = buildResponse(entity, request, oldPlan);
+            SubscriptionResponse response = buildResponse(entity, oldPlan, targetPlan);
 
             String newPlanCode = resolvePlanCode(entity.getPlanId());
             log.info(
@@ -149,7 +175,7 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
         }
     }
 
-    private SubscriptionResponse buildResponse(SubscriptionEntity entity, SubscriptionUpdateRequest request, PlanEntity oldPlan) {
+    private SubscriptionResponse buildResponse(SubscriptionEntity entity, PlanEntity oldPlan, PlanEntity newPlan) {
         SubscriptionResponse response = new SubscriptionResponse();
         response.setSubscriptionId(entity.getSubscriptionId());
         response.setStatus(entity.getStatus());
@@ -158,15 +184,35 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
         response.setCurrentPeriodStart(entity.getCurrentPeriodStart());
         response.setCurrentPeriodEnd(entity.getCurrentPeriodEnd());
         response.setAutoRenew(entity.getAutoRenew());
+        response.setPaymentRequired(Boolean.FALSE);
 
-        if (oldPlan != null && StringUtils.hasText(request.getPlanCode())) {
-            PlanEntity newPlan = planMapper.selectByPrimaryKey(entity.getPlanId());
-            if (newPlan != null && !Objects.equals(oldPlan.getPlanId(), newPlan.getPlanId())) {
-                ProrateService.ProrateResult prorate = prorateService.calculate(entity, oldPlan, newPlan);
-                response.setProrateCreditVnd(prorate.getCreditVnd() > 0 ? prorate.getCreditVnd() : null);
-                response.setProrateChargeVnd(prorate.getChargeVnd() > 0 ? prorate.getChargeVnd() : null);
-            }
+        if (oldPlan != null && newPlan != null && !Objects.equals(oldPlan.getPlanId(), newPlan.getPlanId())) {
+            ProrateService.ProrateResult prorate = prorateService.calculate(entity, oldPlan, newPlan);
+            response.setProrateCreditVnd(prorate.getCreditVnd() > 0 ? prorate.getCreditVnd() : null);
+            response.setProrateChargeVnd(prorate.getChargeVnd() > 0 ? prorate.getChargeVnd() : null);
         }
+        return response;
+    }
+
+    private SubscriptionResponse buildPendingResponse(SubscriptionEntity current,
+                                                      PlanEntity targetPlan,
+                                                      String targetBillingCycle,
+                                                      SubscriptionChangeRequestEntity pending,
+                                                      int chargeAmount) {
+        SubscriptionResponse response = new SubscriptionResponse();
+        response.setSubscriptionId(current.getSubscriptionId());
+        response.setStatus(current.getStatus());
+        response.setPlanCode(resolvePlanCode(current.getPlanId()));
+        response.setBillingCycle(current.getBillingCycle());
+        response.setCurrentPeriodStart(current.getCurrentPeriodStart());
+        response.setCurrentPeriodEnd(current.getCurrentPeriodEnd());
+        response.setAutoRenew(current.getAutoRenew());
+        response.setPaymentRequired(Boolean.TRUE);
+        response.setPendingChangeId(pending.getSubscriptionChangeRequestId());
+        response.setPaymentInvoiceId(pending.getInvoiceId());
+        response.setPendingPlanCode(targetPlan == null ? null : targetPlan.getCode());
+        response.setPendingBillingCycle(targetBillingCycle);
+        response.setProrateChargeVnd(chargeAmount > 0 ? chargeAmount : null);
         return response;
     }
 
@@ -180,6 +226,113 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
         if (!StringUtils.hasText(request.getSubscriptionId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "subscriptionId is required");
         }
+    }
+
+    private String normalizeBillingCycle(String requestedCycle, String currentCycle) {
+        if (!StringUtils.hasText(requestedCycle)) {
+            return StringUtils.hasText(currentCycle) ? currentCycle.trim().toUpperCase() : "MONTHLY";
+        }
+        String cycle = requestedCycle.trim().toUpperCase();
+        if (!"MONTHLY".equals(cycle) && !"YEARLY".equals(cycle)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "billingCycle must be MONTHLY or YEARLY");
+        }
+        return cycle;
+    }
+
+    private int estimatePlanChangeCharge(SubscriptionEntity current,
+                                         PlanEntity oldPlan,
+                                         PlanEntity newPlan,
+                                         String targetBillingCycle) {
+        if (newPlan == null) return 0;
+        int oldPrice = resolvePlanPrice(oldPlan, targetBillingCycle);
+        int newPrice = resolvePlanPrice(newPlan, targetBillingCycle);
+        if (newPrice <= oldPrice) {
+            return 0;
+        }
+        if (oldPlan == null) {
+            return newPrice;
+        }
+
+        SubscriptionEntity calcBase = new SubscriptionEntity();
+        calcBase.setBillingCycle(targetBillingCycle);
+        calcBase.setCurrentPeriodStart(current.getCurrentPeriodStart());
+        calcBase.setCurrentPeriodEnd(current.getCurrentPeriodEnd());
+
+        ProrateService.ProrateResult prorate = prorateService.calculate(calcBase, oldPlan, newPlan);
+        if (prorate.getChargeVnd() > 0) {
+            return prorate.getChargeVnd();
+        }
+        if (oldPrice == 0) {
+            return newPrice;
+        }
+        return Math.max(0, newPrice - oldPrice);
+    }
+
+    private int resolvePlanPrice(PlanEntity plan, String billingCycle) {
+        if (plan == null) return 0;
+        if ("YEARLY".equalsIgnoreCase(billingCycle)) {
+            return plan.getPriceVndYearly() == null ? 0 : Math.max(0, plan.getPriceVndYearly());
+        }
+        return plan.getPriceVndMonthly() == null ? 0 : Math.max(0, plan.getPriceVndMonthly());
+    }
+
+    private void ensureNoOpenPendingChange(SubscriptionEntity subscription) {
+        SubscriptionChangeRequestEntity existing = subscriptionChangeRequestMapper.selectOpenBySubscriptionId(
+                subscription.getCompanyId(), subscription.getSubscriptionId()
+        );
+        if (existing != null) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "A subscription change is already pending payment (invoiceId=" + existing.getInvoiceId() + ")"
+            );
+        }
+    }
+
+    private InvoiceEntity createPlanChangeInvoice(SubscriptionEntity current, int chargeAmount, Date now) {
+        InvoiceEntity invoice = new InvoiceEntity();
+        String invoiceId = UuidGenerator.generate();
+        invoice.setInvoiceId(invoiceId);
+        invoice.setCompanyId(current.getCompanyId());
+        invoice.setSubscriptionId(current.getSubscriptionId());
+        invoice.setInvoiceNo(buildInvoiceNo(invoiceId));
+        invoice.setAmountTotal(chargeAmount);
+        invoice.setCurrency("VND");
+        invoice.setStatus(InvoiceStatus.ISSUED.getCode());
+        invoice.setIssuedAt(now);
+        invoice.setDueAt(addDays(now, 7));
+        invoice.setCreatedAt(now);
+        int inserted = invoiceMapper.insert(invoice);
+        if (inserted != 1) {
+            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "failed to create payment invoice for plan change");
+        }
+        return invoice;
+    }
+
+    private SubscriptionChangeRequestEntity createPendingChangeRequest(BizContext context,
+                                                                       SubscriptionEntity current,
+                                                                       String oldPlanId,
+                                                                       String newPlanId,
+                                                                       String billingCycle,
+                                                                       String invoiceId,
+                                                                       Date now) {
+        SubscriptionChangeRequestEntity req = new SubscriptionChangeRequestEntity();
+        req.setSubscriptionChangeRequestId(UuidGenerator.generate());
+        req.setCompanyId(current.getCompanyId());
+        req.setSubscriptionId(current.getSubscriptionId());
+        req.setOldPlanId(oldPlanId);
+        req.setNewPlanId(newPlanId);
+        req.setBillingCycle(billingCycle);
+        req.setInvoiceId(invoiceId);
+        req.setStatus(SubscriptionChangeRequestStatus.PENDING_PAYMENT.getCode());
+        req.setRequestedBy(context.getOperatorId());
+        req.setRequestedAt(now);
+        req.setCreatedAt(now);
+        req.setUpdatedAt(now);
+        int inserted = subscriptionChangeRequestMapper.insert(req);
+        if (inserted != 1) {
+            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "failed to create pending subscription change");
+        }
+        return req;
     }
 
     private PlanEntity findPlanByCode(String companyId, String planCode) {
@@ -233,5 +386,16 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
         history.setEffectiveTo(null);
         history.setCreatedAt(changeTime);
         subscriptionPlanHistoryMapper.insert(history);
+    }
+
+    private static String buildInvoiceNo(String invoiceId) {
+        String suffix = invoiceId.length() > 6 ? invoiceId.substring(invoiceId.length() - 6) : invoiceId;
+        String today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        return "INV-" + today + "-" + suffix;
+    }
+
+    private static Date addDays(Date start, int days) {
+        LocalDate date = start.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        return Date.from(date.plusDays(days).atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 }
