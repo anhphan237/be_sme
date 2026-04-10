@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class CorsFilter implements Filter {
 
-    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000,https://fe-sme.vercel.app,https://*.vercel.app}")
+    @Value("${app.cors.allowed-origins:http://localhost:5173,https://fe-sme.vercel.app,https://*.vercel.app}")
     private String allowedOrigins;
 
     private List<String> patterns;

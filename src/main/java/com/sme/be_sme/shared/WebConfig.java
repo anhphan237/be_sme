@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000,https://*.vercel.app}")
+    @Value("${app.cors.allowed-origins:http://localhost:5173,https://fe-sme.vercel.app,https://*.vercel.app}")
     private String allowedOrigins;
 
     @Override
@@ -29,7 +29,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .collect(Collectors.toList());
 
         if (patterns.isEmpty()) {
-            patterns = List.of("http://localhost:5173", "http://localhost:3000", "https://*.vercel.app");
+            patterns = List.of("http://localhost:5173", "https://fe-sme.vercel.app", "https://*.vercel.app");
         }
 
         // "*" = allow any origin (useful for dev/staging)
