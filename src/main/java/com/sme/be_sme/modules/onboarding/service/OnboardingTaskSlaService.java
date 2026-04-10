@@ -33,7 +33,9 @@ public class OnboardingTaskSlaService {
             return Long.MAX_VALUE;
         }
         Instant now = Instant.now();
-        return Duration.between(now, dueDate.toInstant()).toHours();
+        // dueDate may come from JDBC DATE (java.sql.Date), where toInstant() throws
+        // UnsupportedOperationException. Use epoch millis for compatibility.
+        return Duration.between(now, Instant.ofEpochMilli(dueDate.getTime())).toHours();
     }
 
     public String dueCategory(TaskInstanceEntity task) {
