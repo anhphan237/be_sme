@@ -61,5 +61,6 @@ public interface SurveyFacade extends OperationFacadeProvider {
     @OperationType("com.sme.survey.response.saveDraft")
     SurveyResponseSaveDraftResponse saveSurveyResponseDraft(SurveyResponseSaveDraftRequest request);
 
-
+    @OperationType("com.sme.survey.template.delete")
+    SurveyTemplateDeleteResponse deleteSurveyTemplate(SurveyTemplateDeleteRequest request);
 }
