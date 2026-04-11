@@ -24,35 +24,37 @@ public class SurveyTemplateArchiveProcessor extends BaseBizProcessor<BizContext>
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
-        if (context == null || !StringUtils.hasText(context.getTenantId())) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
-        }
-
-        SurveyTemplateArchiveRequest request =
+        SurveyTemplateArchiveRequest req =
                 objectMapper.convertValue(payload, SurveyTemplateArchiveRequest.class);
 
-        if (request == null || !StringUtils.hasText(request.getTemplateId())) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "templateId is required");
-        }
+        validate(context, req);
 
-        SurveyTemplateEntity template =
-                surveyTemplateMapper.selectByPrimaryKey(request.getTemplateId());
-
-        if (template == null || !context.getTenantId().equals(template.getCompanyId())) {
+        SurveyTemplateEntity existed = surveyTemplateMapper.selectByPrimaryKey(req.getTemplateId());
+        if (existed == null || !context.getTenantId().equals(existed.getCompanyId())) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
         }
 
-        template.setStatus("ARCHIVED");
-        template.setUpdatedAt(new Date());
+        existed.setStatus("ARCHIVED");
+        existed.setIsDefault(false);
+        existed.setUpdatedAt(new Date());
 
-        int updated = surveyTemplateMapper.updateByPrimaryKey(template);
+        int updated = surveyTemplateMapper.updateByPrimaryKey(existed);
         if (updated != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "archive survey template failed");
         }
 
         SurveyTemplateArchiveResponse res = new SurveyTemplateArchiveResponse();
-        res.setTemplateId(template.getSurveyTemplateId());
-        res.setStatus(template.getStatus());
+        res.setTemplateId(existed.getSurveyTemplateId());
+        res.setStatus(existed.getStatus());
         return res;
+    }
+
+    private static void validate(BizContext context, SurveyTemplateArchiveRequest req) {
+        if (context == null || !StringUtils.hasText(context.getTenantId())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
+        }
+        if (req == null || !StringUtils.hasText(req.getTemplateId())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "templateId is required");
+        }
     }
 }
