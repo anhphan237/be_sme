@@ -24,6 +24,7 @@ public class TaskDetailResponse {
     private String createdBy;
 
     private Boolean requireAck;
+    private Boolean requireDoc;
     private Date acknowledgedAt;
     private String acknowledgedBy;
     private Boolean requiresManagerApproval;

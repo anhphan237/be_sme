@@ -128,6 +128,7 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
                 taskInstance.setDueDate(calculateDueDate(now, taskTemplate.getDueDaysOffset()));
                 applyOwnerAssignment(taskInstance, taskTemplate, instance, effective);
                 taskInstance.setRequireAck(Boolean.TRUE.equals(taskTemplate.getRequireAck()));
+                taskInstance.setRequireDoc(Boolean.TRUE.equals(taskTemplate.getRequireDoc()));
                 taskInstance.setRequiresManagerApproval(Boolean.TRUE.equals(taskTemplate.getRequiresManagerApproval()));
                 taskInstance.setApproverUserId(
                         StringUtils.hasText(taskTemplate.getApproverUserId())

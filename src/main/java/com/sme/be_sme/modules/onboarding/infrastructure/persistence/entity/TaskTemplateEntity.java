@@ -84,6 +84,8 @@ public class TaskTemplateEntity {
      */
     private Boolean requireAck;
 
+    private Boolean requireDoc;
+
     private Boolean requiresManagerApproval;
 
     private String approverUserId;
@@ -338,6 +340,14 @@ public class TaskTemplateEntity {
      */
     public void setRequireAck(Boolean requireAck) {
         this.requireAck = requireAck;
+    }
+
+    public Boolean getRequireDoc() {
+        return requireDoc;
+    }
+
+    public void setRequireDoc(Boolean requireDoc) {
+        this.requireDoc = requireDoc;
     }
 
     public Boolean getRequiresManagerApproval() {

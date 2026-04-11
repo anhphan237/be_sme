@@ -107,6 +107,7 @@ public class TaskListByAssigneeProcessor extends BaseBizProcessor<BizContext> {
         item.setScheduleCancelReason(r.getScheduleCancelReason());
         item.setScheduleNoShowReason(r.getScheduleNoShowReason());
         item.setRequireAck(r.getRequireAck());
+        item.setRequireDoc(r.getRequireDoc());
         item.setRequiresManagerApproval(r.getRequiresManagerApproval());
         item.setApprovalStatus(r.getApprovalStatus());
         item.setApproverUserId(r.getApproverUserId());

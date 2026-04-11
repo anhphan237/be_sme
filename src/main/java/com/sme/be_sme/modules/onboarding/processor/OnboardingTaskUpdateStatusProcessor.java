@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskUpdateStatusRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskAttachmentMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
 import com.sme.be_sme.modules.onboarding.service.OnboardingTaskActivityLogService;
@@ -29,6 +30,7 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
 
     private final ObjectMapper objectMapper;
     private final TaskInstanceMapper taskInstanceMapper;
+    private final TaskAttachmentMapperExt taskAttachmentMapperExt;
     private final OnboardingInstanceProgressService progressService;
     private final OnboardingTaskApprovalAuthority approvalAuthority;
     private final OnboardingTaskActivityLogService activityLogService;
@@ -68,6 +70,7 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
             if (!Boolean.TRUE.equals(task.getRequiresManagerApproval())) {
                 throw AppException.of(ErrorCodes.BAD_REQUEST, "task does not require manager approval");
             }
+            assertRequiredDocUploaded(companyId, task);
             task.setStatus(OnboardingTaskWorkflow.STATUS_PENDING_APPROVAL);
             task.setApprovalStatus(OnboardingTaskWorkflow.APPROVAL_PENDING);
             task.setCompletedAt(null);
@@ -84,6 +87,7 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
             if (Boolean.TRUE.equals(task.getRequireAck()) && task.getAcknowledgedAt() == null) {
                 throw AppException.of(ErrorCodes.BAD_REQUEST, "acknowledge task before marking done");
             }
+            assertRequiredDocUploaded(companyId, task);
             if (Boolean.TRUE.equals(task.getRequiresManagerApproval())) {
                 if (OnboardingTaskAuth.isEmployeeOnly(context.getRoles())) {
                     throw AppException.of(
@@ -183,5 +187,19 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
         }
         return StringUtils.hasText(task.getScheduleStatus())
                 && !OnboardingTaskWorkflow.SCHEDULE_UNSCHEDULED.equalsIgnoreCase(task.getScheduleStatus());
+    }
+
+    private void assertRequiredDocUploaded(String companyId, TaskInstanceEntity task) {
+        if (!Boolean.TRUE.equals(task.getRequireDoc())) {
+            return;
+        }
+        if (task == null || !StringUtils.hasText(task.getTaskId())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "taskId is required");
+        }
+        if (taskAttachmentMapperExt.selectByTaskId(companyId, task.getTaskId()).isEmpty()) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "upload at least one document before submitting this task");
+        }
     }
 }
