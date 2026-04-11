@@ -16,6 +16,7 @@
     <result column="owner_ref_id" jdbcType="VARCHAR" property="ownerRefId" />
     <result column="due_days_offset" jdbcType="INTEGER" property="dueDaysOffset" />
     <result column="require_ack" jdbcType="BIT" property="requireAck" />
+    <result column="require_doc" jdbcType="BIT" property="requireDoc" />
     <result column="requires_manager_approval" jdbcType="BIT" property="requiresManagerApproval" />
     <result column="approver_user_id" jdbcType="VARCHAR" property="approverUserId" />
     <result column="sort_order" jdbcType="INTEGER" property="sortOrder" />
@@ -40,12 +41,13 @@
     -->
     insert into task_templates (task_template_id, company_id, checklist_template_id, 
       title, description, owner_type, 
-      owner_ref_id, due_days_offset, require_ack, requires_manager_approval, approver_user_id,
+      owner_ref_id, due_days_offset, require_ack, require_doc, requires_manager_approval, approver_user_id,
       sort_order, status, created_at, 
       updated_at)
     values (#{taskTemplateId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{checklistTemplateId,jdbcType=VARCHAR}, 
       #{title,jdbcType=VARCHAR}, #{description,jdbcType=VARCHAR}, #{ownerType,jdbcType=VARCHAR}, 
       #{ownerRefId,jdbcType=VARCHAR}, #{dueDaysOffset,jdbcType=INTEGER}, #{requireAck,jdbcType=BIT}, 
+      #{requireDoc,jdbcType=BIT},
       #{requiresManagerApproval,jdbcType=BIT}, #{approverUserId,jdbcType=VARCHAR},
       #{sortOrder,jdbcType=INTEGER}, #{status,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, 
       #{updatedAt,jdbcType=TIMESTAMP})
@@ -65,6 +67,7 @@
       owner_ref_id = #{ownerRefId,jdbcType=VARCHAR},
       due_days_offset = #{dueDaysOffset,jdbcType=INTEGER},
       require_ack = #{requireAck,jdbcType=BIT},
+      require_doc = #{requireDoc,jdbcType=BIT},
       requires_manager_approval = #{requiresManagerApproval,jdbcType=BIT},
       approver_user_id = #{approverUserId,jdbcType=VARCHAR},
       sort_order = #{sortOrder,jdbcType=INTEGER},
@@ -80,7 +83,7 @@
       This element was generated on Thu Jan 22 16:08:37 ICT 2026.
     -->
     select task_template_id, company_id, checklist_template_id, title, description, owner_type, 
-    owner_ref_id, due_days_offset, require_ack, requires_manager_approval, approver_user_id, sort_order, status, created_at, updated_at
+    owner_ref_id, due_days_offset, require_ack, require_doc, requires_manager_approval, approver_user_id, sort_order, status, created_at, updated_at
     from task_templates
     where task_template_id = #{taskTemplateId,jdbcType=VARCHAR}
   </select>
@@ -91,7 +94,7 @@
       This element was generated on Thu Jan 22 16:08:37 ICT 2026.
     -->
     select task_template_id, company_id, checklist_template_id, title, description, owner_type, 
-    owner_ref_id, due_days_offset, require_ack, requires_manager_approval, approver_user_id, sort_order, status, created_at, updated_at
+    owner_ref_id, due_days_offset, require_ack, require_doc, requires_manager_approval, approver_user_id, sort_order, status, created_at, updated_at
     from task_templates
   </select>
   <update id="updateStatusByOnboardingTemplateId">
@@ -105,7 +108,7 @@
   </update>
   <select id="selectByCompanyId" resultMap="BaseResultMap">
     select task_template_id, company_id, checklist_template_id, title, description, owner_type,
-    owner_ref_id, due_days_offset, require_ack, requires_manager_approval, approver_user_id, sort_order, status, created_at, updated_at
+    owner_ref_id, due_days_offset, require_ack, require_doc, requires_manager_approval, approver_user_id, sort_order, status, created_at, updated_at
     from task_templates
     where company_id = #{companyId,jdbcType=VARCHAR}
   </select>

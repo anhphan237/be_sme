@@ -106,6 +106,7 @@ public class OnboardingInstanceGetProcessor extends BaseBizProcessor<BizContext>
         item.setDueDate(t.getDueDate());
         item.setCompletedAt(t.getCompletedAt());
         item.setRequireAck(t.getRequireAck());
+        item.setRequireDoc(t.getRequireDoc());
         item.setAcknowledgedAt(t.getAcknowledgedAt());
         item.setRequiresManagerApproval(t.getRequiresManagerApproval());
         item.setApprovalStatus(t.getApprovalStatus());

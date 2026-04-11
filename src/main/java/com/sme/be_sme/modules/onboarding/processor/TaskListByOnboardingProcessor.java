@@ -192,6 +192,7 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
                 item.setOverdue(slaService.isOverdue(e.getDueDate(), e.getStatus()));
                 item.setDueCategory(slaService.dueCategory(e.getDueDate(), e.getStatus()));
                 item.setRequireAck(e.getRequireAck());
+                item.setRequireDoc(e.getRequireDoc());
                 item.setRequiresManagerApproval(e.getRequiresManagerApproval());
                 item.setApprovalStatus(e.getApprovalStatus());
                 item.setApproverUserId(e.getApproverUserId());

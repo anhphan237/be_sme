@@ -67,6 +67,7 @@ public class OnboardingTemplateCreateChecklistsAndTasksCoreProcessor extends Bas
                     taskEntity.setOwnerRefId(taskItem.getOwnerRefId());
                     taskEntity.setDueDaysOffset(taskItem.getDueDaysOffset());
                     taskEntity.setRequireAck(taskItem.getRequireAck());
+                    taskEntity.setRequireDoc(Boolean.TRUE.equals(taskItem.getRequireDoc()));
                     taskEntity.setRequiresManagerApproval(Boolean.TRUE.equals(taskItem.getRequiresManagerApproval()));
                     taskEntity.setApproverUserId(
                             StringUtils.hasText(taskItem.getApproverUserId()) ? taskItem.getApproverUserId().trim() : null);

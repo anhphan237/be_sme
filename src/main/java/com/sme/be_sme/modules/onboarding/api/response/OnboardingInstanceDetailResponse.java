@@ -41,6 +41,7 @@ public class OnboardingInstanceDetailResponse {
         private Date dueDate;
         private Date completedAt;
         private Boolean requireAck;
+        private Boolean requireDoc;
         private Date acknowledgedAt;
         private Boolean requiresManagerApproval;
         private String approvalStatus;

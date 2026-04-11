@@ -131,6 +131,7 @@ public class TaskTimelineByOnboardingProcessor extends BaseBizProcessor<BizConte
         item.setOverdue(slaService.isOverdue(row.getDueDate(), row.getStatus()));
         item.setDueCategory(slaService.dueCategory(row.getDueDate(), row.getStatus()));
         item.setRequireAck(row.getRequireAck());
+        item.setRequireDoc(row.getRequireDoc());
         item.setRequiresManagerApproval(row.getRequiresManagerApproval());
         item.setApprovalStatus(row.getApprovalStatus());
         return item;

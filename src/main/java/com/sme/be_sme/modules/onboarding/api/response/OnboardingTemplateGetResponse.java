@@ -39,6 +39,7 @@ public class OnboardingTemplateGetResponse {
         private String ownerRefId;
         private Integer dueDaysOffset;
         private Boolean requireAck;
+        private Boolean requireDoc;
         private Boolean requiresManagerApproval;
         private String approverUserId;
         private Integer orderNo;

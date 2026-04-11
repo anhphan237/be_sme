@@ -67,6 +67,7 @@ public class OnboardingTemplateGetBuildResponseCoreProcessor extends BaseCorePro
         x.setOwnerRefId(r.getOwnerRefId());
         x.setDueDaysOffset(r.getDueDaysOffset());
         x.setRequireAck(r.getRequireAck());
+        x.setRequireDoc(r.getRequireDoc());
         x.setRequiresManagerApproval(r.getRequiresManagerApproval());
         x.setApproverUserId(r.getApproverUserId());
         x.setOrderNo(r.getOrderNo());

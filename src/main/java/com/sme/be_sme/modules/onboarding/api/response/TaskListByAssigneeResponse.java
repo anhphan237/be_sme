@@ -37,6 +37,7 @@ public class TaskListByAssigneeResponse {
         private String scheduleCancelReason;
         private String scheduleNoShowReason;
         private Boolean requireAck;
+        private Boolean requireDoc;
         private Boolean requiresManagerApproval;
         private String approvalStatus;
         private String approverUserId;

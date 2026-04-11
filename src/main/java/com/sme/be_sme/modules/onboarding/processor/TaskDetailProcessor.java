@@ -215,6 +215,7 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
         response.setUpdatedAt(task.getUpdatedAt());
         response.setCreatedBy(task.getCreatedBy());
         response.setRequireAck(task.getRequireAck());
+        response.setRequireDoc(task.getRequireDoc());
         response.setAcknowledgedAt(task.getAcknowledgedAt());
         response.setAcknowledgedBy(task.getAcknowledgedBy());
         response.setRequiresManagerApproval(task.getRequiresManagerApproval());

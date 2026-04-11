@@ -52,6 +52,7 @@
             tt.owner_ref_id          as ownerRefId,
             tt.due_days_offset       as dueDaysOffset,
             tt.require_ack                            as requireAck,
+            tt.require_doc                            as requireDoc,
             tt.requires_manager_approval             as requiresManagerApproval,
             tt.approver_user_id      as approverUserId,
             tt.sort_order            as orderNo,

@@ -130,6 +130,7 @@ public class TaskInstanceEntity {
     private Date updatedAt;
 
     private Boolean requireAck;
+    private Boolean requireDoc;
     private Date acknowledgedAt;
     private String acknowledgedBy;
     private Boolean requiresManagerApproval;
@@ -493,6 +494,14 @@ public class TaskInstanceEntity {
 
     public void setRequireAck(Boolean requireAck) {
         this.requireAck = requireAck;
+    }
+
+    public Boolean getRequireDoc() {
+        return requireDoc;
+    }
+
+    public void setRequireDoc(Boolean requireDoc) {
+        this.requireDoc = requireDoc;
     }
 
     public Date getAcknowledgedAt() {

@@ -39,6 +39,7 @@ public class TaskListByOnboardingResponse {
         private Boolean overdue;
         private String dueCategory;
         private Boolean requireAck;
+        private Boolean requireDoc;
         private Boolean requiresManagerApproval;
         private String approvalStatus;
         private String approverUserId;
