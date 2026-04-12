@@ -2,13 +2,12 @@ package com.sme.be_sme.modules.employee.processor;
 
 import com.sme.be_sme.modules.employee.api.request.UpsertEmployeeProfileRequest;
 import com.sme.be_sme.modules.employee.api.response.UpsertEmployeeProfileResponse;
-import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
+import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.employee.service.EmployeeCodeGeneratorService;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BizContext;
-import com.sme.be_sme.shared.util.UuidGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -42,7 +41,7 @@ public class UpsertEmployeeProfileProcessor {
                     : employeeCodeGeneratorService.generate(companyId);
 
             EmployeeProfileEntity e = new EmployeeProfileEntity();
-            e.setEmployeeId(UuidGenerator.generate());
+            e.setEmployeeId(req.getUserId());
             e.setCompanyId(companyId);
             e.setUserId(req.getUserId());
 
