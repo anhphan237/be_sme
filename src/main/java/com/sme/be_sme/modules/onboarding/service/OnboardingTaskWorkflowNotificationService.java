@@ -4,6 +4,7 @@ import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
 import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -282,7 +283,7 @@ public class OnboardingTaskWorkflowNotificationService {
         if (task == null || task.getDueDate() == null) {
             return "";
         }
-        return task.getDueDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().format(DATE_FMT);
+        return Instant.ofEpochMilli(task.getDueDate().getTime()).atZone(ZoneId.systemDefault()).toLocalDate().format(DATE_FMT);
     }
 
     private void safeNotify(NotificationCreateParams params) {
