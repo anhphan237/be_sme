@@ -1,6 +1,7 @@
 package com.sme.be_sme.modules.survey.processor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapper;
@@ -28,6 +29,7 @@ import com.sme.be_sme.shared.gateway.core.BizContext;
 import com.sme.be_sme.shared.util.UuidGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -36,15 +38,18 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
 public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
 
     private static final String STATUS_COMPLETED = "COMPLETED";
+    private static final String STATUS_SENT = "SENT";
 
     private final ObjectMapper objectMapper;
     private final SurveyInstanceMapper surveyInstanceMapper;
@@ -58,6 +63,7 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
     private final NotificationService notificationService;
 
     @Override
+    @Transactional
     protected Object doProcess(BizContext context, JsonNode payload) {
         SurveySubmitRequest request = objectMapper.convertValue(payload, SurveySubmitRequest.class);
         validate(context, request);
@@ -78,6 +84,9 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
         }
         if (STATUS_COMPLETED.equalsIgnoreCase(instance.getStatus())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "survey already submitted");
+        }
+        if (!STATUS_SENT.equalsIgnoreCase(instance.getStatus())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "survey is not available for submission");
         }
         if (StringUtils.hasText(instance.getResponderUserId())
                 && !instance.getResponderUserId().equals(context.getOperatorId())) {
@@ -100,6 +109,7 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
 
         Map<String, String> answers = normalizeAnswers(request.getAnswers());
         ensureRequiredAnswered(questions, answers);
+        validateAnswersByType(questions, answers);
 
         SurveyResponseEntity responseEntity = new SurveyResponseEntity();
         responseEntity.setSurveyResponseId(UuidGenerator.generate());
@@ -214,8 +224,11 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
     }
 
     private List<SurveyQuestionEntity> filterQuestions(String tenantId, String templateId) {
-        List<SurveyQuestionEntity> questions = surveyQuestionMapper.selectAll();
+        List<SurveyQuestionEntity> questions = surveyQuestionMapper.selectByTemplateId(templateId);
         List<SurveyQuestionEntity> filtered = new ArrayList<>();
+        if (questions == null) {
+            return filtered;
+        }
         for (SurveyQuestionEntity question : questions) {
             if (question == null) {
                 continue;
@@ -272,6 +285,116 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
                 );
             }
         }
+    }
+
+    private void validateAnswersByType(
+            List<SurveyQuestionEntity> questions,
+            Map<String, String> answers
+    ) {
+        for (SurveyQuestionEntity question : questions) {
+            if (question == null) {
+                continue;
+            }
+
+            String raw = answers.get(question.getSurveyQuestionId());
+            if (!StringUtils.hasText(raw)) {
+                continue;
+            }
+
+            String type = question.getType() == null ? "" : question.getType().trim().toUpperCase(Locale.US);
+
+            switch (type) {
+                case "RATING" -> validateRatingAnswer(question, raw);
+                case "CHOICE", "SINGLE_CHOICE" -> validateSingleChoiceAnswer(question, raw);
+                case "MULTIPLE_CHOICE", "MULTI_CHOICE", "CHECKBOX" -> validateMultipleChoiceAnswer(question, raw);
+                default -> {
+                }
+            }
+        }
+    }
+
+    private void validateRatingAnswer(SurveyQuestionEntity question, String raw) {
+        Integer rating = parseInteger(raw.trim());
+        if (rating == null) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid rating answer");
+        }
+
+        Integer min = question.getScaleMin() != null ? question.getScaleMin() : 1;
+        Integer max = question.getScaleMax() != null ? question.getScaleMax() : 5;
+
+        if (rating < min || rating > max) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "rating answer is out of range");
+        }
+    }
+
+    private void validateSingleChoiceAnswer(SurveyQuestionEntity question, String raw) {
+        Set<String> validOptions = parseQuestionOptions(question);
+        if (!validOptions.isEmpty() && !validOptions.contains(raw.trim())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid choice answer");
+        }
+    }
+
+    private void validateMultipleChoiceAnswer(SurveyQuestionEntity question, String raw) {
+        Set<String> validOptions = parseQuestionOptions(question);
+        List<String> selectedValues = parseSubmittedValues(raw);
+
+        if (selectedValues.isEmpty() && Boolean.TRUE.equals(question.getRequired())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid multiple choice answer");
+        }
+
+        for (String value : selectedValues) {
+            if (!validOptions.isEmpty() && !validOptions.contains(value)) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid multiple choice answer");
+            }
+        }
+    }
+
+    private Set<String> parseQuestionOptions(SurveyQuestionEntity question) {
+        Set<String> options = new LinkedHashSet<>();
+        if (question == null || question.getOptionsJson() == null) {
+            return options;
+        }
+
+        try {
+            String raw = String.valueOf(question.getOptionsJson());
+            List<String> values = objectMapper.readValue(raw, new TypeReference<List<String>>() {});
+            for (String value : values) {
+                if (StringUtils.hasText(value)) {
+                    options.add(value.trim());
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        return options;
+    }
+
+    private List<String> parseSubmittedValues(String raw) {
+        List<String> result = new ArrayList<>();
+        if (!StringUtils.hasText(raw)) {
+            return result;
+        }
+
+        String trimmed = raw.trim();
+        try {
+            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                List<String> values = objectMapper.readValue(trimmed, new TypeReference<List<String>>() {});
+                for (String value : values) {
+                    if (StringUtils.hasText(value)) {
+                        result.add(value.trim());
+                    }
+                }
+                return result;
+            }
+        } catch (Exception ignored) {
+        }
+
+        for (String value : trimmed.split(",")) {
+            if (StringUtils.hasText(value)) {
+                result.add(value.trim().replace("\"", ""));
+            }
+        }
+        return result;
     }
 
     private static BigDecimal calculateOverallScore(

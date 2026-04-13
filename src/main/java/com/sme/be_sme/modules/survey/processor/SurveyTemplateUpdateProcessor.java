@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.survey.api.request.SurveyTemplateUpdateRequest;
 import com.sme.be_sme.modules.survey.api.response.SurveyTemplateResponse;
+import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapperExt;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyTemplateMapper;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyTemplateEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -21,6 +22,7 @@ public class SurveyTemplateUpdateProcessor extends BaseBizProcessor<BizContext> 
 
     private final ObjectMapper objectMapper;
     private final SurveyTemplateMapper surveyTemplateMapper;
+    private final SurveyInstanceMapperExt surveyInstanceMapperExt;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -41,6 +43,25 @@ public class SurveyTemplateUpdateProcessor extends BaseBizProcessor<BizContext> 
 
         if (entity == null || !context.getTenantId().equals(entity.getCompanyId())) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
+        }
+
+        if ("ARCHIVED".equalsIgnoreCase(entity.getStatus())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "archived template cannot be updated");
+        }
+
+        int instanceCount = surveyInstanceMapperExt.countByCompanyId(
+                context.getTenantId(),
+                entity.getSurveyTemplateId(),
+                null,
+                null,
+                null,
+                null
+        );
+        if (instanceCount > 0) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "template already has instances, update is not allowed"
+            );
         }
 
         if (request.getVersion() != null
