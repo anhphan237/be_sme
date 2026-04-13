@@ -33,6 +33,14 @@
         AND company_id = #{companyId}
     </select>
 
+    <select id="existsSentInstanceByTemplateId" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM survey_instances
+        WHERE survey_template_id = #{surveyTemplateId}
+        AND company_id = #{companyId}
+        AND status IN ('SENT', 'COMPLETED', 'EXPIRED')
+    </select>
+
     <delete id="deleteByIdAndCompanyId">
         DELETE FROM survey_templates
         WHERE survey_template_id = #{surveyTemplateId}
