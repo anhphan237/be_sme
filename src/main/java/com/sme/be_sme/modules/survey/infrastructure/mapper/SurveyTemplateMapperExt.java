@@ -14,6 +14,9 @@ public interface SurveyTemplateMapperExt {
     boolean existsAnyInstanceByTemplateId(@Param("surveyTemplateId") String surveyTemplateId,
                                           @Param("companyId") String companyId);
 
+    boolean existsSentInstanceByTemplateId(@Param("surveyTemplateId") String surveyTemplateId,
+                                           @Param("companyId") String companyId);
+
     int deleteByIdAndCompanyId(@Param("surveyTemplateId") String surveyTemplateId,
                                @Param("companyId") String companyId);
 }
