@@ -138,10 +138,5 @@
     order by sort_order asc
 
   </select>
-  <delete id="deleteByTemplateId">
-    DELETE FROM survey_questions
-    WHERE survey_template_id = #{surveyTemplateId}
-    AND company_id = #{companyId}
-  </delete>
 
 </mapper>

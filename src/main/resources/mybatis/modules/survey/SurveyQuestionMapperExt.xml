@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyQuestionMapperExt">
+
+    <delete id="deleteByTemplateId">
+        DELETE FROM survey_questions
+        WHERE survey_template_id = #{surveyTemplateId}
+        AND company_id = #{companyId}
+    </delete>
+
+</mapper>

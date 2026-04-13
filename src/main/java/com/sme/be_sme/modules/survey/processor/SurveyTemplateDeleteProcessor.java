@@ -4,9 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.survey.api.request.SurveyTemplateDeleteRequest;
 import com.sme.be_sme.modules.survey.api.response.SurveyTemplateDeleteResponse;
+import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyQuestionMapperExt;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyTemplateMapper;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyTemplateMapperExt;
-import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyQuestionMapperExt;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyTemplateEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -34,7 +34,8 @@ public class SurveyTemplateDeleteProcessor extends BaseBizProcessor<BizContext> 
 
         validate(context, req);
 
-        SurveyTemplateEntity existed = surveyTemplateMapper.selectByPrimaryKey(req.getTemplateId());
+        SurveyTemplateEntity existed =
+                surveyTemplateMapper.selectByPrimaryKey(req.getTemplateId());
 
         if (existed == null) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
@@ -44,15 +45,15 @@ public class SurveyTemplateDeleteProcessor extends BaseBizProcessor<BizContext> 
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
         }
 
-        boolean hasInstances = surveyTemplateMapperExt.existsAnyInstanceByTemplateId(
+        boolean alreadySentOrUsed = surveyTemplateMapperExt.existsSentInstanceByTemplateId(
                 req.getTemplateId(),
                 context.getTenantId()
         );
 
-        if (hasInstances) {
+        if (alreadySentOrUsed) {
             throw AppException.of(
                     ErrorCodes.BAD_REQUEST,
-                    "template already used, only archive is allowed"
+                    "template already sent, only archive is allowed"
             );
         }
 
