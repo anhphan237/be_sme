@@ -3,6 +3,8 @@ package com.sme.be_sme.modules.survey.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
+import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
+import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.survey.api.request.SurveySendRequest;
 import com.sme.be_sme.modules.survey.api.response.SurveySendResponse;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapper;
@@ -10,8 +12,6 @@ import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapperE
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyTemplateMapper;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyInstanceEntity;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyTemplateEntity;
-import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
-import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -40,6 +40,7 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
     private final NotificationService notificationService;
     private final UserMapperExt userMapperExt;
     private final SurveyInstanceMapperExt surveyInstanceMapperExt;
+
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
         SurveySendRequest request = objectMapper.convertValue(payload, SurveySendRequest.class);
@@ -51,6 +52,19 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
             SurveyInstanceEntity entity = surveyInstanceMapper.selectByPrimaryKey(request.getSurveyInstanceId().trim());
             if (entity == null || !context.getTenantId().equals(entity.getCompanyId())) {
                 throw AppException.of(ErrorCodes.NOT_FOUND, "survey instance not found");
+            }
+
+            if (!"SCHEDULED".equalsIgnoreCase(entity.getStatus())
+                    && !"PENDING".equalsIgnoreCase(entity.getStatus())) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "survey instance cannot be sent");
+            }
+
+            SurveyTemplateEntity template = surveyTemplateMapper.selectByPrimaryKey(entity.getSurveyTemplateId());
+            if (template == null || !context.getTenantId().equals(template.getCompanyId())) {
+                throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
+            }
+            if (!"ACTIVE".equalsIgnoreCase(template.getStatus())) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "only ACTIVE template can be sent");
             }
 
             entity.setSentAt(now);
@@ -73,23 +87,29 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
         if (template == null || !context.getTenantId().equals(template.getCompanyId())) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
         }
-
-        String targetRole = request.getTargetRole();
-        String employeeId = request.getResponderUserId();
-
-        String managerId = userMapperExt.selectManagerUserIdByUserId(employeeId);
-
-        String createdInstanceId;
-
-        if (("MANAGER".equals(targetRole) || "BOTH".equals(targetRole))
-                && !StringUtils.hasText(managerId)) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "Manager not found for user");
-        } else if ("BOTH".equals(targetRole)) {
-            createAndSend(context, template, request, employeeId, now);
-            createdInstanceId = createAndSend(context, template, request, managerId, now);
-        } else {
-            createdInstanceId = createAndSend(context, template, request, employeeId, now);
+        if (!"ACTIVE".equalsIgnoreCase(template.getStatus())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "only ACTIVE template can be sent");
         }
+
+        String targetRole = StringUtils.hasText(request.getTargetRole())
+                ? request.getTargetRole().trim()
+                : template.getTargetRole();
+        if (!"EMPLOYEE".equalsIgnoreCase(targetRole) && !"MANAGER".equalsIgnoreCase(targetRole)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid targetRole");
+        }
+
+        String employeeId = request.getResponderUserId();
+        String actualResponderUserId = employeeId;
+
+        if ("MANAGER".equalsIgnoreCase(targetRole)) {
+            String managerId = userMapperExt.selectManagerUserIdByUserId(employeeId);
+            if (!StringUtils.hasText(managerId)) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "Manager not found for user");
+            }
+            actualResponderUserId = managerId;
+        }
+
+        String createdInstanceId = createAndSend(context, template, request, actualResponderUserId, now);
 
         SurveySendResponse res = new SurveySendResponse();
         res.setSurveyInstanceId(createdInstanceId);
@@ -97,6 +117,7 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
         res.setSentAt(now);
         return res;
     }
+
     private String createAndSend(
             BizContext context,
             SurveyTemplateEntity template,
@@ -134,6 +155,7 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
         notifySurveyReady(entity);
         return entity.getSurveyInstanceId();
     }
+
     private void notifySurveyReady(SurveyInstanceEntity entity) {
         if (!StringUtils.hasText(entity.getResponderUserId())) return;
         String dueStr = entity.getClosedAt() != null
@@ -146,7 +168,8 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
                 .userId(entity.getResponderUserId())
                 .type("SURVEY_READY")
                 .title("Survey ready")
-                .content("A survey is ready for you to complete. Please submit by " + dueStr + ".")
+                .content("A survey is ready for you to complete."
+                        + (StringUtils.hasText(dueStr) ? " Please submit by " + dueStr + "." : ""))
                 .refType("SURVEY")
                 .refId(entity.getSurveyInstanceId())
                 .sendEmail(true)
@@ -169,10 +192,8 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
         if (!hasInstanceId && !hasTemplateId) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "surveyInstanceId or templateId is required");
         }
-        if (!hasInstanceId) {
-            if (!StringUtils.hasText(request.getResponderUserId())) {
-                throw AppException.of(ErrorCodes.BAD_REQUEST, "responderUserId is required");
-            }
+        if (!hasInstanceId && !StringUtils.hasText(request.getResponderUserId())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "responderUserId is required");
         }
     }
 }

@@ -4,7 +4,9 @@ import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
 import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapper;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapperExt;
+import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyTemplateMapper;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyInstanceEntity;
+import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyTemplateEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.flywaydb.core.internal.util.StringUtils;
@@ -27,6 +29,7 @@ public class SurveyScheduledDispatchJob {
 
     private final SurveyInstanceMapperExt surveyInstanceMapperExt;
     private final SurveyInstanceMapper surveyInstanceMapper;
+    private final SurveyTemplateMapper surveyTemplateMapper;
     private final NotificationService notificationService;
 
     @Scheduled(fixedDelay = 60000)
@@ -42,6 +45,13 @@ public class SurveyScheduledDispatchJob {
 
         for (SurveyInstanceEntity item : instances) {
             try {
+                SurveyTemplateEntity template =
+                        surveyTemplateMapper.selectByPrimaryKey(item.getSurveyTemplateId());
+
+                if (template == null || !"ACTIVE".equalsIgnoreCase(template.getStatus())) {
+                    continue;
+                }
+
                 int updated = surveyInstanceMapperExt.markAsSentIfScheduled(
                         item.getSurveyInstanceId(),
                         now

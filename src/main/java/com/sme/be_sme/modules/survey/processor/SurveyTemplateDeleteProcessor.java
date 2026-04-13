@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.survey.api.request.SurveyTemplateDeleteRequest;
 import com.sme.be_sme.modules.survey.api.response.SurveyTemplateDeleteResponse;
+import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapperExt;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyQuestionMapperExt;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyTemplateMapper;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyTemplateMapperExt;
@@ -25,6 +26,7 @@ public class SurveyTemplateDeleteProcessor extends BaseBizProcessor<BizContext> 
     private final SurveyTemplateMapper surveyTemplateMapper;
     private final SurveyTemplateMapperExt surveyTemplateMapperExt;
     private final SurveyQuestionMapperExt surveyQuestionMapperExt;
+    private final SurveyInstanceMapperExt surveyInstanceMapperExt;
 
     @Override
     @Transactional
@@ -45,15 +47,26 @@ public class SurveyTemplateDeleteProcessor extends BaseBizProcessor<BizContext> 
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
         }
 
-        boolean alreadySentOrUsed = surveyTemplateMapperExt.existsSentInstanceByTemplateId(
-                req.getTemplateId(),
-                context.getTenantId()
-        );
-
-        if (alreadySentOrUsed) {
+        if (Boolean.TRUE.equals(existed.getIsDefault())) {
             throw AppException.of(
                     ErrorCodes.BAD_REQUEST,
-                    "template already sent, only archive is allowed"
+                    "default template cannot be deleted"
+            );
+        }
+
+        int instanceCount = surveyInstanceMapperExt.countByCompanyId(
+                context.getTenantId(),
+                req.getTemplateId(),
+                null,
+                null,
+                null,
+                null
+        );
+
+        if (instanceCount > 0) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "template already has instances, delete is not allowed"
             );
         }
 

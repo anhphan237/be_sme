@@ -55,46 +55,52 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         if (template == null || !context.getTenantId().equals(template.getCompanyId())) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
         }
+        if (!"ACTIVE".equalsIgnoreCase(template.getStatus())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "only ACTIVE template can be scheduled");
+        }
 
         Date now = new Date();
-        int dueDays = request.getDueDays() != null ? request.getDueDays() : 3;
+        if (request.getScheduledAt().before(now)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "scheduledAt cannot be in the past");
+        }
 
+        int dueDays = request.getDueDays() != null ? request.getDueDays() : 3;
         Date scheduledAt = request.getScheduledAt();
         Date closedAt = plusDays(scheduledAt, dueDays);
 
-        String targetRole = request.getTargetRole();
-        if (!StringUtils.hasText(targetRole)) {
-            targetRole = template.getTargetRole();
+        String targetRole = StringUtils.hasText(request.getTargetRole())
+                ? request.getTargetRole().trim()
+                : template.getTargetRole();
+
+        if (!"EMPLOYEE".equalsIgnoreCase(targetRole) && !"MANAGER".equalsIgnoreCase(targetRole)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid targetRole");
         }
-        if (!StringUtils.hasText(targetRole)) {
-            targetRole = "EMPLOYEE";
-        }
 
-        String employeeId = request.getResponderUserId();
-        String createdInstanceId = null;
+        String employeeId = request.getResponderUserId().trim();
+        String actualResponderUserId = employeeId;
 
-        String managerId = userMapperExt.selectManagerUserIdByUserId(employeeId);
-
-        if (("MANAGER".equalsIgnoreCase(targetRole) || "BOTH".equalsIgnoreCase(targetRole))
-                && !StringUtils.hasText(managerId)) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "Manager not found for user");
+        if ("MANAGER".equalsIgnoreCase(targetRole)) {
+            String managerId = userMapperExt.selectManagerUserIdByUserId(employeeId);
+            if (!StringUtils.hasText(managerId)) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "Manager not found for user");
+            }
+            actualResponderUserId = managerId;
         }
 
         boolean sendNow = !scheduledAt.after(now);
 
-        if ("MANAGER".equalsIgnoreCase(targetRole)) {
-            createdInstanceId = createInstance(context, template, request, managerId, scheduledAt, closedAt, sendNow, now);
-        } else if ("BOTH".equalsIgnoreCase(targetRole)) {
-            createInstance(context, template, request, employeeId, scheduledAt, closedAt, sendNow, now);
-            createdInstanceId = createInstance(context, template, request, managerId, scheduledAt, closedAt, sendNow, now);
-        } else {
-            createdInstanceId = createInstance(context, template, request, employeeId, scheduledAt, closedAt, sendNow, now);
-        }
+        String createdInstanceId = createInstance(
+                context,
+                template,
+                request,
+                actualResponderUserId,
+                scheduledAt,
+                closedAt,
+                sendNow,
+                now
+        );
 
-        UserEntity user = null;
-        if (StringUtils.hasText(request.getResponderUserId())) {
-            user = userMapper.selectByPrimaryKey(request.getResponderUserId());
-        }
+        UserEntity actualUser = userMapper.selectByPrimaryKey(actualResponderUserId);
 
         SurveyScheduleResponse response = new SurveyScheduleResponse();
         response.setScheduleId(createdInstanceId);
@@ -102,12 +108,12 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         response.setOpenAt(scheduledAt);
         response.setDueAt(closedAt);
         response.setTemplateId(template.getSurveyTemplateId());
-        response.setResponderUserId(request.getResponderUserId());
+        response.setResponderUserId(actualResponderUserId);
         response.setInstanceId(createdInstanceId);
 
-        if (user != null) {
-            response.setEmployeeName(user.getFullName());
-            response.setEmail(user.getEmail());
+        if (actualUser != null) {
+            response.setEmployeeName(actualUser.getFullName());
+            response.setEmail(actualUser.getEmail());
         }
 
         return response;
