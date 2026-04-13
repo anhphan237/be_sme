@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -60,12 +61,23 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         }
 
         Date now = new Date();
-        if (request.getScheduledAt().before(now)) {
+        Date requestedScheduledAt = request.getScheduledAt();
+
+        LocalDate today = now.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        LocalDate scheduledDate = requestedScheduledAt.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        if (scheduledDate.isBefore(today)) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "scheduledAt cannot be in the past");
         }
 
+        Date scheduledAt = scheduledDate.isEqual(today) ? now : requestedScheduledAt;
+
         int dueDays = request.getDueDays() != null ? request.getDueDays() : 3;
-        Date scheduledAt = request.getScheduledAt();
         Date closedAt = plusDays(scheduledAt, dueDays);
 
         String targetRole = StringUtils.hasText(request.getTargetRole())
