@@ -23,7 +23,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class PlatformFeedbackListProcessor extends BaseBizProcessor<BizContext> {
 
-    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_SIZE = 20;
 
     private final ObjectMapper objectMapper;
@@ -34,16 +34,18 @@ public class PlatformFeedbackListProcessor extends BaseBizProcessor<BizContext> 
     protected Object doProcess(BizContext context, JsonNode payload) {
         PlatformFeedbackListRequest request = objectMapper.convertValue(payload, PlatformFeedbackListRequest.class);
 
-        int page = request.getPage() != null ? request.getPage() : DEFAULT_PAGE;
-        int size = request.getSize() != null ? request.getSize() : DEFAULT_SIZE;
+        int page = request.getPage() != null && request.getPage() > 0 ? request.getPage() : DEFAULT_PAGE;
+        int size = request.getSize() != null && request.getSize() > 0 ? request.getSize() : DEFAULT_SIZE;
 
         List<FeedbackEntity> allFeedbacks = feedbackMapper.selectAll();
 
         List<FeedbackEntity> filtered = new ArrayList<>();
         for (FeedbackEntity fb : allFeedbacks) {
-            if (fb == null) continue;
+            if (fb == null) {
+                continue;
+            }
             if (StringUtils.hasText(request.getStatus())
-                    && !request.getStatus().equalsIgnoreCase(fb.getStatus())) {
+                    && !request.getStatus().trim().equalsIgnoreCase(String.valueOf(fb.getStatus()).trim())) {
                 continue;
             }
             filtered.add(fb);
@@ -52,7 +54,7 @@ public class PlatformFeedbackListProcessor extends BaseBizProcessor<BizContext> 
         Map<String, String> companyNameMap = buildCompanyNameMap();
 
         int total = filtered.size();
-        int fromIndex = Math.min(page * size, total);
+        int fromIndex = Math.min((page - 1) * size, total);
         int toIndex = Math.min(fromIndex + size, total);
         List<FeedbackEntity> pageSlice = filtered.subList(fromIndex, toIndex);
 
