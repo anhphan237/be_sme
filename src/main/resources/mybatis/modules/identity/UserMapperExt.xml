@@ -76,12 +76,14 @@
         LIMIT 1
     </select>
     <select id="selectHrUserIdsByCompanyId" resultType="java.lang.String">
-        SELECT u.user_id
+        SELECT DISTINCT u.user_id
         FROM users u
         JOIN user_roles ur ON ur.user_id = u.user_id
+        JOIN roles r ON r.role_id = ur.role_id
         WHERE u.company_id = #{companyId}
         AND u.status = 'ACTIVE'
-        AND ur.role_id IN ('HR', 'HR_ADMIN')
+        AND upper(r.code) IN ('HR', 'HR_ADMIN')
+        AND upper(r.status) = 'ACTIVE'
     </select>
 
 </mapper>
