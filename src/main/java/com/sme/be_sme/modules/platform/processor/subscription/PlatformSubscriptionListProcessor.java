@@ -25,7 +25,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class PlatformSubscriptionListProcessor extends BaseBizProcessor<BizContext> {
 
-    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_SIZE = 20;
 
     private final ObjectMapper objectMapper;
@@ -37,8 +37,8 @@ public class PlatformSubscriptionListProcessor extends BaseBizProcessor<BizConte
     protected Object doProcess(BizContext context, JsonNode payload) {
         PlatformSubscriptionListRequest request = objectMapper.convertValue(payload, PlatformSubscriptionListRequest.class);
 
-        int page = request.getPage() != null ? request.getPage() : DEFAULT_PAGE;
-        int size = request.getSize() != null ? request.getSize() : DEFAULT_SIZE;
+        int page = request.getPage() != null && request.getPage() > 0 ? request.getPage() : DEFAULT_PAGE;
+        int size = request.getSize() != null && request.getSize() > 0 ? request.getSize() : DEFAULT_SIZE;
 
         List<SubscriptionEntity> allSubscriptions = subscriptionMapper.selectAll();
         Map<String, String> companyNameMap = buildCompanyNameMap();
@@ -53,23 +53,30 @@ public class PlatformSubscriptionListProcessor extends BaseBizProcessor<BizConte
 
         List<SubscriptionEntity> filtered = new ArrayList<>();
         for (SubscriptionEntity sub : allSubscriptions) {
-            if (sub == null) continue;
-
-            if (StringUtils.hasText(request.getStatus())
-                    && !request.getStatus().equalsIgnoreCase(sub.getStatus())) {
+            if (sub == null) {
                 continue;
             }
-            if (StringUtils.hasText(request.getPlanCode())) {
-                String code = sub.getPlanId() != null ? planCodeByPlanId.get(sub.getPlanId()) : null;
-                if (code == null || !request.getPlanCode().equalsIgnoreCase(code)) {
+
+            if (StringUtils.hasText(request.getStatus())) {
+                String requestStatus = normalize(request.getStatus());
+                String subscriptionStatus = normalize(sub.getStatus());
+                if (subscriptionStatus == null || !requestStatus.equals(subscriptionStatus)) {
                     continue;
                 }
             }
+
+            if (StringUtils.hasText(request.getPlanCode())) {
+                String code = sub.getPlanId() != null ? planCodeByPlanId.get(sub.getPlanId()) : null;
+                if (code == null || !normalize(request.getPlanCode()).equals(normalize(code))) {
+                    continue;
+                }
+            }
+
             filtered.add(sub);
         }
 
         int total = filtered.size();
-        int fromIndex = Math.min(page * size, total);
+        int fromIndex = Math.min((page - 1) * size, total);
         int toIndex = Math.min(fromIndex + size, total);
         List<SubscriptionEntity> pageSlice = filtered.subList(fromIndex, toIndex);
 
@@ -91,6 +98,16 @@ public class PlatformSubscriptionListProcessor extends BaseBizProcessor<BizConte
         response.setItems(items);
         response.setTotal(total);
         return response;
+    }
+
+    private String normalize(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim()
+                .replace("-", "_")
+                .replace(" ", "_")
+                .toUpperCase();
     }
 
     private Map<String, String> buildCompanyNameMap() {
