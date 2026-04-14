@@ -68,8 +68,8 @@ public class PlatformDashboardOverviewProcessor extends BaseBizProcessor<BizCont
         int previousActiveOnboardings = countActiveOnboardings(onboardings, previous.start, previous.end);
         int riskOnboardings = countRiskOnboardings(onboardings, current.start, current.end);
         int previousRiskOnboardings = countRiskOnboardings(onboardings, previous.start, previous.end);
-        int totalEmployees = countEmployees(users, current.end);
-        int previousEmployees = countEmployees(users, previous.end);
+        int totalEmployees = countEmployees(users, current.start, current.end);
+        int previousEmployees = countEmployees(users, previous.start, previous.end);
 
         PlatformDashboardOverviewResponse response = new PlatformDashboardOverviewResponse();
         response.setStartDate(start.toString());
@@ -147,17 +147,71 @@ public class PlatformDashboardOverviewProcessor extends BaseBizProcessor<BizCont
         return count;
     }
 
-    private int countEmployees(List<UserEntity> users, java.util.Date endExclusive) {
+    private int countEmployees(List<UserEntity> users, java.util.Date start, java.util.Date end) {
         int count = 0;
         for (UserEntity user : users) {
-            if (user == null || !PlatformAnalyticsSupport.isEmployee(user)) {
+            if (user == null) {
                 continue;
             }
-            if (user.getCreatedAt() == null || endExclusive == null || user.getCreatedAt().before(endExclusive)) {
+
+            if (!PlatformAnalyticsSupport.inRange(user.getCreatedAt(), start, end)) {
+                continue;
+            }
+
+            if (isAdminUser(user)) {
+                continue;
+            }
+
+            if (PlatformAnalyticsSupport.isEmployee(user)) {
                 count++;
             }
         }
         return count;
+    }
+
+    private boolean isAdminUser(UserEntity user) {
+        return hasRole(user, "ADMIN")
+                || hasRole(user, "PLATFORM_ADMIN")
+                || hasRole(user, "HR_ADMIN")
+                || hasRole(user, "SUPER_ADMIN");
+    }
+
+    private boolean hasRole(UserEntity user, String roleName) {
+        if (user == null || roleName == null) {
+            return false;
+        }
+
+        try {
+            Object rolesObj = null;
+
+            try {
+                rolesObj = user.getClass().getMethod("getRole").invoke(user);
+            } catch (Exception ignored) {
+            }
+
+            if (rolesObj == null) {
+                try {
+                    rolesObj = user.getClass().getMethod("getRoles").invoke(user);
+                } catch (Exception ignored) {
+                }
+            }
+
+            if (rolesObj == null) {
+                try {
+                    rolesObj = user.getClass().getMethod("getUserType").invoke(user);
+                } catch (Exception ignored) {
+                }
+            }
+
+            if (rolesObj == null) {
+                return false;
+            }
+
+            String normalized = String.valueOf(rolesObj).toUpperCase();
+            return normalized.contains(roleName.toUpperCase());
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static class DateRange {

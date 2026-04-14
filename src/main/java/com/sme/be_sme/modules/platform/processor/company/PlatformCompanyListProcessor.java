@@ -28,7 +28,7 @@ import org.springframework.util.StringUtils;
 public class PlatformCompanyListProcessor extends BaseBizProcessor<BizContext> {
 
     private static final String PLATFORM_STATUS = "PLATFORM";
-    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_SIZE = 20;
 
     private final ObjectMapper objectMapper;
@@ -41,8 +41,8 @@ public class PlatformCompanyListProcessor extends BaseBizProcessor<BizContext> {
     protected Object doProcess(BizContext context, JsonNode payload) {
         PlatformCompanyListRequest request = objectMapper.convertValue(payload, PlatformCompanyListRequest.class);
 
-        int page = request.getPage() != null ? request.getPage() : DEFAULT_PAGE;
-        int size = request.getSize() != null ? request.getSize() : DEFAULT_SIZE;
+        int page = request.getPage() != null && request.getPage() > 0 ? request.getPage() : DEFAULT_PAGE;
+        int size = request.getSize() != null && request.getSize() > 0 ? request.getSize() : DEFAULT_SIZE;
 
         List<CompanyEntity> allCompanies = companyMapper.selectAll();
         List<UserEntity> allUsers = userMapper.selectAll();
@@ -56,38 +56,45 @@ public class PlatformCompanyListProcessor extends BaseBizProcessor<BizContext> {
             }
         }
 
-        Map<String, SubscriptionEntity> subscriptionByCompany = new HashMap<>();
-        for (SubscriptionEntity sub : allSubscriptions) {
-            if (sub != null && sub.getCompanyId() != null) {
-                subscriptionByCompany.put(sub.getCompanyId(), sub);
-            }
-        }
+        Map<String, SubscriptionEntity> subscriptionByCompany = buildCurrentSubscriptionByCompany(allSubscriptions);
 
         List<CompanyEntity> filtered = new ArrayList<>();
         for (CompanyEntity company : allCompanies) {
-            if (company == null) continue;
-            if (PLATFORM_STATUS.equalsIgnoreCase(company.getStatus())) continue;
+            if (company == null) {
+                continue;
+            }
+            if (PLATFORM_STATUS.equalsIgnoreCase(company.getStatus())) {
+                continue;
+            }
 
             if (StringUtils.hasText(request.getStatus())
-                    && !request.getStatus().equalsIgnoreCase(company.getStatus())) {
+                    && !request.getStatus().trim().equalsIgnoreCase(String.valueOf(company.getStatus()).trim())) {
                 continue;
             }
+
             if (StringUtils.hasText(request.getSearch())
                     && (company.getName() == null
-                        || !company.getName().toLowerCase().contains(request.getSearch().toLowerCase()))) {
+                    || !company.getName().toLowerCase().contains(request.getSearch().trim().toLowerCase()))) {
                 continue;
             }
+
             if (StringUtils.hasText(request.getPlanCode())) {
                 SubscriptionEntity sub = subscriptionByCompany.get(company.getCompanyId());
-                if (sub == null) continue;
+                if (sub == null) {
+                    continue;
+                }
+
                 PlanEntity plan = sub.getPlanId() != null ? plansById.get(sub.getPlanId()) : null;
-                if (plan == null || !request.getPlanCode().equalsIgnoreCase(plan.getCode())) continue;
+                if (plan == null || !request.getPlanCode().trim().equalsIgnoreCase(String.valueOf(plan.getCode()).trim())) {
+                    continue;
+                }
             }
+
             filtered.add(company);
         }
 
         int total = filtered.size();
-        int fromIndex = Math.min(page * size, total);
+        int fromIndex = Math.min((page - 1) * size, total);
         int toIndex = Math.min(fromIndex + size, total);
         List<CompanyEntity> pageSlice = filtered.subList(fromIndex, toIndex);
 
@@ -125,5 +132,43 @@ public class PlatformCompanyListProcessor extends BaseBizProcessor<BizContext> {
             }
         }
         return map;
+    }
+    private Map<String, SubscriptionEntity> buildCurrentSubscriptionByCompany(List<SubscriptionEntity> subscriptions) {
+        Map<String, SubscriptionEntity> result = new HashMap<>();
+        for (SubscriptionEntity sub : subscriptions) {
+            if (sub == null || sub.getCompanyId() == null) {
+                continue;
+            }
+
+            SubscriptionEntity current = result.get(sub.getCompanyId());
+            if (current == null || isBetterSubscription(sub, current)) {
+                result.put(sub.getCompanyId(), sub);
+            }
+        }
+        return result;
+    }
+
+    private boolean isBetterSubscription(SubscriptionEntity candidate, SubscriptionEntity current) {
+        boolean candidateActive = "ACTIVE".equalsIgnoreCase(candidate.getStatus());
+        boolean currentActive = "ACTIVE".equalsIgnoreCase(current.getStatus());
+
+        if (candidateActive && !currentActive) {
+            return true;
+        }
+        if (!candidateActive && currentActive) {
+            return false;
+        }
+
+        java.util.Date candidateDate = candidate.getUpdatedAt() != null ? candidate.getUpdatedAt() : candidate.getCreatedAt();
+        java.util.Date currentDate = current.getUpdatedAt() != null ? current.getUpdatedAt() : current.getCreatedAt();
+
+        if (candidateDate == null) {
+            return false;
+        }
+        if (currentDate == null) {
+            return true;
+        }
+
+        return candidateDate.after(currentDate);
     }
 }
