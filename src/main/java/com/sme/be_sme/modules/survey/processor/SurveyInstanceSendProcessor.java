@@ -98,16 +98,7 @@ public class SurveyInstanceSendProcessor extends BaseBizProcessor<BizContext> {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid targetRole");
         }
 
-        String employeeId = request.getResponderUserId();
-        String actualResponderUserId = employeeId;
-
-        if ("MANAGER".equalsIgnoreCase(targetRole)) {
-            String managerId = userMapperExt.selectManagerUserIdByUserId(employeeId);
-            if (!StringUtils.hasText(managerId)) {
-                throw AppException.of(ErrorCodes.BAD_REQUEST, "Manager not found for user");
-            }
-            actualResponderUserId = managerId;
-        }
+        String actualResponderUserId = request.getResponderUserId().trim();
 
         String createdInstanceId = createAndSend(context, template, request, actualResponderUserId, now);
 
