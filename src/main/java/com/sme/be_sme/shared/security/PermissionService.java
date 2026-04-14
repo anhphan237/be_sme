@@ -20,7 +20,7 @@ public class PermissionService {
 
         // ADMIN (platform-level): only platform operations
         if (rolesUpper.contains("ADMIN")) {
-            return requiredPerm != null && requiredPerm.startsWith(PLATFORM_OP_PREFIX);
+            return requiredPerm != null && requiredPerm.startsWith(PLATFORM_OP_PREFIX) || requiredPerm.startsWith("com.sme.");
         }
 
         // Block tenant roles from platform operations
