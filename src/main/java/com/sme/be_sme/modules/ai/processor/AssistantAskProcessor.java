@@ -22,14 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
@@ -163,7 +156,7 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
                 .collect(Collectors.toSet());
         return documentIds.stream()
                 .map(documentMapper::selectByPrimaryKey)
-                .filter(doc -> doc != null)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toMap(DocumentEntity::getDocumentId, d -> d.getTitle() != null ? d.getTitle() : "(no title)", (a, b) -> a));
     }
 
@@ -191,7 +184,7 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
         if (text == null || text.isBlank()) return new ArrayList<>();
         List<String> tokens = new ArrayList<>();
         for (String s : text.toLowerCase(Locale.ROOT).split("\\W+")) {
-            if (s != null && s.length() >= MIN_TOKEN_LENGTH) {
+            if (s.length() >= MIN_TOKEN_LENGTH) {
                 tokens.add(s);
             }
         }
