@@ -85,5 +85,21 @@
         AND upper(r.code) IN ('HR', 'HR_ADMIN')
         AND upper(r.status) = 'ACTIVE'
     </select>
+    <select id="selectPlatformAdminUserIds" resultType="java.lang.String">
+        SELECT DISTINCT u.user_id
+        FROM users u
+        JOIN user_roles ur ON ur.user_id = u.user_id
+        WHERE upper(coalesce(u.status, '')) = 'ACTIVE'
+        AND ur.role_id = '00000000-0000-0000-0000-000000000002'
+    </select>
 
+    <select id="selectFirstPlatformAdminUserId" resultType="java.lang.String">
+        SELECT u.user_id
+        FROM users u
+        JOIN user_roles ur ON ur.user_id = u.user_id
+        WHERE upper(coalesce(u.status, '')) = 'ACTIVE'
+        AND ur.role_id = '00000000-0000-0000-0000-000000000002'
+        ORDER BY u.created_at
+        LIMIT 1
+    </select>
 </mapper>

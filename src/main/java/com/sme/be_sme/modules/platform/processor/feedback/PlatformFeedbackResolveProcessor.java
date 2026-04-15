@@ -2,6 +2,10 @@ package com.sme.be_sme.modules.platform.processor.feedback;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapper;
+import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
+import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
+import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.platform.api.request.PlatformFeedbackResolveRequest;
 import com.sme.be_sme.modules.platform.api.response.PlatformFeedbackResolveResponse;
 import com.sme.be_sme.modules.platform.infrastructure.mapper.FeedbackMapper;
@@ -21,6 +25,8 @@ public class PlatformFeedbackResolveProcessor extends BaseBizProcessor<BizContex
 
     private final ObjectMapper objectMapper;
     private final FeedbackMapper feedbackMapper;
+    private final NotificationService notificationService;
+    private final UserMapper userMapper;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -30,7 +36,7 @@ public class PlatformFeedbackResolveProcessor extends BaseBizProcessor<BizContex
             throw AppException.of(ErrorCodes.BAD_REQUEST, "feedbackId is required");
         }
 
-        FeedbackEntity feedback = feedbackMapper.selectByPrimaryKey(request.getFeedbackId());
+        FeedbackEntity feedback = feedbackMapper.selectByPrimaryKey(request.getFeedbackId().trim());
         if (feedback == null) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "Feedback not found");
         }
@@ -40,11 +46,46 @@ public class PlatformFeedbackResolveProcessor extends BaseBizProcessor<BizContex
         feedback.setResolvedAt(now);
         feedback.setResolvedBy(context.getOperatorId());
         feedback.setUpdatedAt(now);
-        feedbackMapper.updateByPrimaryKey(feedback);
+
+        int updated = feedbackMapper.updateByPrimaryKey(feedback);
+        if (updated != 1) {
+            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "resolve feedback failed");
+        }
+
+        notifyFeedbackSubmitter(feedback);
 
         PlatformFeedbackResolveResponse response = new PlatformFeedbackResolveResponse();
         response.setFeedbackId(feedback.getFeedbackId());
         response.setStatus(feedback.getStatus());
         return response;
+    }
+
+    private void notifyFeedbackSubmitter(FeedbackEntity feedback) {
+        if (!StringUtils.hasText(feedback.getUserId())) {
+            return;
+        }
+
+        String resolverName = "Platform admin";
+        if (StringUtils.hasText(feedback.getResolvedBy())) {
+            UserEntity resolver = userMapper.selectByPrimaryKey(feedback.getResolvedBy());
+            if (resolver != null && StringUtils.hasText(resolver.getFullName())) {
+                resolverName = resolver.getFullName();
+            }
+        }
+
+        String subject = StringUtils.hasText(feedback.getSubject()) ? feedback.getSubject().trim() : "Feedback";
+
+        NotificationCreateParams params = NotificationCreateParams.builder()
+                .companyId(feedback.getCompanyId())
+                .userId(feedback.getUserId())
+                .type("PLATFORM_FEEDBACK_RESOLVED")
+                .title("Feedback resolved")
+                .content(resolverName + " resolved your feedback: " + subject)
+                .refType("FEEDBACK")
+                .refId(feedback.getFeedbackId())
+                .sendEmail(false)
+                .build();
+
+        notificationService.create(params);
     }
 }
