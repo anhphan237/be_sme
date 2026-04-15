@@ -31,4 +31,6 @@ public interface UserMapperExt {
     String selectManagerUserIdByUserId(@Param("userId") String userId);
 
     List<String> selectHrUserIdsByCompanyId(@Param("companyId") String companyId);
+
+    List<String> selectPlatformAdminUserIds();
 }
