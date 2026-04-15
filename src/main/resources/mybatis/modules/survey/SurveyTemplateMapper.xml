@@ -87,7 +87,7 @@
       This element was generated on Thu Jan 22 16:08:37 ICT 2026.
     -->
     select survey_template_id, company_id, name, stage, manager_only, status, created_by, 
-    created_at, updated_at , version, is_default, description
+    created_at, updated_at , version, is_default, description, target_role
 
     from survey_templates
   </select>
