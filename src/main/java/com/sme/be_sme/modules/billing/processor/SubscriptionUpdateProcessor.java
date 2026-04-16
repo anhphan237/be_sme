@@ -7,6 +7,7 @@ import com.sme.be_sme.modules.billing.api.response.SubscriptionResponse;
 import com.sme.be_sme.modules.billing.enums.InvoiceStatus;
 import com.sme.be_sme.modules.billing.enums.SubscriptionChangeRequestStatus;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.OnboardingUsageMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionChangeRequestMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
@@ -46,6 +47,7 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
     private final SubscriptionChangeRequestMapper subscriptionChangeRequestMapper;
     private final InvoiceMapper invoiceMapper;
     private final PlanMapper planMapper;
+    private final OnboardingUsageMapper onboardingUsageMapper;
 
     @Override
     @Transactional
@@ -85,9 +87,12 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
             boolean planChanged = !equalsTrimmed(oldPlanId, targetPlanId);
             boolean cycleChanged = !equalsTrimmed(oldBillingCycle, targetBillingCycle);
 
+            int oldPrice = resolvePlanPrice(oldPlan, targetBillingCycle);
+            int newPrice = resolvePlanPrice(targetPlan, targetBillingCycle);
             int chargeAmount = 0;
             if (planChanged || cycleChanged) {
-                chargeAmount = calculatePlanChangeCharge(oldPlan, targetPlan, targetBillingCycle);
+                validateDowngradeActiveOnboardingLimit(context.getTenantId().trim(), oldPrice, newPrice, targetPlan);
+                chargeAmount = calculatePlanChangeCharge(targetPlan, targetBillingCycle);
             }
 
             Date updatedAt = new Date();
@@ -239,13 +244,10 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
         return cycle;
     }
 
-    private int calculatePlanChangeCharge(PlanEntity oldPlan,
-                                          PlanEntity newPlan,
+    private int calculatePlanChangeCharge(PlanEntity newPlan,
                                           String targetBillingCycle) {
         if (newPlan == null) return 0;
-        int oldPrice = resolvePlanPrice(oldPlan, targetBillingCycle);
-        int newPrice = resolvePlanPrice(newPlan, targetBillingCycle);
-        return newPrice > oldPrice ? newPrice : 0;
+        return resolvePlanPrice(newPlan, targetBillingCycle);
     }
 
     private int resolvePlanPrice(PlanEntity plan, String billingCycle) {
@@ -254,6 +256,27 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
             return plan.getPriceVndYearly() == null ? 0 : Math.max(0, plan.getPriceVndYearly());
         }
         return plan.getPriceVndMonthly() == null ? 0 : Math.max(0, plan.getPriceVndMonthly());
+    }
+
+    private void validateDowngradeActiveOnboardingLimit(String companyId,
+                                                        int oldPrice,
+                                                        int newPrice,
+                                                        PlanEntity targetPlan) {
+        if (newPrice >= oldPrice) {
+            return;
+        }
+        if (targetPlan == null || targetPlan.getEmployeeLimitPerMonth() == null) {
+            return;
+        }
+        int targetLimit = Math.max(0, targetPlan.getEmployeeLimitPerMonth());
+        int activeCount = onboardingUsageMapper.countActiveOnboardingInstancesByCompanyId(companyId);
+        if (activeCount > targetLimit) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "Cannot downgrade: ACTIVE onboarding count (" + activeCount
+                            + ") exceeds target plan limit (" + targetLimit + ")"
+            );
+        }
     }
 
     private SubscriptionChangeRequestEntity getOrCreatePendingChangeRequest(BizContext context,
