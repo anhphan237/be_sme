@@ -3,7 +3,10 @@ package com.sme.be_sme.modules.onboarding.processor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskAttachmentMapperExt;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskRequiredDocumentMapper;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
+import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAcknowledgementMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
 import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
 import com.sme.be_sme.modules.onboarding.service.OnboardingTaskActivityLogService;
@@ -33,6 +36,12 @@ class OnboardingTaskUpdateStatusProcessorTest {
     @Mock
     private TaskAttachmentMapperExt taskAttachmentMapperExt;
     @Mock
+    private TaskRequiredDocumentMapper taskRequiredDocumentMapper;
+    @Mock
+    private ChecklistInstanceMapper checklistInstanceMapper;
+    @Mock
+    private DocumentAcknowledgementMapper documentAcknowledgementMapper;
+    @Mock
     private OnboardingInstanceProgressService progressService;
     @Mock
     private OnboardingTaskApprovalAuthority approvalAuthority;
@@ -47,6 +56,9 @@ class OnboardingTaskUpdateStatusProcessorTest {
                 new ObjectMapper(),
                 taskInstanceMapper,
                 taskAttachmentMapperExt,
+                taskRequiredDocumentMapper,
+                checklistInstanceMapper,
+                documentAcknowledgementMapper,
                 progressService,
                 approvalAuthority,
                 activityLogService,
@@ -83,6 +95,9 @@ class OnboardingTaskUpdateStatusProcessorTest {
                 new ObjectMapper(),
                 taskInstanceMapper,
                 taskAttachmentMapperExt,
+                taskRequiredDocumentMapper,
+                checklistInstanceMapper,
+                documentAcknowledgementMapper,
                 progressService,
                 approvalAuthority,
                 activityLogService,
@@ -113,6 +128,9 @@ class OnboardingTaskUpdateStatusProcessorTest {
                 new ObjectMapper(),
                 taskInstanceMapper,
                 taskAttachmentMapperExt,
+                taskRequiredDocumentMapper,
+                checklistInstanceMapper,
+                documentAcknowledgementMapper,
                 progressService,
                 approvalAuthority,
                 activityLogService,

@@ -42,6 +42,7 @@ public class OnboardingTemplateGetResponse {
         private Boolean requireDoc;
         private Boolean requiresManagerApproval;
         private String approverUserId;
+        private List<String> requiredDocumentIds;
         private Integer orderNo;
         private String status;
     }

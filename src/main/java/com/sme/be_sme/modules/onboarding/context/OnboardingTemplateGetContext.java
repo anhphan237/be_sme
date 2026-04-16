@@ -9,6 +9,7 @@ import com.sme.be_sme.shared.gateway.core.BizContext;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Map;
 import java.util.List;
 
 @Getter
@@ -21,4 +22,5 @@ public class OnboardingTemplateGetContext {
     private OnboardingTemplateEntity template;
     private List<ChecklistTemplateRow> checklistRows;
     private List<TaskTemplateRow> baselineTaskRows;
+    private Map<String, List<String>> requiredDocumentIdsByTaskTemplateId;
 }

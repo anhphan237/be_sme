@@ -51,6 +51,7 @@ public class TaskDetailResponse {
     private DepartmentInfo assignedDepartment;
 
     // Related collections
+    private List<RequiredDocumentItem> requiredDocuments;
     private List<CommentItem> comments;
     private List<AttachmentItem> attachments;
     private List<ActivityLogItem> activityLogs;
@@ -101,6 +102,13 @@ public class TaskDetailResponse {
         private String uploadedBy;
         private String uploadedByName;
         private Date uploadedAt;
+    }
+
+    @Getter
+    @Setter
+    public static class RequiredDocumentItem {
+        private String documentId;
+        private String title;
     }
 
     @Getter

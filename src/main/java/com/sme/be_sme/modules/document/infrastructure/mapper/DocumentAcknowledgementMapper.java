@@ -53,4 +53,10 @@ public interface DocumentAcknowledgementMapper {
             @Param("documentId") String documentId,
             @Param("userId") String userId,
             @Param("onboardingId") String onboardingId);
+
+    int countAckedByCompanyAndDocumentIdsAndUserAndOnboarding(
+            @Param("companyId") String companyId,
+            @Param("documentIds") List<String> documentIds,
+            @Param("userId") String userId,
+            @Param("onboardingId") String onboardingId);
 }

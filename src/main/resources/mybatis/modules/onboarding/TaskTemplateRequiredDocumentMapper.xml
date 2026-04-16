@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskTemplateRequiredDocumentMapper">
+
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateRequiredDocumentEntity">
+    <id column="task_template_required_document_id" jdbcType="VARCHAR" property="taskTemplateRequiredDocumentId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="task_template_id" jdbcType="VARCHAR" property="taskTemplateId" />
+    <result column="document_id" jdbcType="VARCHAR" property="documentId" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateRequiredDocumentEntity">
+    insert into task_template_required_documents (
+      task_template_required_document_id, company_id, task_template_id, document_id, created_at
+    )
+    values (
+      #{taskTemplateRequiredDocumentId,jdbcType=VARCHAR},
+      #{companyId,jdbcType=VARCHAR},
+      #{taskTemplateId,jdbcType=VARCHAR},
+      #{documentId,jdbcType=VARCHAR},
+      #{createdAt,jdbcType=TIMESTAMP}
+    )
+  </insert>
+
+  <delete id="deleteByCompanyIdAndTaskTemplateId">
+    delete from task_template_required_documents
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and task_template_id = #{taskTemplateId,jdbcType=VARCHAR}
+  </delete>
+
+  <select id="selectByCompanyIdAndTaskTemplateIds" resultMap="BaseResultMap">
+    select task_template_required_document_id, company_id, task_template_id, document_id, created_at
+    from task_template_required_documents
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      <if test="taskTemplateIds != null and taskTemplateIds.size() > 0">
+        and task_template_id in
+        <foreach item="id" collection="taskTemplateIds" open="(" separator="," close=")">
+          #{id,jdbcType=VARCHAR}
+        </foreach>
+      </if>
+      <if test="taskTemplateIds == null or taskTemplateIds.size() == 0">
+        and 1 = 0
+      </if>
+    order by created_at asc
+  </select>
+
+</mapper>

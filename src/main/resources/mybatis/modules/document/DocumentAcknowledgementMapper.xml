@@ -88,4 +88,21 @@
       and user_id = #{userId,jdbcType=VARCHAR}
       and onboarding_id = #{onboardingId,jdbcType=VARCHAR}
   </select>
+  <select id="countAckedByCompanyAndDocumentIdsAndUserAndOnboarding" resultType="java.lang.Integer">
+    select count(distinct document_id)
+    from document_acknowledgements
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and user_id = #{userId,jdbcType=VARCHAR}
+      and onboarding_id = #{onboardingId,jdbcType=VARCHAR}
+      and upper(coalesce(trim(status), '')) = 'ACKED'
+      <if test="documentIds != null and documentIds.size() > 0">
+        and document_id in
+        <foreach item="id" collection="documentIds" open="(" separator="," close=")">
+          #{id,jdbcType=VARCHAR}
+        </foreach>
+      </if>
+      <if test="documentIds == null or documentIds.size() == 0">
+        and 1 = 0
+      </if>
+  </select>
 </mapper>

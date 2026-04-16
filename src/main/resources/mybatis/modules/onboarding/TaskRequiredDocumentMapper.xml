@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskRequiredDocumentMapper">
+
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskRequiredDocumentEntity">
+    <id column="task_required_document_id" jdbcType="VARCHAR" property="taskRequiredDocumentId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="task_id" jdbcType="VARCHAR" property="taskId" />
+    <result column="document_id" jdbcType="VARCHAR" property="documentId" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskRequiredDocumentEntity">
+    insert into task_required_documents (
+      task_required_document_id, company_id, task_id, document_id, created_at
+    )
+    values (
+      #{taskRequiredDocumentId,jdbcType=VARCHAR},
+      #{companyId,jdbcType=VARCHAR},
+      #{taskId,jdbcType=VARCHAR},
+      #{documentId,jdbcType=VARCHAR},
+      #{createdAt,jdbcType=TIMESTAMP}
+    )
+  </insert>
+
+  <delete id="deleteByCompanyIdAndTaskId">
+    delete from task_required_documents
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and task_id = #{taskId,jdbcType=VARCHAR}
+  </delete>
+
+  <select id="selectByCompanyIdAndTaskId" resultMap="BaseResultMap">
+    select task_required_document_id, company_id, task_id, document_id, created_at
+    from task_required_documents
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and task_id = #{taskId,jdbcType=VARCHAR}
+    order by created_at asc
+  </select>
+
+</mapper>

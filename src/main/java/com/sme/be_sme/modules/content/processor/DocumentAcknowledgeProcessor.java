@@ -101,9 +101,15 @@ public class DocumentAcknowledgeProcessor extends BaseBizProcessor<BizContext> {
                 OnboardingTaskUpdateStatusRequest updateReq = new OnboardingTaskUpdateStatusRequest();
                 updateReq.setTaskId(taskIdToUpdate);
                 updateReq.setStatus(STATUS_DONE);
-                OnboardingTaskResponse taskResp = onboardingTaskFacade.updateTaskStatus(updateReq);
-                if (taskResp != null) {
-                    taskMarkedDone = true;
+                try {
+                    OnboardingTaskResponse taskResp = onboardingTaskFacade.updateTaskStatus(updateReq);
+                    if (taskResp != null) {
+                        taskMarkedDone = true;
+                    }
+                } catch (AppException ex) {
+                    // Document acknowledgement is still valid even when task cannot be auto-completed
+                    // (e.g. task still requires explicit task acknowledge/status transition).
+                    taskMarkedDone = false;
                 }
             }
         }
