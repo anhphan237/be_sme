@@ -24,10 +24,19 @@ public class PlatformRevenueTrendProcessor extends BaseBizProcessor<BizContext> 
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
-        PlatformRevenueTrendRequest request = objectMapper.convertValue(payload, PlatformRevenueTrendRequest.class);
+        PlatformRevenueTrendRequest request =
+                objectMapper.convertValue(payload, PlatformRevenueTrendRequest.class);
+
         String groupBy = PlatformAnalyticsSupport.normalizeGroupBy(request.getGroupBy());
-        LocalDate start = PlatformAnalyticsSupport.parseLocalDate(request.getStartDate(), LocalDate.now().minusMonths(11));
-        LocalDate end = PlatformAnalyticsSupport.parseLocalDate(request.getEndDate(), LocalDate.now());
+        LocalDate start = PlatformAnalyticsSupport.parseLocalDate(
+                request.getStartDate(), LocalDate.now().minusMonths(11));
+        LocalDate end = PlatformAnalyticsSupport.parseLocalDate(
+                request.getEndDate(), LocalDate.now());
+
+
+        boolean comparePrevious =
+                request.getComparePrevious() == null || Boolean.TRUE.equals(request.getComparePrevious());
+
         LocalDate previousStart = PlatformAnalyticsSupport.previousPeriodStart(start, end, groupBy);
         LocalDate previousEnd = PlatformAnalyticsSupport.previousPeriodEnd(start, end, groupBy);
 
@@ -45,15 +54,22 @@ public class PlatformRevenueTrendProcessor extends BaseBizProcessor<BizContext> 
             if (invoice == null || invoice.getCreatedAt() == null || !"PAID".equalsIgnoreCase(invoice.getStatus())) {
                 continue;
             }
+
             double amount = invoice.getAmountTotal() != null ? invoice.getAmountTotal() : 0.0;
+
             if (PlatformAnalyticsSupport.inRange(invoice.getCreatedAt(), startDate, endDate)) {
                 String bucket = PlatformAnalyticsSupport.bucketOf(invoice.getCreatedAt(), groupBy);
                 currentMap.computeIfPresent(bucket, (k, v) -> v + amount);
             }
-            if (Boolean.TRUE.equals(request.getComparePrevious())
+
+            if (comparePrevious
                     && PlatformAnalyticsSupport.inRange(invoice.getCreatedAt(), previousStartDate, previousEndDate)) {
                 String previousBucket = PlatformAnalyticsSupport.bucketOf(invoice.getCreatedAt(), groupBy);
-                LocalDate shifted = PlatformAnalyticsSupport.step(PlatformAnalyticsSupport.bucketToDate(previousBucket, groupBy), groupBy, distance);
+                LocalDate shifted = PlatformAnalyticsSupport.step(
+                        PlatformAnalyticsSupport.bucketToDate(previousBucket, groupBy),
+                        groupBy,
+                        distance
+                );
                 String shiftedBucket = PlatformAnalyticsSupport.formatBucket(shifted, groupBy);
                 previousMap.computeIfPresent(shiftedBucket, (k, v) -> v + amount);
             }
@@ -61,12 +77,16 @@ public class PlatformRevenueTrendProcessor extends BaseBizProcessor<BizContext> 
 
         List<PlatformRevenueTrendResponse.TrendItem> items = new ArrayList<>();
         for (String bucket : buckets) {
+            Double currentValue = currentMap.getOrDefault(bucket, 0.0);
+            Double previousValue = comparePrevious ? previousMap.getOrDefault(bucket, 0.0) : null;
+
             PlatformRevenueTrendResponse.TrendItem item = new PlatformRevenueTrendResponse.TrendItem();
             item.setBucket(bucket);
-            item.setValue(currentMap.getOrDefault(bucket, 0.0));
-            item.setPreviousValue(Boolean.TRUE.equals(request.getComparePrevious()) ? previousMap.getOrDefault(bucket, 0.0) : null);
-            item.setGrowthRate(Boolean.TRUE.equals(request.getComparePrevious())
-                    ? PlatformAnalyticsSupport.growth(item.getValue(), item.getPreviousValue()) : null);
+            item.setValue(currentValue);
+            item.setPreviousValue(previousValue);
+            item.setGrowthRate(comparePrevious
+                    ? PlatformAnalyticsSupport.growth(currentValue, previousValue)
+                    : null);
             items.add(item);
         }
 
