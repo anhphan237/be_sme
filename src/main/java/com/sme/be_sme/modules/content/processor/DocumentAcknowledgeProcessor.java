@@ -8,6 +8,7 @@ import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAcknowledge
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentAcknowledgementEntity;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentEntity;
+import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskAcknowledgeRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskUpdateStatusRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.facade.OnboardingTaskFacade;
@@ -94,22 +95,34 @@ public class DocumentAcknowledgeProcessor extends BaseBizProcessor<BizContext> {
 
         boolean taskMarkedDone = false;
         if (StringUtils.hasText(onboardingId)) {
-            String taskIdToUpdate = request.getTaskId() != null && !request.getTaskId().isBlank()
+            String explicitTaskId = request.getTaskId() != null && !request.getTaskId().isBlank()
                     ? request.getTaskId().trim()
-                    : findReadHandbookTaskId(companyId, onboardingId, documentId, doc.getTitle());
-            if (taskIdToUpdate != null) {
-                OnboardingTaskUpdateStatusRequest updateReq = new OnboardingTaskUpdateStatusRequest();
-                updateReq.setTaskId(taskIdToUpdate);
-                updateReq.setStatus(STATUS_DONE);
+                    : null;
+            if (explicitTaskId != null) {
+                // Low-risk behavior: when caller explicitly passes taskId, sync task acknowledge state first
+                // (WAIT_ACK), then FE can call updateStatus -> DONE explicitly.
+                OnboardingTaskAcknowledgeRequest ackReq = new OnboardingTaskAcknowledgeRequest();
+                ackReq.setTaskId(explicitTaskId);
                 try {
-                    OnboardingTaskResponse taskResp = onboardingTaskFacade.updateTaskStatus(updateReq);
-                    if (taskResp != null) {
-                        taskMarkedDone = true;
-                    }
+                    onboardingTaskFacade.acknowledgeTask(ackReq);
                 } catch (AppException ex) {
-                    // Document acknowledgement is still valid even when task cannot be auto-completed
-                    // (e.g. task still requires explicit task acknowledge/status transition).
-                    taskMarkedDone = false;
+                    // Document acknowledgement remains valid even if task acknowledge is not applicable.
+                }
+            } else {
+                String taskIdToUpdate = findReadHandbookTaskId(companyId, onboardingId, documentId, doc.getTitle());
+                if (taskIdToUpdate != null) {
+                    OnboardingTaskUpdateStatusRequest updateReq = new OnboardingTaskUpdateStatusRequest();
+                    updateReq.setTaskId(taskIdToUpdate);
+                    updateReq.setStatus(STATUS_DONE);
+                    try {
+                        OnboardingTaskResponse taskResp = onboardingTaskFacade.updateTaskStatus(updateReq);
+                        if (taskResp != null) {
+                            taskMarkedDone = true;
+                        }
+                    } catch (AppException ex) {
+                        // Document acknowledgement is still valid even when task cannot be auto-completed.
+                        taskMarkedDone = false;
+                    }
                 }
             }
         }
