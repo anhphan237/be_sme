@@ -6,9 +6,12 @@ import com.sme.be_sme.modules.company.infrastructure.mapper.DepartmentMapper;
 import com.sme.be_sme.modules.company.infrastructure.persistence.entity.DepartmentEntity;
 import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapper;
 import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
+import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper;
+import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentEntity;
 import com.sme.be_sme.modules.onboarding.api.request.TaskDetailRequest;
 import com.sme.be_sme.modules.onboarding.api.response.TaskDetailResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstanceMapper;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskRequiredDocumentMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskActivityLogMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskAttachmentMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskCommentMapperExt;
@@ -18,6 +21,7 @@ import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskA
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskAttachmentEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskCommentEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskRequiredDocumentEntity;
 import com.sme.be_sme.modules.onboarding.service.OnboardingTaskSlaService;
 import com.sme.be_sme.modules.onboarding.support.OnboardingTaskAuth;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -41,7 +45,9 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
     private final TaskCommentMapperExt taskCommentMapperExt;
     private final TaskAttachmentMapperExt taskAttachmentMapperExt;
     private final TaskActivityLogMapperExt taskActivityLogMapperExt;
+    private final TaskRequiredDocumentMapper taskRequiredDocumentMapper;
     private final UserMapper userMapper;
+    private final DocumentMapper documentMapper;
     private final DepartmentMapper departmentMapper;
     private final OnboardingTaskSlaService slaService;
 
@@ -91,6 +97,9 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
         List<TaskActivityLogEntity> activityLogs = shouldIncludeActivityLogs(request)
             ? taskActivityLogMapperExt.selectByTaskId(tenantId, task.getTaskId())
             : Collections.emptyList();
+        List<TaskRequiredDocumentEntity> requiredDocumentLinks =
+                taskRequiredDocumentMapper.selectByCompanyIdAndTaskId(tenantId, task.getTaskId());
+        Map<String, DocumentEntity> requiredDocumentMap = loadRequiredDocuments(requiredDocumentLinks);
 
         // 7. Enrich users for task + comments/attachments/logs in one batch
         Map<String, UserEntity> userMap = loadUsers(task, comments, attachments, activityLogs);
@@ -101,7 +110,7 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
 
         // 8. Build Response
         return buildResponse(task, checklist, assignedUser, createdByUser, department,
-            comments, attachments, activityLogs, userNameMap);
+            comments, attachments, activityLogs, userNameMap, requiredDocumentLinks, requiredDocumentMap);
     }
 
     private void validate(TaskDetailRequest request) {
@@ -196,7 +205,9 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
         List<TaskCommentEntity> comments,
         List<TaskAttachmentEntity> attachments,
         List<TaskActivityLogEntity> activityLogs,
-        Map<String, String> userNameMap
+        Map<String, String> userNameMap,
+        List<TaskRequiredDocumentEntity> requiredDocumentLinks,
+        Map<String, DocumentEntity> requiredDocumentMap
     ) {
         TaskDetailResponse response = new TaskDetailResponse();
 
@@ -302,6 +313,18 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
             .collect(Collectors.toList());
         response.setAttachments(attachmentItems);
 
+        // Required documents
+        List<TaskDetailResponse.RequiredDocumentItem> requiredDocuments = requiredDocumentLinks.stream()
+                .map(link -> {
+                    TaskDetailResponse.RequiredDocumentItem item = new TaskDetailResponse.RequiredDocumentItem();
+                    item.setDocumentId(link.getDocumentId());
+                    DocumentEntity doc = requiredDocumentMap.get(link.getDocumentId());
+                    item.setTitle(doc == null ? null : doc.getTitle());
+                    return item;
+                })
+                .collect(Collectors.toList());
+        response.setRequiredDocuments(requiredDocuments);
+
         // Activity logs
         List<TaskDetailResponse.ActivityLogItem> logItems = activityLogs.stream()
             .map(l -> {
@@ -319,5 +342,26 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
         response.setActivityLogs(logItems);
 
         return response;
+    }
+
+    private Map<String, DocumentEntity> loadRequiredDocuments(List<TaskRequiredDocumentEntity> links) {
+        if (links == null || links.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, DocumentEntity> result = new HashMap<>();
+        for (TaskRequiredDocumentEntity link : links) {
+            if (link == null || !StringUtils.hasText(link.getDocumentId())) {
+                continue;
+            }
+            String documentId = link.getDocumentId().trim();
+            if (result.containsKey(documentId)) {
+                continue;
+            }
+            DocumentEntity document = documentMapper.selectByPrimaryKey(documentId);
+            if (document != null) {
+                result.put(documentId, document);
+            }
+        }
+        return result;
     }
 }

@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.onboarding.api.request;
 
 import lombok.Getter;
 import lombok.Setter;
+import java.util.List;
 
 @Getter
 @Setter
@@ -16,6 +17,8 @@ public class TaskTemplateCreateItem {
     private Boolean requiresManagerApproval;
     /** When set, only this user ({@code users.user_id}) may approve/reject (overrides line manager). */
     private String approverUserId;
+    /** Required when {@code requireAck=true}: document ids selected from content library. */
+    private List<String> requiredDocumentIds;
     private Integer sortOrder;
     private String status;
 }

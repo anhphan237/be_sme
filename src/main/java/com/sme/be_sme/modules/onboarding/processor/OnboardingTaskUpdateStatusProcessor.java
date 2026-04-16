@@ -5,8 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskUpdateStatusRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskAttachmentMapperExt;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskRequiredDocumentMapper;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
+import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.ChecklistInstanceEntity;
+import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskRequiredDocumentEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAcknowledgementMapper;
 import com.sme.be_sme.modules.onboarding.service.OnboardingTaskActivityLogService;
 import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
 import com.sme.be_sme.modules.onboarding.service.OnboardingTaskApprovalAuthority;
@@ -20,9 +25,11 @@ import com.sme.be_sme.shared.gateway.core.BizContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.Date;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -31,6 +38,9 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
     private final ObjectMapper objectMapper;
     private final TaskInstanceMapper taskInstanceMapper;
     private final TaskAttachmentMapperExt taskAttachmentMapperExt;
+    private final TaskRequiredDocumentMapper taskRequiredDocumentMapper;
+    private final ChecklistInstanceMapper checklistInstanceMapper;
+    private final DocumentAcknowledgementMapper documentAcknowledgementMapper;
     private final OnboardingInstanceProgressService progressService;
     private final OnboardingTaskApprovalAuthority approvalAuthority;
     private final OnboardingTaskActivityLogService activityLogService;
@@ -87,6 +97,7 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
             if (Boolean.TRUE.equals(task.getRequireAck()) && task.getAcknowledgedAt() == null) {
                 throw AppException.of(ErrorCodes.BAD_REQUEST, "acknowledge task before marking done");
             }
+            assertRequiredDocumentsAcknowledged(companyId, task);
             assertRequiredDocUploaded(companyId, task);
             if (Boolean.TRUE.equals(task.getRequiresManagerApproval())) {
                 if (OnboardingTaskAuth.isEmployeeOnly(context.getRoles())) {
@@ -200,6 +211,53 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
             throw AppException.of(
                     ErrorCodes.BAD_REQUEST,
                     "upload at least one document before submitting this task");
+        }
+    }
+
+    private void assertRequiredDocumentsAcknowledged(String companyId, TaskInstanceEntity task) {
+        if (!Boolean.TRUE.equals(task.getRequireAck())) {
+            return;
+        }
+        if (task == null || !StringUtils.hasText(task.getTaskId())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "taskId is required");
+        }
+        if (!StringUtils.hasText(task.getAssignedUserId())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "assignee is required for acknowledge-required task");
+        }
+
+        List<TaskRequiredDocumentEntity> requiredDocuments =
+                taskRequiredDocumentMapper.selectByCompanyIdAndTaskId(companyId, task.getTaskId());
+        if (CollectionUtils.isEmpty(requiredDocuments)) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "no required documents configured for acknowledge-required task");
+        }
+        List<String> requiredDocumentIds = requiredDocuments.stream()
+                .map(TaskRequiredDocumentEntity::getDocumentId)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .toList();
+        if (requiredDocumentIds.isEmpty()) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "no required documents configured for acknowledge-required task");
+        }
+
+        ChecklistInstanceEntity checklist = checklistInstanceMapper.selectByPrimaryKey(task.getChecklistId());
+        if (checklist == null || !StringUtils.hasText(checklist.getOnboardingId())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "onboardingId is required for required document check");
+        }
+
+        int ackedCount = documentAcknowledgementMapper.countAckedByCompanyAndDocumentIdsAndUserAndOnboarding(
+                companyId,
+                requiredDocumentIds,
+                task.getAssignedUserId().trim(),
+                checklist.getOnboardingId().trim());
+        if (ackedCount < requiredDocumentIds.size()) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "acknowledge all required documents before marking done");
         }
     }
 }

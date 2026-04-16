@@ -31,7 +31,9 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
     private final ChecklistTemplateMapper checklistTemplateMapper;
     private final ChecklistInstanceMapper checklistInstanceMapper;
     private final TaskTemplateMapper taskTemplateMapper;
+    private final TaskTemplateRequiredDocumentMapper taskTemplateRequiredDocumentMapper;
     private final TaskInstanceMapper taskInstanceMapper;
+    private final TaskRequiredDocumentMapper taskRequiredDocumentMapper;
     private final TaskInstanceMapperExt taskInstanceMapperExt;
     private final EmployeeProfileMapperExt employeeProfileMapperExt;
     private final OnboardingTaskApprovalAuthority approvalAuthority;
@@ -80,6 +82,8 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
                             + "; cannot create tasks");
         }
         List<TaskTemplateEntity> taskTemplates = filterTaskTemplates(companyId);
+        Map<String, List<String>> requiredDocumentIdsByTaskTemplateId =
+                loadRequiredDocumentIdsByTaskTemplate(companyId, taskTemplates);
 
         String lineManagerResolved = approvalAuthority.resolveLineManagerUserId(companyId, instance);
 
@@ -143,6 +147,19 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
                 int insertedTask = taskInstanceMapper.insert(taskInstance);
                 if (insertedTask != 1) {
                     throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create task instance failed");
+                }
+                List<String> requiredDocumentIds = requiredDocumentIdsByTaskTemplateId
+                        .getOrDefault(taskTemplate.getTaskTemplateId(), List.of());
+                for (String documentId : requiredDocumentIds) {
+                    TaskRequiredDocumentEntity requiredDocument = new TaskRequiredDocumentEntity();
+                    requiredDocument.setTaskRequiredDocumentId(UuidGenerator.generate());
+                    requiredDocument.setCompanyId(companyId);
+                    requiredDocument.setTaskId(taskInstance.getTaskId());
+                    requiredDocument.setDocumentId(documentId);
+                    requiredDocument.setCreatedAt(now);
+                    if (taskRequiredDocumentMapper.insert(requiredDocument) != 1) {
+                        throw AppException.of(ErrorCodes.INTERNAL_ERROR, "attach required document to task failed");
+                    }
                 }
                 totalTasks++;
             }
@@ -221,6 +238,31 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
     private List<TaskTemplateEntity> filterTaskTemplates(String tenantId) {
         List<TaskTemplateEntity> templates = taskTemplateMapper.selectByCompanyId(tenantId);
         return templates == null ? List.of() : templates;
+    }
+
+    private Map<String, List<String>> loadRequiredDocumentIdsByTaskTemplate(
+            String companyId,
+            List<TaskTemplateEntity> taskTemplates) {
+        if (taskTemplates == null || taskTemplates.isEmpty()) {
+            return Map.of();
+        }
+        List<String> taskTemplateIds = taskTemplates.stream()
+                .map(TaskTemplateEntity::getTaskTemplateId)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .toList();
+        if (taskTemplateIds.isEmpty()) {
+            return Map.of();
+        }
+        return taskTemplateRequiredDocumentMapper
+                .selectByCompanyIdAndTaskTemplateIds(companyId, taskTemplateIds)
+                .stream()
+                .collect(
+                        java.util.stream.Collectors.groupingBy(
+                                TaskTemplateRequiredDocumentEntity::getTaskTemplateId,
+                                java.util.stream.Collectors.mapping(
+                                        TaskTemplateRequiredDocumentEntity::getDocumentId,
+                                        java.util.stream.Collectors.toList())));
     }
 
     private static Date calculateDueDate(Date start, Integer daysOffset) {
