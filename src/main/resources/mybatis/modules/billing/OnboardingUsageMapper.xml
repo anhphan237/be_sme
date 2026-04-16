@@ -8,4 +8,11 @@
       and created_at &gt;= #{monthStart,jdbcType=TIMESTAMP}
       and created_at &lt; #{monthEnd,jdbcType=TIMESTAMP}
   </select>
+
+  <select id="countActiveOnboardingInstancesByCompanyId" resultType="int">
+    select count(*)
+    from onboarding_instances
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and upper(trim(status)) = 'ACTIVE'
+  </select>
 </mapper>

@@ -16,4 +16,8 @@ public interface OnboardingUsageMapper {
             @Param("monthStart") Date monthStart,
             @Param("monthEnd") Date monthEnd
     );
+
+    int countActiveOnboardingInstancesByCompanyId(
+            @Param("companyId") String companyId
+    );
 }
