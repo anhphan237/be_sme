@@ -30,6 +30,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
@@ -275,11 +276,14 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
             );
         }
 
-        InvoiceEntity invoice = createPlanChangeInvoice(current, chargeAmount, now);
+        InvoiceEntity invoice = createPlanChangeInvoice(current, chargeAmount, billingCycle, now);
         return createPendingChangeRequest(context, current, oldPlanId, newPlanId, billingCycle, invoice.getInvoiceId(), now);
     }
 
-    private InvoiceEntity createPlanChangeInvoice(SubscriptionEntity current, int chargeAmount, Date now) {
+    private InvoiceEntity createPlanChangeInvoice(SubscriptionEntity current,
+                                                  int chargeAmount,
+                                                  String billingCycle,
+                                                  Date now) {
         InvoiceEntity invoice = new InvoiceEntity();
         String invoiceId = UuidGenerator.generate();
         invoice.setInvoiceId(invoiceId);
@@ -290,7 +294,7 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
         invoice.setCurrency("VND");
         invoice.setStatus(InvoiceStatus.ISSUED.getCode());
         invoice.setIssuedAt(now);
-        invoice.setDueAt(addDays(now, 7));
+        invoice.setDueAt(resolveDueAt(now, billingCycle));
         invoice.setCreatedAt(now);
         int inserted = invoiceMapper.insert(invoice);
         if (inserted != 1) {
@@ -428,8 +432,11 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
         return "INV-" + today + "-" + suffix;
     }
 
-    private static Date addDays(Date start, int days) {
-        LocalDate date = start.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        return Date.from(date.plusDays(days).atStartOfDay(ZoneId.systemDefault()).toInstant());
+    private static Date resolveDueAt(Date issuedAt, String billingCycle) {
+        ZonedDateTime issuedTime = issuedAt.toInstant().atZone(ZoneId.systemDefault());
+        ZonedDateTime dueTime = "YEARLY".equalsIgnoreCase(billingCycle)
+                ? issuedTime.plusYears(1)
+                : issuedTime.plusMonths(1);
+        return Date.from(dueTime.toInstant());
     }
 }

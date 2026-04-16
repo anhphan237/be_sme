@@ -18,6 +18,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
@@ -67,6 +68,7 @@ public class InvoiceGenerateCoreService {
         }
 
         int amountTotal = calculateAmount(subscription, plan, periodStart);
+        String billingCycle = normalizeBillingCycle(subscription.getBillingCycle());
         Date now = new Date();
 
         InvoiceEntity invoice = new InvoiceEntity();
@@ -79,7 +81,7 @@ public class InvoiceGenerateCoreService {
         invoice.setCurrency("VND");
         invoice.setStatus(InvoiceStatus.ISSUED.getCode());
         invoice.setIssuedAt(now);
-        invoice.setDueAt(addDays(now, 7));
+        invoice.setDueAt(resolveDueAt(now, billingCycle));
         invoice.setCreatedAt(now);
 
         int inserted = invoiceMapper.insert(invoice);
@@ -90,7 +92,7 @@ public class InvoiceGenerateCoreService {
     }
 
     private int calculateAmount(SubscriptionEntity subscription, PlanEntity plan, LocalDate periodStart) {
-        String billingCycle = subscription.getBillingCycle() == null ? "MONTHLY" : subscription.getBillingCycle();
+        String billingCycle = normalizeBillingCycle(subscription.getBillingCycle());
         int basePrice = "YEARLY".equalsIgnoreCase(billingCycle)
                 ? safeAmount(plan.getPriceVndYearly())
                 : safeAmount(plan.getPriceVndMonthly());
@@ -128,8 +130,18 @@ public class InvoiceGenerateCoreService {
         return "INV-" + today + "-" + suffix;
     }
 
-    private static Date addDays(Date start, int days) {
-        LocalDate date = start.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        return Date.from(date.plusDays(days).atStartOfDay(ZoneId.systemDefault()).toInstant());
+    private static String normalizeBillingCycle(String billingCycle) {
+        if ("YEARLY".equalsIgnoreCase(billingCycle)) {
+            return "YEARLY";
+        }
+        return "MONTHLY";
+    }
+
+    private static Date resolveDueAt(Date issuedAt, String billingCycle) {
+        ZonedDateTime issuedTime = issuedAt.toInstant().atZone(ZoneId.systemDefault());
+        ZonedDateTime dueTime = "YEARLY".equalsIgnoreCase(billingCycle)
+                ? issuedTime.plusYears(1)
+                : issuedTime.plusMonths(1);
+        return Date.from(dueTime.toInstant());
     }
 }
