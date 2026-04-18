@@ -49,6 +49,7 @@ public class PermissionService {
                     || "com.sme.onboarding.task.listByAssignee".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.updateStatus".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.detail".equalsIgnoreCase(perm)
+                    || "com.sme.onboarding.task.comment.add".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.acknowledge".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.attachment.add".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.approve".equalsIgnoreCase(perm)
