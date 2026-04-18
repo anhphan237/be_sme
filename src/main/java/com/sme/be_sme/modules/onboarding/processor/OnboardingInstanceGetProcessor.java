@@ -24,6 +24,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -74,6 +75,7 @@ public class OnboardingInstanceGetProcessor extends BaseBizProcessor<BizContext>
                 companyId, instance.getOnboardingId());
         List<TaskInstanceEntity> allTasks = taskInstanceMapper.selectByCompanyIdAndOnboardingId(
                 companyId, instance.getOnboardingId());
+        Date now = new Date();
 
         List<OnboardingInstanceDetailResponse.ChecklistDetailItem> checklistItems = new ArrayList<>();
         if (checklists != null) {
@@ -82,6 +84,9 @@ public class OnboardingInstanceGetProcessor extends BaseBizProcessor<BizContext>
                 item.setChecklistId(chk.getChecklistId());
                 item.setName(chk.getName());
                 item.setStage(chk.getStage());
+                item.setOpenAt(chk.getOpenAt());
+                item.setDeadlineAt(chk.getDeadlineAt());
+                item.setOpen(isChecklistOpen(chk, now));
                 item.setStatus(chk.getStatus());
                 item.setProgressPercent(chk.getProgressPercent() != null ? chk.getProgressPercent() : 0);
                 List<OnboardingInstanceDetailResponse.TaskDetailItem> taskItems = allTasks == null ? List.of() :
@@ -95,6 +100,13 @@ public class OnboardingInstanceGetProcessor extends BaseBizProcessor<BizContext>
         }
         response.setChecklists(checklistItems);
         return response;
+    }
+
+    private static boolean isChecklistOpen(ChecklistInstanceEntity checklist, Date now) {
+        if (checklist == null || checklist.getOpenAt() == null) {
+            return true;
+        }
+        return !now.before(checklist.getOpenAt());
     }
 
     private OnboardingInstanceDetailResponse.TaskDetailItem toTaskDetailItem(TaskInstanceEntity t) {

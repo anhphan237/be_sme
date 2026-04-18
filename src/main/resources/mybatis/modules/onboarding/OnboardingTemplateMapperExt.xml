@@ -65,6 +65,7 @@
             checklist_template_id as checklistTemplateId,
             name                 as name,
             stage                as stage,
+            deadline_days        as deadlineDays,
             sort_order           as orderNo,
             status               as status
         from checklist_templates

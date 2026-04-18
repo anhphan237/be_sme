@@ -26,6 +26,9 @@ public class OnboardingInstanceDetailResponse {
         private String checklistId;
         private String name;
         private String stage;
+        private Boolean open;
+        private Date openAt;
+        private Date deadlineAt;
         private String status;
         private Integer progressPercent;
         private List<TaskDetailItem> tasks;

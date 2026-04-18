@@ -195,6 +195,9 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
             if (checklistItem.getStage() != null) {
                 checklistEntity.setStage(trimToNull(checklistItem.getStage()));
             }
+            if (checklistItem.getDeadlineDays() != null) {
+                checklistEntity.setDeadlineDays(checklistItem.getDeadlineDays());
+            }
             checklistEntity.setSortOrder(
                     checklistItem.getSortOrder() != null
                             ? checklistItem.getSortOrder()
