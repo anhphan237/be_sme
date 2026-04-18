@@ -6,10 +6,11 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class OnboardingTemplateUpdateRequest {
-    private String templateId;
+public class ChecklistTemplateUpdateItem {
+    private String checklistTemplateId;
     private String name;
-    private String description;
+    private String stage;
+    private Integer sortOrder;
     private String status;
-    private List<ChecklistTemplateUpdateItem> checklists;
+    private List<TaskTemplateUpdateItem> tasks;
 }
