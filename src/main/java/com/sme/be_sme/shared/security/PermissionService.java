@@ -57,6 +57,7 @@ public class PermissionService {
                     || "com.sme.onboarding.instance.get".equalsIgnoreCase(perm)
                     || "com.sme.notification.list".equalsIgnoreCase(perm)
                     || "com.sme.notification.markRead".equalsIgnoreCase(perm)
+                    || "com.sme.content.document.upload".equalsIgnoreCase(perm)
                     || "com.sme.content.document.list".equalsIgnoreCase(perm)
                     || "com.sme.content.document.acknowledge".equalsIgnoreCase(perm)
                     || "com.sme.identity.user.get".equalsIgnoreCase(perm)
