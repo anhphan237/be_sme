@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -88,8 +89,20 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
         String lineManagerResolved = approvalAuthority.resolveLineManagerUserId(companyId, instance);
 
         Date now = new Date();
+        Date scheduleBaseDate = instance.getStartDate() != null ? instance.getStartDate() : now;
+        Map<String, List<TaskTemplateEntity>> tasksByChecklistTemplateId = taskTemplates.stream()
+                .filter(t -> StringUtils.hasText(t.getChecklistTemplateId()))
+                .collect(Collectors.groupingBy(
+                        t -> t.getChecklistTemplateId().trim(),
+                        LinkedHashMap::new,
+                        Collectors.toList()));
+        List<ChecklistTemplateEntity> orderedChecklistTemplates = checklistTemplates.stream()
+                .sorted(Comparator.comparingInt(this::sortOrderOrDefault))
+                .toList();
+
+        int previousStageEndOffset = 0;
         int totalTasks = 0;
-        for (ChecklistTemplateEntity checklistTemplate : checklistTemplates) {
+        for (ChecklistTemplateEntity checklistTemplate : orderedChecklistTemplates) {
             String checklistId = UuidGenerator.generate();
             ChecklistInstanceEntity checklistInstance = new ChecklistInstanceEntity();
             checklistInstance.setChecklistId(checklistId);
@@ -99,6 +112,13 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
             checklistInstance.setStage(checklistTemplate.getStage());
             checklistInstance.setStatus("NOT_STARTED");
             checklistInstance.setProgressPercent(0);
+            int stageEndOffset = Math.max(
+                    previousStageEndOffset,
+                    resolveStageEndOffset(
+                            checklistTemplate,
+                            tasksByChecklistTemplateId.getOrDefault(checklistTemplate.getChecklistTemplateId(), List.of())));
+            checklistInstance.setOpenAt(calculateDueDate(scheduleBaseDate, previousStageEndOffset));
+            checklistInstance.setDeadlineAt(calculateDueDate(scheduleBaseDate, stageEndOffset));
             checklistInstance.setCreatedAt(now);
             checklistInstance.setUpdatedAt(now);
 
@@ -107,10 +127,8 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
                 throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create checklist instance failed");
             }
 
-            for (TaskTemplateEntity taskTemplate : taskTemplates) {
-                if (!checklistTemplate.getChecklistTemplateId().equals(taskTemplate.getChecklistTemplateId())) {
-                    continue;
-                }
+            for (TaskTemplateEntity taskTemplate
+                    : tasksByChecklistTemplateId.getOrDefault(checklistTemplate.getChecklistTemplateId(), List.of())) {
                 if (Boolean.TRUE.equals(taskTemplate.getRequiresManagerApproval())) {
                     boolean designated = StringUtils.hasText(taskTemplate.getApproverUserId());
                     if (!designated && !StringUtils.hasText(lineManagerResolved)) {
@@ -129,7 +147,7 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
                 taskInstance.setTitle(taskTemplate.getTitle());
                 taskInstance.setDescription(taskTemplate.getDescription());
                 taskInstance.setStatus(OnboardingTaskWorkflow.STATUS_TODO);
-                taskInstance.setDueDate(calculateDueDate(now, taskTemplate.getDueDaysOffset()));
+                taskInstance.setDueDate(calculateDueDate(scheduleBaseDate, taskTemplate.getDueDaysOffset()));
                 applyOwnerAssignment(taskInstance, taskTemplate, instance, effective);
                 taskInstance.setRequireAck(Boolean.TRUE.equals(taskTemplate.getRequireAck()));
                 taskInstance.setRequireDoc(Boolean.TRUE.equals(taskTemplate.getRequireDoc()));
@@ -163,6 +181,7 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
                 }
                 totalTasks++;
             }
+            previousStageEndOffset = stageEndOffset;
         }
 
         if (totalTasks == 0) {
@@ -276,6 +295,24 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
         calendar.setTime(start);
         calendar.add(Calendar.DATE, daysOffset);
         return calendar.getTime();
+    }
+
+    private int resolveStageEndOffset(ChecklistTemplateEntity checklistTemplate, List<TaskTemplateEntity> stageTasks) {
+        if (checklistTemplate != null && checklistTemplate.getDeadlineDays() != null) {
+            return checklistTemplate.getDeadlineDays();
+        }
+        return stageTasks.stream()
+                .map(TaskTemplateEntity::getDueDaysOffset)
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(0);
+    }
+
+    private int sortOrderOrDefault(ChecklistTemplateEntity checklistTemplate) {
+        if (checklistTemplate == null || checklistTemplate.getSortOrder() == null) {
+            return Integer.MAX_VALUE;
+        }
+        return checklistTemplate.getSortOrder();
     }
 
     private void applyOwnerAssignment(TaskInstanceEntity taskInstance, TaskTemplateEntity template,

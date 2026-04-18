@@ -51,6 +51,7 @@ public class OnboardingTemplateGetBuildResponseCoreProcessor extends BaseCorePro
         x.setChecklistTemplateId(r.getChecklistTemplateId());
         x.setName(r.getName());
         x.setStage(r.getStage());
+        x.setDeadlineDays(r.getDeadlineDays());
         x.setOrderNo(r.getOrderNo());
         x.setStatus(r.getStatus());
         List<OnboardingTemplateGetResponse.TaskTemplateItemResponse> tasksOfChecklist = allTasks.stream()

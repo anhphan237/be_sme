@@ -49,6 +49,7 @@ public class OnboardingTemplateCreateChecklistsAndTasksCoreProcessor extends Bas
             checklistEntity.setOnboardingTemplateId(templateId);
             checklistEntity.setName(StringUtils.hasText(checklistItem.getName()) ? checklistItem.getName().trim() : "Checklist");
             checklistEntity.setStage(checklistItem.getStage());
+            checklistEntity.setDeadlineDays(checklistItem.getDeadlineDays());
             checklistEntity.setSortOrder(checklistItem.getSortOrder() != null ? checklistItem.getSortOrder() : checklistSortOrder);
             checklistEntity.setStatus(StringUtils.hasText(checklistItem.getStatus()) ? checklistItem.getStatus() : "ACTIVE");
             checklistEntity.setCreatedAt(now);

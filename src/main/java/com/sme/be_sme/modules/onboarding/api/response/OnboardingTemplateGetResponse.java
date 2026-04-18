@@ -24,6 +24,7 @@ public class OnboardingTemplateGetResponse {
         private String checklistTemplateId;
         private String name;
         private String stage;
+        private Integer deadlineDays;
         private Integer orderNo;
         private String status;
         /** Tasks belonging to this checklist */

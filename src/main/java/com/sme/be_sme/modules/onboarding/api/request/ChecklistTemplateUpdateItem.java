@@ -10,6 +10,7 @@ public class ChecklistTemplateUpdateItem {
     private String checklistTemplateId;
     private String name;
     private String stage;
+    private Integer deadlineDays;
     private Integer sortOrder;
     private String status;
     private List<TaskTemplateUpdateItem> tasks;

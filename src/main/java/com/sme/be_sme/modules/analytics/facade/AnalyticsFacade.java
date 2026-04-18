@@ -3,11 +3,13 @@ package com.sme.be_sme.modules.analytics.facade;
 import com.sme.be_sme.modules.analytics.api.request.CompanyOnboardingByDepartmentRequest;
 import com.sme.be_sme.modules.analytics.api.request.CompanyOnboardingFunnelRequest;
 import com.sme.be_sme.modules.analytics.api.request.CompanyOnboardingSummaryRequest;
+import com.sme.be_sme.modules.analytics.api.request.CompanyOnboardingTemplateScoreboardRequest;
 import com.sme.be_sme.modules.analytics.api.request.CompanyTaskCompletionRequest;
 import com.sme.be_sme.modules.analytics.api.request.PlatformSubscriptionMetricsRequest;
 import com.sme.be_sme.modules.analytics.api.response.CompanyOnboardingByDepartmentResponse;
 import com.sme.be_sme.modules.analytics.api.response.CompanyOnboardingFunnelResponse;
 import com.sme.be_sme.modules.analytics.api.response.CompanyOnboardingSummaryResponse;
+import com.sme.be_sme.modules.analytics.api.response.CompanyOnboardingTemplateScoreboardResponse;
 import com.sme.be_sme.modules.analytics.api.response.CompanyTaskCompletionResponse;
 import com.sme.be_sme.modules.analytics.api.response.PlatformSubscriptionMetricsResponse;
 import com.sme.be_sme.shared.gateway.annotation.OperationType;
@@ -26,6 +28,10 @@ public interface AnalyticsFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.analytics.company.task.completion")
     CompanyTaskCompletionResponse getCompanyTaskCompletion(CompanyTaskCompletionRequest request);
+
+    @OperationType("com.sme.analytics.onboarding.template.scoreboard")
+    CompanyOnboardingTemplateScoreboardResponse getOnboardingTemplateScoreboard(
+            CompanyOnboardingTemplateScoreboardRequest request);
 
     @OperationType("com.sme.analytics.platform.subscription.metrics")
     PlatformSubscriptionMetricsResponse getPlatformSubscriptionMetrics(PlatformSubscriptionMetricsRequest request);
