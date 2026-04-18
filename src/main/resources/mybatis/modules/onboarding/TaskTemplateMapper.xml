@@ -112,4 +112,19 @@
     from task_templates
     where company_id = #{companyId,jdbcType=VARCHAR}
   </select>
+  <select id="selectByCompanyIdAndChecklistTemplateIds" resultMap="BaseResultMap">
+    select task_template_id, company_id, checklist_template_id, title, description, owner_type,
+    owner_ref_id, due_days_offset, require_ack, require_doc, requires_manager_approval, approver_user_id, sort_order, status, created_at, updated_at
+    from task_templates
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      <if test="checklistTemplateIds != null and checklistTemplateIds.size() > 0">
+        and checklist_template_id in
+        <foreach item="id" collection="checklistTemplateIds" open="(" separator="," close=")">
+          #{id,jdbcType=VARCHAR}
+        </foreach>
+      </if>
+      <if test="checklistTemplateIds == null or checklistTemplateIds.size() == 0">
+        and 1 = 0
+      </if>
+  </select>
 </mapper>

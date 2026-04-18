@@ -56,4 +56,9 @@ public interface TaskTemplateMapper {
     );
 
     List<TaskTemplateEntity> selectByCompanyId(@Param("companyId") String companyId);
+
+    List<TaskTemplateEntity> selectByCompanyIdAndChecklistTemplateIds(
+            @Param("companyId") String companyId,
+            @Param("checklistTemplateIds") List<String> checklistTemplateIds
+    );
 }

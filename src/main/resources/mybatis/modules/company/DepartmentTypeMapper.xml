@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.company.infrastructure.mapper.DepartmentTypeMapper">
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.company.infrastructure.persistence.entity.DepartmentTypeEntity">
+    <id column="department_type_id" jdbcType="VARCHAR" property="departmentTypeId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="code" jdbcType="VARCHAR" property="code" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.sme.be_sme.modules.company.infrastructure.persistence.entity.DepartmentTypeEntity">
+    insert into department_types (
+      department_type_id,
+      company_id,
+      code,
+      name,
+      status,
+      created_at,
+      updated_at
+    )
+    values (
+      #{departmentTypeId,jdbcType=VARCHAR},
+      #{companyId,jdbcType=VARCHAR},
+      #{code,jdbcType=VARCHAR},
+      #{name,jdbcType=VARCHAR},
+      #{status,jdbcType=VARCHAR},
+      now(),
+      now()
+    )
+  </insert>
+
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select department_type_id, company_id, code, name, status, created_at, updated_at
+    from department_types
+    where department_type_id = #{departmentTypeId,jdbcType=VARCHAR}
+  </select>
+
+  <update id="updateByPrimaryKeySelective" parameterType="com.sme.be_sme.modules.company.infrastructure.persistence.entity.DepartmentTypeEntity">
+    update department_types
+    <set>
+      <if test="code != null">code = #{code,jdbcType=VARCHAR},</if>
+      <if test="name != null">name = #{name,jdbcType=VARCHAR},</if>
+      <if test="status != null">status = #{status,jdbcType=VARCHAR},</if>
+      updated_at = now()
+    </set>
+    where department_type_id = #{departmentTypeId,jdbcType=VARCHAR}
+  </update>
+
+  <select id="countByCompany" resultType="int">
+    select count(1)
+    from department_types
+    where company_id = #{companyId}
+  </select>
+
+  <select id="countByCompanyAndCode" resultType="int">
+    select count(1)
+    from department_types
+    where company_id = #{companyId}
+      and code = #{code}
+  </select>
+
+  <select id="countByCompanyAndCodeExcludeId" resultType="int">
+    select count(1)
+    from department_types
+    where company_id = #{companyId}
+      and code = #{code}
+      and department_type_id &lt;&gt; #{departmentTypeId}
+  </select>
+
+  <select id="countByCompanyAndName" resultType="int">
+    select count(1)
+    from department_types
+    where company_id = #{companyId}
+      and name = #{name}
+  </select>
+
+  <select id="countByCompanyAndNameExcludeId" resultType="int">
+    select count(1)
+    from department_types
+    where company_id = #{companyId}
+      and name = #{name}
+      and department_type_id &lt;&gt; #{departmentTypeId}
+  </select>
+
+  <select id="selectByCompany" resultMap="BaseResultMap">
+    select department_type_id, company_id, code, name, status, created_at, updated_at
+    from department_types
+    where company_id = #{companyId}
+    order by name asc
+  </select>
+
+  <select id="selectByCompanyAndStatus" resultMap="BaseResultMap">
+    select department_type_id, company_id, code, name, status, created_at, updated_at
+    from department_types
+    where company_id = #{companyId}
+      and status = #{status}
+    order by name asc
+  </select>
+</mapper>
