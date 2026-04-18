@@ -96,6 +96,8 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
         response.setTemplateId(entity.getOnboardingTemplateId());
         response.setName(entity.getName());
         response.setStatus(entity.getStatus());
+        response.setTemplateKind(entity.getTemplateKind());
+        response.setDepartmentTypeCode(entity.getDepartmentTypeCode());
         return response;
     }
 

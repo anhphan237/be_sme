@@ -12,5 +12,7 @@ public class OnboardingTemplateCreateRequest {
     private String description;
     private String status;
     private String createdBy;
+    private String templateKind;
+    private String departmentTypeCode;
     private List<ChecklistTemplateCreateItem> checklists;
 }

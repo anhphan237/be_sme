@@ -16,9 +16,24 @@ public interface OnboardingTemplateMapperExt {
             @Param("status") String status
     );
 
+    List<OnboardingTemplateEntity> selectTaskLibrariesByCompanyIdAndStatus(
+            @Param("companyId") String companyId,
+            @Param("status") String status
+    );
+
     OnboardingTemplateEntity selectTemplateByIdAndCompany(
             @Param("templateId") String templateId,
             @Param("companyId") String companyId
+    );
+
+    OnboardingTemplateEntity selectTaskLibraryByIdAndCompany(
+            @Param("templateId") String templateId,
+            @Param("companyId") String companyId
+    );
+
+    OnboardingTemplateEntity selectTaskLibraryByDepartmentTypeCode(
+            @Param("companyId") String companyId,
+            @Param("departmentTypeCode") String departmentTypeCode
     );
 
     List<ChecklistTemplateRow> selectChecklistRows(
