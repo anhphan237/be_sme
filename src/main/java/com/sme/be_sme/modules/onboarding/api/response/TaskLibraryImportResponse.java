@@ -5,10 +5,10 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class OnboardingTemplateResponse {
+public class TaskLibraryImportResponse {
     private String templateId;
-    private String name;
-    private String status;
-    private String templateKind;
     private String departmentTypeCode;
+    private boolean created;
+    private int totalRows;
+    private int importedTasks;
 }

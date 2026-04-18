@@ -14,6 +14,8 @@ public class OnboardingTemplateCreateBuildResponseCoreProcessor extends BaseCore
         response.setTemplateId(ctx.getTemplateId());
         response.setName(ctx.getTemplateEntity().getName());
         response.setStatus(ctx.getTemplateEntity().getStatus());
+        response.setTemplateKind(ctx.getTemplateEntity().getTemplateKind());
+        response.setDepartmentTypeCode(ctx.getTemplateEntity().getDepartmentTypeCode());
         ctx.setResponse(response);
         return null;
     }
