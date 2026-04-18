@@ -38,6 +38,8 @@ public class OnboardingTemplateListCoreProcessor extends BaseCoreProcessor<Onboa
         r.setTemplateId(e.getOnboardingTemplateId());
         r.setName(e.getName());
         r.setStatus(e.getStatus());
+        r.setTemplateKind(e.getTemplateKind());
+        r.setDepartmentTypeCode(e.getDepartmentTypeCode());
         return r;
     }
 }

@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.Onboa
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseCoreProcessor;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -25,6 +26,14 @@ public class OnboardingTemplateCreateInsertTemplateCoreProcessor extends BaseCor
         entity.setDescription(ctx.getRequest().getDescription());
         entity.setStatus(StringUtils.hasText(ctx.getRequest().getStatus()) ? ctx.getRequest().getStatus() : "DRAFT");
         entity.setCreatedBy(StringUtils.hasText(ctx.getRequest().getCreatedBy()) ? ctx.getRequest().getCreatedBy() : "system");
+        entity.setTemplateKind(
+                StringUtils.hasText(ctx.getRequest().getTemplateKind())
+                        ? ctx.getRequest().getTemplateKind().trim().toUpperCase(Locale.US)
+                        : "ONBOARDING");
+        entity.setDepartmentTypeCode(
+                StringUtils.hasText(ctx.getRequest().getDepartmentTypeCode())
+                        ? ctx.getRequest().getDepartmentTypeCode().trim().toUpperCase()
+                        : null);
         entity.setCreatedAt(ctx.getNow());
         entity.setUpdatedAt(ctx.getNow());
 
