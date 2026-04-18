@@ -9,6 +9,7 @@ public class ChecklistTemplateRow {
     private String checklistTemplateId;
     private String name;
     private String stage;
+    private Integer deadlineDays;
     private Integer orderNo;
     private String status;
 }
