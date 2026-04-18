@@ -2,7 +2,7 @@ package com.sme.be_sme.modules.company.processor;
 
 import com.sme.be_sme.modules.company.context.UpdateDepartmentContext;
 import com.sme.be_sme.modules.company.infrastructure.mapper.DepartmentMapper;
-import com.sme.be_sme.modules.company.infrastructure.mapper.DepartmentMapperExt;
+import com.sme.be_sme.modules.company.infrastructure.mapper.DepartmentTypeMapper;
 import com.sme.be_sme.modules.company.infrastructure.persistence.entity.DepartmentEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -17,6 +17,7 @@ import java.util.Date;
 public class UpdateDepartmentCoreProcessor extends BaseCoreProcessor<UpdateDepartmentContext> {
 
     private final DepartmentMapper departmentMapper;
+    private final DepartmentTypeMapper departmentTypeMapper;
 
     private static final String DEFAULT_TYPE = "OTHER";
 
@@ -42,7 +43,11 @@ public class UpdateDepartmentCoreProcessor extends BaseCoreProcessor<UpdateDepar
             throw AppException.of(ErrorCodes.DUPLICATED, "department name already exists");
         }
 
-        String type = normalizeOrDefault(req.getType(), existing.getType() == null ? DEFAULT_TYPE : existing.getType());
+        String type = resolveType(
+                tenantId,
+                req.getType(),
+                existing.getType() == null ? DEFAULT_TYPE : existing.getType()
+        );
         String status = normalizeOrDefault(req.getStatus(), existing.getStatus());
         String managerUserId = req.getManagerUserId() != null
                 ? (req.getManagerUserId().isBlank() ? null : req.getManagerUserId().trim())
@@ -70,6 +75,19 @@ public class UpdateDepartmentCoreProcessor extends BaseCoreProcessor<UpdateDepar
 
     private static String normalizeOrDefault(String v, String def) {
         return (v == null || v.isBlank()) ? def : v.trim();
+    }
+
+    private String resolveType(String tenantId, String requestedType, String fallbackType) {
+        String type = normalizeOrDefault(requestedType, fallbackType).toUpperCase();
+        int configuredTypeCount = departmentTypeMapper.countByCompany(tenantId);
+        // Backward compatibility: allow legacy tenants before they configure type master.
+        if (configuredTypeCount == 0) {
+            return type;
+        }
+        if (departmentTypeMapper.countByCompanyAndCode(tenantId, type) == 0) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid department type");
+        }
+        return type;
     }
 
     private static String requireText(String v, String code, String msg) {
