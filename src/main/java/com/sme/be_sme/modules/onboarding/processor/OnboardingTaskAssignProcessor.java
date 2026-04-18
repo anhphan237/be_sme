@@ -14,6 +14,7 @@ import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -69,7 +70,10 @@ public class OnboardingTaskAssignProcessor extends BaseBizProcessor<BizContext> 
 
         String taskTitle = StringUtils.hasText(task.getTitle()) ? task.getTitle() : "Task";
         String dueStr = task.getDueDate() != null
-                ? task.getDueDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().format(DATE_FMT)
+                ? Instant.ofEpochMilli(task.getDueDate().getTime())
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+                    .format(DATE_FMT)
                 : "";
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("taskTitle", taskTitle);

@@ -46,6 +46,7 @@ public class PermissionService {
         if (rolesUpper.contains("EMPLOYEE") && requiredPerm != null) {
             String perm = requiredPerm.trim();
             if ("com.sme.onboarding.task.listByOnboarding".equalsIgnoreCase(perm)
+                    || "com.sme.onboarding.task.listByAssignee".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.updateStatus".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.detail".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.acknowledge".equalsIgnoreCase(perm)
