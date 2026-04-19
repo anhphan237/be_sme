@@ -50,6 +50,8 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
 
     private static final String STATUS_COMPLETED = "COMPLETED";
     private static final String STATUS_SENT = "SENT";
+    private static final String STATUS_SCHEDULED = "SCHEDULED";
+    private static final String STATUS_PENDING = "PENDING";
 
     private final ObjectMapper objectMapper;
     private final SurveyInstanceMapper surveyInstanceMapper;
@@ -79,20 +81,24 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey instance not found");
         }
         if (instance.getScheduledAt() != null
-                && instance.getScheduledAt().toInstant().isAfter(Instant.now())) {
+                && instance.getScheduledAt().toInstant().isAfter(now.toInstant())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "Survey is not open yet");
         }
+
         if (STATUS_COMPLETED.equalsIgnoreCase(instance.getStatus())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "survey already submitted");
         }
-        if (!STATUS_SENT.equalsIgnoreCase(instance.getStatus())) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "survey is not available for submission");
-        }
+
         if (StringUtils.hasText(instance.getResponderUserId())
                 && !instance.getResponderUserId().equals(context.getOperatorId())) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "You are not allowed to submit this survey");
         }
 
+        openScheduledSurveyIfDue(instance, now);
+
+        if (!STATUS_SENT.equalsIgnoreCase(instance.getStatus())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "survey is not available for submission");
+        }
         SurveyTemplateEntity template =
                 surveyTemplateMapper.selectByPrimaryKey(instance.getSurveyTemplateId());
 
@@ -164,7 +170,44 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
         response.setStatus(STATUS_COMPLETED);
         return response;
     }
+    private void openScheduledSurveyIfDue(SurveyInstanceEntity instance, Date now) {
+        if (instance == null || !StringUtils.hasText(instance.getStatus())) {
+            return;
+        }
 
+        String status = instance.getStatus().trim().toUpperCase(Locale.US);
+
+        boolean canAutoOpen =
+                STATUS_SCHEDULED.equals(status)
+                        || STATUS_PENDING.equals(status);
+
+        if (!canAutoOpen) {
+            return;
+        }
+
+        if (instance.getScheduledAt() != null
+                && instance.getScheduledAt().toInstant().isAfter(now.toInstant())) {
+            return;
+        }
+
+        if (instance.getClosedAt() != null
+                && !instance.getClosedAt().after(now)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "survey is expired");
+        }
+
+        instance.setStatus(STATUS_SENT);
+
+        if (instance.getSentAt() == null) {
+            instance.setSentAt(now);
+        }
+
+        trySetUpdatedAt(instance, now);
+
+        int updated = surveyInstanceMapper.updateByPrimaryKey(instance);
+        if (updated != 1) {
+            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "open scheduled survey failed");
+        }
+    }
     private void notifyHrWhenSubmitted(
             String tenantId,
             String operatorId,
