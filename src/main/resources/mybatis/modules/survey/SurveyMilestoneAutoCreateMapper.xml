@@ -8,13 +8,24 @@
     <select id="selectDefaultMilestoneCandidates"
             resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyMilestoneCandidate">
         <![CDATA[
+    with resolved_candidates as (
         select
             oi.onboarding_id as onboardingId,
             oi.company_id as companyId,
             oi.employee_id as employeeId,
 
-            ep.user_id as employeeUserId,
-            ep.manager_user_id as managerUserId,
+            coalesce(
+                ep_by_employee_id.user_id,
+                ep_by_user_id.user_id,
+                u_direct.user_id
+            ) as employeeUserId,
+
+            coalesce(
+                ep_by_employee_id.manager_user_id,
+                ep_by_user_id.manager_user_id,
+                dept_by_employee.department_manager_user_id,
+                dept_by_user.department_manager_user_id
+            ) as managerUserId,
 
             st.survey_template_id as templateId,
             st.name as templateName,
@@ -22,8 +33,21 @@
             st.target_role as targetRole,
 
             case
-                when upper(st.target_role) = 'EMPLOYEE' then ep.user_id
-                when upper(st.target_role) = 'MANAGER' then ep.manager_user_id
+                when upper(st.target_role) = 'EMPLOYEE' then
+                    coalesce(
+                        ep_by_employee_id.user_id,
+                        ep_by_user_id.user_id,
+                        u_direct.user_id
+                    )
+
+                when upper(st.target_role) = 'MANAGER' then
+                    coalesce(
+                        ep_by_employee_id.manager_user_id,
+                        ep_by_user_id.manager_user_id,
+                        dept_by_employee.department_manager_user_id,
+                        dept_by_user.department_manager_user_id
+                    )
+
                 else null
             end as responderUserId,
 
@@ -53,9 +77,39 @@
 
         from onboarding_instances oi
 
-        join employee_profiles ep
-          on ep.employee_id = oi.employee_id
-         and ep.company_id = oi.company_id
+        left join employee_profiles ep_by_employee_id
+          on ep_by_employee_id.employee_id = oi.employee_id
+         and ep_by_employee_id.company_id = oi.company_id
+
+        left join employee_profiles ep_by_user_id
+          on ep_by_user_id.user_id = oi.employee_id
+         and ep_by_user_id.company_id = oi.company_id
+
+        left join users u_direct
+          on u_direct.user_id = oi.employee_id
+         and u_direct.company_id = oi.company_id
+
+        left join (
+            select
+                department_id,
+                company_id,
+                manager_user_id as department_manager_user_id
+            from departments
+            where manager_user_id is not null
+        ) dept_by_employee
+          on dept_by_employee.department_id = ep_by_employee_id.department_id
+         and dept_by_employee.company_id = oi.company_id
+
+        left join (
+            select
+                department_id,
+                company_id,
+                manager_user_id as department_manager_user_id
+            from departments
+            where manager_user_id is not null
+        ) dept_by_user
+          on dept_by_user.department_id = ep_by_user_id.department_id
+         and dept_by_user.company_id = oi.company_id
 
         join survey_templates st
           on st.company_id = oi.company_id
@@ -79,71 +133,117 @@
                     else interval '0 day'
                 end
               ) <= #{now}
+    )
 
-          and (
-                case
-                    when upper(st.target_role) = 'EMPLOYEE' then ep.user_id
-                    when upper(st.target_role) = 'MANAGER' then ep.manager_user_id
-                    else null
-                end
-              ) is not null
+    select
+        rc.onboardingId,
+        rc.companyId,
+        rc.employeeId,
+        rc.employeeUserId,
+        rc.managerUserId,
+        rc.templateId,
+        rc.templateName,
+        rc.stage,
+        rc.targetRole,
+        rc.responderUserId,
+        rc.scheduledAt,
+        rc.closedAt
+    from resolved_candidates rc
+    where rc.responderUserId is not null
 
-          and not exists (
-                select 1
-                from survey_instances si
-                where si.company_id = oi.company_id
-                  and si.onboarding_id = oi.onboarding_id
-                  and si.survey_template_id = st.survey_template_id
-                  and si.responder_user_id =
-                        case
-                            when upper(st.target_role) = 'EMPLOYEE' then ep.user_id
-                            when upper(st.target_role) = 'MANAGER' then ep.manager_user_id
-                            else null
-                        end
-                  and si.status <> 'CANCELLED'
-          )
+      and (
+            (
+                upper(rc.targetRole) = 'EMPLOYEE'
+                and exists (
+                    select 1
+                    from user_roles ur
+                    join roles r
+                      on r.role_id = ur.role_id
+                     and r.company_id = ur.company_id
+                    where ur.company_id = rc.companyId
+                      and ur.user_id = rc.responderUserId
+                      and upper(r.code) = 'EMPLOYEE'
+                )
+            )
+            or
+            (
+                upper(rc.targetRole) = 'MANAGER'
+                and exists (
+                    select 1
+                    from user_roles ur
+                    join roles r
+                      on r.role_id = ur.role_id
+                     and r.company_id = ur.company_id
+                    where ur.company_id = rc.companyId
+                      and ur.user_id = rc.responderUserId
+                      and upper(r.code) = 'MANAGER'
+                )
+            )
+      )
 
-        order by oi.start_date asc, st.stage asc, st.target_role asc
-        limit #{limit}
-        ]]>
-    </select>
+      and not exists (
+            select 1
+            from user_roles ur
+            join roles r
+              on r.role_id = ur.role_id
+             and r.company_id = ur.company_id
+            where ur.company_id = rc.companyId
+              and ur.user_id = rc.responderUserId
+              and upper(r.code) in ('HR', 'HR_ADMIN', 'ADMIN', 'PLATFORM_ADMIN')
+      )
 
-    <insert id="insertAutoSurveyInstance"
-            parameterType="com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyMilestoneCandidate">
-        <![CDATA[
-        insert into survey_instances (
-            survey_instance_id,
-            company_id,
-            onboarding_id,
-            survey_template_id,
-            responder_user_id,
-            scheduled_at,
-            closed_at,
-            status,
-            created_at,
-            updated_at
-        )
-        select
-            #{surveyInstanceId},
-            #{companyId},
-            #{onboardingId},
-            #{templateId},
-            #{responderUserId},
-            #{scheduledAt},
-            #{closedAt},
-            'SCHEDULED',
-            now(),
-            now()
-        where not exists (
+      and not exists (
             select 1
             from survey_instances si
-            where si.company_id = #{companyId}
-              and si.onboarding_id = #{onboardingId}
-              and si.survey_template_id = #{templateId}
-              and si.responder_user_id = #{responderUserId}
+            where si.company_id = rc.companyId
+              and si.onboarding_id = rc.onboardingId
+              and si.survey_template_id = rc.templateId
+              and si.responder_user_id = rc.responderUserId
               and si.status <> 'CANCELLED'
-        )
-        ]]>
-    </insert>
+      )
 
+    order by rc.scheduledAt asc, rc.stage asc, rc.targetRole asc
+    limit #{limit}
+    ]]>
+    </select>
+
+    <insert id="insertAutoSentSurveyInstance"
+            parameterType="com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyMilestoneCandidate">
+        <![CDATA[
+    insert into survey_instances (
+        survey_instance_id,
+        company_id,
+        onboarding_id,
+        survey_template_id,
+        responder_user_id,
+        scheduled_at,
+        sent_at,
+        closed_at,
+        status,
+        created_at,
+        updated_at
+    )
+    select
+        #{surveyInstanceId},
+        #{companyId},
+        #{onboardingId},
+        #{templateId},
+        #{responderUserId},
+        #{scheduledAt},
+        now(),
+        #{closedAt},
+        'SENT',
+        now(),
+        now()
+    where not exists (
+        select 1
+        from survey_instances si
+        where si.company_id = #{companyId}
+          and si.onboarding_id = #{onboardingId}
+          and si.survey_template_id = #{templateId}
+          and si.responder_user_id = #{responderUserId}
+          and si.status <> 'CANCELLED'
+    )
+    ]]>
+    </insert>
 </mapper>
