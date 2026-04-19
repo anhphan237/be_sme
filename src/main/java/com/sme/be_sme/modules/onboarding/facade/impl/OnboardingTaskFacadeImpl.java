@@ -8,6 +8,7 @@ import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskRejectRequest
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskUpdateStatusRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskAttachmentAddRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskCommentAddRequest;
+import com.sme.be_sme.modules.onboarding.api.request.TaskCommentListRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskScheduleCancelRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskScheduleConfirmRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskScheduleMarkNoShowRequest;
@@ -21,6 +22,7 @@ import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskGenerationRe
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskAttachmentAddResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskCommentAddResponse;
+import com.sme.be_sme.modules.onboarding.api.response.TaskCommentListResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskDetailResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskListByAssigneeResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskListByOnboardingResponse;
@@ -35,6 +37,7 @@ import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskRejectProcessor
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskUpdateStatusProcessor;
 import com.sme.be_sme.modules.onboarding.processor.TaskAttachmentAddProcessor;
 import com.sme.be_sme.modules.onboarding.processor.TaskCommentAddProcessor;
+import com.sme.be_sme.modules.onboarding.processor.TaskCommentListProcessor;
 import com.sme.be_sme.modules.onboarding.processor.TaskDetailProcessor;
 import com.sme.be_sme.modules.onboarding.processor.TaskListByAssigneeProcessor;
 import com.sme.be_sme.modules.onboarding.processor.TaskListByOnboardingProcessor;
@@ -60,6 +63,7 @@ public class OnboardingTaskFacadeImpl extends BaseOperationFacade implements Onb
     private final OnboardingTaskRejectProcessor onboardingTaskRejectProcessor;
     private final TaskAttachmentAddProcessor taskAttachmentAddProcessor;
     private final TaskCommentAddProcessor taskCommentAddProcessor;
+    private final TaskCommentListProcessor taskCommentListProcessor;
     private final TaskListByOnboardingProcessor taskListByOnboardingProcessor;
     private final TaskListByAssigneeProcessor taskListByAssigneeProcessor;
     private final TaskTimelineByOnboardingProcessor taskTimelineByOnboardingProcessor;
@@ -108,6 +112,11 @@ public class OnboardingTaskFacadeImpl extends BaseOperationFacade implements Onb
     @Override
     public TaskCommentAddResponse addTaskComment(TaskCommentAddRequest request) {
         return call(taskCommentAddProcessor, request, TaskCommentAddResponse.class);
+    }
+
+    @Override
+    public TaskCommentListResponse listTaskComments(TaskCommentListRequest request) {
+        return call(taskCommentListProcessor, request, TaskCommentListResponse.class);
     }
 
     @Override
