@@ -14,5 +14,5 @@ public interface SurveyMilestoneAutoCreateMapper {
             @Param("limit") int limit
     );
 
-    int insertAutoSurveyInstance(SurveyMilestoneCandidate candidate);
+    int insertAutoSentSurveyInstance(SurveyMilestoneCandidate candidate);
 }
