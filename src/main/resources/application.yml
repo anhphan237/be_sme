@@ -53,6 +53,11 @@ app:
   invite:
     base-url: ${INVITE_BASE_URL:https://fe-sme.vercel.app}
     token-ttl-hours: ${INVITE_TOKEN_TTL_HOURS:72}
+  identity:
+    bulk-user-import:
+      enabled: ${BULK_USER_IMPORT_ENABLED:false}
+      max-rows: ${BULK_USER_IMPORT_MAX_ROWS:500}
+      max-file-size-bytes: ${BULK_USER_IMPORT_MAX_FILE_SIZE_BYTES:2097152}
   # payment gateway: stripe | mock (default stripe for real payments; set mock for local dev)
   payment:
     gateway: ${PAYMENT_GATEWAY:stripe}
