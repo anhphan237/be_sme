@@ -15,6 +15,8 @@ import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PaymentT
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionChangeRequestEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionPlanHistoryEntity;
+import com.sme.be_sme.modules.company.infrastructure.mapper.CompanyMapper;
+import com.sme.be_sme.modules.company.infrastructure.persistence.entity.CompanyEntity;
 import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
 import com.sme.be_sme.modules.identity.infrastructure.mapper.UserRoleMapperExt;
 import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
@@ -35,8 +37,10 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @RestController
@@ -44,6 +48,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Slf4j
 public class StripeWebhookController {
+
+    private static final String TEMPLATE_PAYMENT_SUCCEEDED = "PAYMENT_SUCCEEDED";
 
     private final ObjectMapper objectMapper;
     private final PaymentTransactionMapperExt paymentTransactionMapperExt;
@@ -55,6 +61,7 @@ public class StripeWebhookController {
     private final NotificationService notificationService;
     private final UserRoleMapperExt userRoleMapperExt;
     private final UserMapperExt userMapperExt;
+    private final CompanyMapper companyMapper;
 
     @Value("${app.stripe.webhook-secret:}")
     private String webhookSecret;
@@ -160,6 +167,18 @@ public class StripeWebhookController {
                 ? String.format("Payment for invoice %s (%d %s) completed successfully.", invoiceLabel, amount, currency)
                 : String.format("A payment of %d %s completed successfully.", amount, currency);
 
+        String companyName = "";
+        CompanyEntity company = companyMapper.selectByPrimaryKey(companyId);
+        if (company != null && StringUtils.hasText(company.getName())) {
+            companyName = company.getName().trim();
+        }
+
+        Map<String, String> emailPlaceholders = new HashMap<>();
+        emailPlaceholders.put("invoiceNo", invoiceLabel);
+        emailPlaceholders.put("amountTotal", String.valueOf(amount));
+        emailPlaceholders.put("currency", currency);
+        emailPlaceholders.put("companyName", companyName.isEmpty() ? companyId : companyName);
+
         String refId = StringUtils.hasText(txn.getInvoiceId()) ? txn.getInvoiceId().trim() : txn.getPaymentTransactionId();
         for (String userId : hrUserIds) {
             UserEntity user = userMapperExt.selectByCompanyIdAndUserId(companyId, userId);
@@ -174,7 +193,10 @@ public class StripeWebhookController {
                     .content(content)
                     .refType(StringUtils.hasText(txn.getInvoiceId()) ? "INVOICE" : "PAYMENT")
                     .refId(refId)
-                    .sendEmail(false)
+                    .sendEmail(true)
+                    .emailTemplate(TEMPLATE_PAYMENT_SUCCEEDED)
+                    .emailPlaceholders(emailPlaceholders)
+                    .toEmail(user.getEmail())
                     .build();
             notificationService.create(params);
         }
