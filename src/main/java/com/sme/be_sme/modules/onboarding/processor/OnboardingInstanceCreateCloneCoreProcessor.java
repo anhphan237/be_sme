@@ -1,6 +1,7 @@
 package com.sme.be_sme.modules.onboarding.processor;
 
 import com.sme.be_sme.modules.onboarding.context.OnboardingInstanceCreateContext;
+import com.sme.be_sme.modules.onboarding.support.OnboardingInstanceStartDates;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.shared.gateway.core.BaseCoreProcessor;
@@ -50,6 +51,7 @@ public class OnboardingInstanceCreateCloneCoreProcessor
         if (ctx.getRequest().getItStaffUserId() != null && !ctx.getRequest().getItStaffUserId().isBlank()) {
             inst.setItStaffUserId(ctx.getRequest().getItStaffUserId().trim());
         }
+        inst.setStartDate(OnboardingInstanceStartDates.resolveExpectedOrToday(ctx.getRequest().getExpectedStartDate()));
         onboardingInstanceMapper.insert(inst);
         return null;
     }
