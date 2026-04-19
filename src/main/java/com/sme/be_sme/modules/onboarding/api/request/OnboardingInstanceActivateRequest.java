@@ -1,5 +1,6 @@
 package com.sme.be_sme.modules.onboarding.api.request;
 
+import java.util.Date;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,4 +14,6 @@ public class OnboardingInstanceActivateRequest {
     private String managerUserId;
     /** Optional override: persist to instance and use for task generation (IT_STAFF owner_type). */
     private String itStaffUserId;
+    /** First calendar day of onboarding; when null, keeps existing {@code start_date} or defaults to today. */
+    private Date expectedStartDate;
 }

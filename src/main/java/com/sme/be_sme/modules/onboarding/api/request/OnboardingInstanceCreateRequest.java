@@ -1,5 +1,6 @@
 package com.sme.be_sme.modules.onboarding.api.request;
 
+import java.util.Date;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,4 +15,6 @@ public class OnboardingInstanceCreateRequest {
     private String itStaffUserId;
     /** Idempotency key: if provided and instance already exists with this requestNo, return existing. */
     private String requestNo;
+    /** First calendar day of onboarding; when null, {@code start_date} defaults to today. */
+    private Date expectedStartDate;
 }

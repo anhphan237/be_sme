@@ -13,6 +13,7 @@ import com.sme.be_sme.modules.company.infrastructure.persistence.entity.CompanyE
 import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
 import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper;
+import com.sme.be_sme.modules.onboarding.support.OnboardingInstanceStartDates;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -92,9 +93,15 @@ public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizCon
         if (wasInactive) {
             instance.setStatus("ACTIVE");
         }
-        if (instance.getStartDate() == null) {
-            instance.setStartDate(now);
+        Date resolvedStart;
+        if (request.getExpectedStartDate() != null) {
+            resolvedStart = OnboardingInstanceStartDates.toCalendarDate(request.getExpectedStartDate());
+        } else if (instance.getStartDate() != null) {
+            resolvedStart = instance.getStartDate();
+        } else {
+            resolvedStart = OnboardingInstanceStartDates.todayCalendarDate();
         }
+        instance.setStartDate(resolvedStart);
         instance.setUpdatedAt(now);
         instance.setUpdatedBy(context.getOperatorId());
         if (StringUtils.hasText(request.getRequestNo())) {
