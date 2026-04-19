@@ -15,6 +15,11 @@ import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PaymentT
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionChangeRequestEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionPlanHistoryEntity;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserRoleMapperExt;
+import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
+import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
+import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.shared.util.UuidGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +35,9 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Date;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/webhook")
@@ -44,6 +52,9 @@ public class StripeWebhookController {
     private final SubscriptionMapper subscriptionMapper;
     private final SubscriptionMapperExt subscriptionMapperExt;
     private final SubscriptionPlanHistoryMapper subscriptionPlanHistoryMapper;
+    private final NotificationService notificationService;
+    private final UserRoleMapperExt userRoleMapperExt;
+    private final UserMapperExt userMapperExt;
 
     @Value("${app.stripe.webhook-secret:}")
     private String webhookSecret;
@@ -94,22 +105,91 @@ public class StripeWebhookController {
             return;
         }
 
+        boolean alreadySucceeded = PaymentTransactionStatus.SUCCEEDED.getCode().equalsIgnoreCase(txn.getStatus());
+
         Date now = new Date();
         txn.setStatus(PaymentTransactionStatus.SUCCEEDED.getCode());
         txn.setPaidAt(now);
         // Use the base mapper for update via selectByPrimaryKey pattern
         updateTransaction(txn);
 
+        InvoiceEntity invoiceForNotify = null;
         if (StringUtils.hasText(txn.getInvoiceId())) {
             InvoiceEntity invoice = invoiceMapper.selectByPrimaryKey(txn.getInvoiceId());
-            if (invoice != null && !InvoiceStatus.PAID.getCode().equalsIgnoreCase(invoice.getStatus())) {
-                invoice.setStatus(InvoiceStatus.PAID.getCode());
-                invoiceMapper.updateByPrimaryKey(invoice);
-                log.info("Invoice {} marked as PAID via Stripe webhook", invoice.getInvoiceId());
+            if (invoice != null) {
+                invoiceForNotify = invoice;
+                if (!InvoiceStatus.PAID.getCode().equalsIgnoreCase(invoice.getStatus())) {
+                    invoice.setStatus(InvoiceStatus.PAID.getCode());
+                    invoiceMapper.updateByPrimaryKey(invoice);
+                    log.info("Invoice {} marked as PAID via Stripe webhook", invoice.getInvoiceId());
+                }
             }
         }
         applyPendingPlanChangeIfAny(txn, now);
+
+        if (!alreadySucceeded) {
+            try {
+                notifyHrPaymentSucceeded(txn, invoiceForNotify);
+            } catch (Exception e) {
+                log.warn("Stripe webhook: HR notification failed: {}", e.getMessage(), e);
+            }
+        }
+
         log.info("PaymentIntent {} succeeded, txn {} updated", paymentIntentId, txn.getPaymentTransactionId());
+    }
+
+    private void notifyHrPaymentSucceeded(PaymentTransactionEntity txn, InvoiceEntity invoice) {
+        if (txn == null || !StringUtils.hasText(txn.getCompanyId())) {
+            return;
+        }
+        String companyId = txn.getCompanyId().trim();
+        Set<String> hrUserIds = new LinkedHashSet<>();
+        addUserIdsForRole(companyId, "HR", hrUserIds);
+        addUserIdsForRole(companyId, "HR_ADMIN", hrUserIds);
+        if (hrUserIds.isEmpty()) {
+            return;
+        }
+
+        int amount = txn.getAmount() != null ? txn.getAmount() : 0;
+        String currency = StringUtils.hasText(txn.getCurrency()) ? txn.getCurrency().trim() : "VND";
+        String invoiceLabel = invoice != null && StringUtils.hasText(invoice.getInvoiceNo())
+                ? invoice.getInvoiceNo().trim()
+                : (StringUtils.hasText(txn.getInvoiceId()) ? txn.getInvoiceId().trim() : txn.getPaymentTransactionId());
+        String title = "Payment received";
+        String content = invoice != null && StringUtils.hasText(invoice.getInvoiceNo())
+                ? String.format("Payment for invoice %s (%d %s) completed successfully.", invoiceLabel, amount, currency)
+                : String.format("A payment of %d %s completed successfully.", amount, currency);
+
+        String refId = StringUtils.hasText(txn.getInvoiceId()) ? txn.getInvoiceId().trim() : txn.getPaymentTransactionId();
+        for (String userId : hrUserIds) {
+            UserEntity user = userMapperExt.selectByCompanyIdAndUserId(companyId, userId);
+            if (user == null) {
+                continue;
+            }
+            NotificationCreateParams params = NotificationCreateParams.builder()
+                    .companyId(companyId)
+                    .userId(userId)
+                    .type("PAYMENT_SUCCEEDED")
+                    .title(title)
+                    .content(content)
+                    .refType(StringUtils.hasText(txn.getInvoiceId()) ? "INVOICE" : "PAYMENT")
+                    .refId(refId)
+                    .sendEmail(false)
+                    .build();
+            notificationService.create(params);
+        }
+    }
+
+    private void addUserIdsForRole(String companyId, String roleCode, Set<String> out) {
+        List<String> ids = userRoleMapperExt.selectUserIdsByCompanyAndRoleCode(companyId, roleCode);
+        if (ids == null) {
+            return;
+        }
+        for (String id : ids) {
+            if (StringUtils.hasText(id)) {
+                out.add(id.trim());
+            }
+        }
     }
 
     private void handlePaymentIntentFailed(JsonNode piNode) {
