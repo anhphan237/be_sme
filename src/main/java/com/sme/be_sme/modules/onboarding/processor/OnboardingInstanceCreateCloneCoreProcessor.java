@@ -51,7 +51,7 @@ public class OnboardingInstanceCreateCloneCoreProcessor
         if (ctx.getRequest().getItStaffUserId() != null && !ctx.getRequest().getItStaffUserId().isBlank()) {
             inst.setItStaffUserId(ctx.getRequest().getItStaffUserId().trim());
         }
-        inst.setStartDate(OnboardingInstanceStartDates.resolveExpectedOrToday(ctx.getRequest().getExpectedStartDate()));
+        inst.setStartDate(OnboardingInstanceStartDates.resolveExpectedOrToday(ctx.getRequest().getStartDate()));
         onboardingInstanceMapper.insert(inst);
         return null;
     }
