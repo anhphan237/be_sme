@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyMilestoneAutoCreateMapper">
+
+    <select id="selectDefaultMilestoneCandidates"
+            resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyMilestoneCandidate">
+        <![CDATA[
+        select
+            oi.onboarding_id as onboardingId,
+            oi.company_id as companyId,
+            oi.employee_id as employeeId,
+
+            ep.user_id as employeeUserId,
+            ep.manager_user_id as managerUserId,
+
+            st.survey_template_id as templateId,
+            st.name as templateName,
+            st.stage as stage,
+            st.target_role as targetRole,
+
+            case
+                when upper(st.target_role) = 'EMPLOYEE' then ep.user_id
+                when upper(st.target_role) = 'MANAGER' then ep.manager_user_id
+                else null
+            end as responderUserId,
+
+            (
+                oi.start_date
+                +
+                case
+                    when upper(st.stage) = 'D7' then interval '7 day'
+                    when upper(st.stage) = 'D30' then interval '30 day'
+                    when upper(st.stage) = 'D60' then interval '60 day'
+                    else interval '0 day'
+                end
+            ) as scheduledAt,
+
+            (
+                oi.start_date
+                +
+                case
+                    when upper(st.stage) = 'D7' then interval '7 day'
+                    when upper(st.stage) = 'D30' then interval '30 day'
+                    when upper(st.stage) = 'D60' then interval '60 day'
+                    else interval '0 day'
+                end
+                +
+                interval '7 day'
+            ) as closedAt
+
+        from onboarding_instances oi
+
+        join employee_profiles ep
+          on ep.employee_id = oi.employee_id
+         and ep.company_id = oi.company_id
+
+        join survey_templates st
+          on st.company_id = oi.company_id
+
+        where st.status = 'ACTIVE'
+          and st.is_default = true
+          and upper(st.stage) in ('D7', 'D30', 'D60')
+          and upper(st.target_role) in ('EMPLOYEE', 'MANAGER')
+
+          and oi.start_date is not null
+          and oi.employee_id is not null
+          and upper(oi.status) in ('ACTIVE', 'IN_PROGRESS', 'INPROGRESS')
+
+          and (
+                oi.start_date
+                +
+                case
+                    when upper(st.stage) = 'D7' then interval '7 day'
+                    when upper(st.stage) = 'D30' then interval '30 day'
+                    when upper(st.stage) = 'D60' then interval '60 day'
+                    else interval '0 day'
+                end
+              ) <= #{now}
+
+          and (
+                case
+                    when upper(st.target_role) = 'EMPLOYEE' then ep.user_id
+                    when upper(st.target_role) = 'MANAGER' then ep.manager_user_id
+                    else null
+                end
+              ) is not null
+
+          and not exists (
+                select 1
+                from survey_instances si
+                where si.company_id = oi.company_id
+                  and si.onboarding_id = oi.onboarding_id
+                  and si.survey_template_id = st.survey_template_id
+                  and si.responder_user_id =
+                        case
+                            when upper(st.target_role) = 'EMPLOYEE' then ep.user_id
+                            when upper(st.target_role) = 'MANAGER' then ep.manager_user_id
+                            else null
+                        end
+                  and si.status <> 'CANCELLED'
+          )
+
+        order by oi.start_date asc, st.stage asc, st.target_role asc
+        limit #{limit}
+        ]]>
+    </select>
+
+    <insert id="insertAutoSurveyInstance"
+            parameterType="com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyMilestoneCandidate">
+        <![CDATA[
+        insert into survey_instances (
+            survey_instance_id,
+            company_id,
+            onboarding_id,
+            survey_template_id,
+            responder_user_id,
+            scheduled_at,
+            closed_at,
+            status,
+            created_at,
+            updated_at
+        )
+        select
+            #{surveyInstanceId},
+            #{companyId},
+            #{onboardingId},
+            #{templateId},
+            #{responderUserId},
+            #{scheduledAt},
+            #{closedAt},
+            'SCHEDULED',
+            now(),
+            now()
+        where not exists (
+            select 1
+            from survey_instances si
+            where si.company_id = #{companyId}
+              and si.onboarding_id = #{onboardingId}
+              and si.survey_template_id = #{templateId}
+              and si.responder_user_id = #{responderUserId}
+              and si.status <> 'CANCELLED'
+        )
+        ]]>
+    </insert>
+
+</mapper>

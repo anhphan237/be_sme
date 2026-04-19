@@ -48,7 +48,6 @@ public class SurveyTemplateUpdateProcessor extends BaseBizProcessor<BizContext> 
         if ("ARCHIVED".equalsIgnoreCase(entity.getStatus())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "archived template cannot be updated");
         }
-
         int instanceCount = surveyInstanceMapperExt.countByCompanyId(
                 context.getTenantId(),
                 entity.getSurveyTemplateId(),
@@ -57,10 +56,20 @@ public class SurveyTemplateUpdateProcessor extends BaseBizProcessor<BizContext> 
                 null,
                 null
         );
-        if (instanceCount > 0) {
+
+        boolean changingDefaultOnly =
+                request.getIsDefault() != null
+                        && !StringUtils.hasText(request.getName())
+                        && request.getDescription() == null
+                        && !StringUtils.hasText(request.getStage())
+                        && request.getManagerOnly() == null
+                        && !StringUtils.hasText(request.getStatus())
+                        && !StringUtils.hasText(request.getTargetRole());
+
+        if (instanceCount > 0 && !changingDefaultOnly) {
             throw AppException.of(
                     ErrorCodes.BAD_REQUEST,
-                    "template already has instances, update is not allowed"
+                    "template already has instances, only default flag can be updated"
             );
         }
 
@@ -90,14 +99,14 @@ public class SurveyTemplateUpdateProcessor extends BaseBizProcessor<BizContext> 
 
         validateUpdateValues(nextStage, nextStatus, nextTargetRole);
 
-        if ("CUSTOM".equals(nextStage) && Boolean.TRUE.equals(nextIsDefault)) {
+        if ("CUSTOM".equalsIgnoreCase(nextStage) && Boolean.TRUE.equals(nextIsDefault)) {
             throw AppException.of(
                     ErrorCodes.BAD_REQUEST,
                     "CUSTOM_STAGE_CANNOT_BE_DEFAULT"
             );
         }
 
-        if (Boolean.TRUE.equals(nextIsDefault) && !"ACTIVE".equals(nextStatus)) {
+        if (Boolean.TRUE.equals(nextIsDefault) && !"ACTIVE".equalsIgnoreCase(nextStatus)) {
             throw AppException.of(
                     ErrorCodes.BAD_REQUEST,
                     "ONLY_ACTIVE_TEMPLATE_CAN_BE_DEFAULT"
@@ -147,10 +156,6 @@ public class SurveyTemplateUpdateProcessor extends BaseBizProcessor<BizContext> 
 
         if (StringUtils.hasText(request.getStage())) {
             entity.setStage(nextStage);
-        }
-
-        if (request.getManagerOnly() != null) {
-            entity.setManagerOnly(request.getManagerOnly());
         }
 
         if (StringUtils.hasText(request.getStatus())) {
