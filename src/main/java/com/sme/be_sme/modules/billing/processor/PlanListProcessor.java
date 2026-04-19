@@ -11,7 +11,6 @@ import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -25,21 +24,20 @@ public class PlanListProcessor extends BaseBizProcessor<BizContext> {
     private final ObjectMapper objectMapper;
     private final PlanMapper planMapper;
 
+    private static final String PLAN_STATUS_ACTIVE = "ACTIVE";
+
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
-        PlanListRequest request = objectMapper.convertValue(payload, PlanListRequest.class);
+        objectMapper.convertValue(payload, PlanListRequest.class);
 
         String companyId = context != null && StringUtils.hasText(context.getTenantId()) ? context.getTenantId().trim() : null;
-        String status = request == null ? null : request.getStatus();
-        String statusNormalized = (status == null || status.isBlank()) ? null : status.trim().toLowerCase(Locale.ROOT);
 
         List<PlanSummaryResponse> plans = planMapper.selectAll().stream()
                 .filter(Objects::nonNull)
+                .filter(plan -> PLAN_STATUS_ACTIVE.equalsIgnoreCase(StringUtils.trimWhitespace(plan.getStatus())))
                 .filter(plan -> companyId == null
                         ? !StringUtils.hasText(plan.getCompanyId())
                         : (companyId.equals(plan.getCompanyId()) || !StringUtils.hasText(plan.getCompanyId())))
-                .filter(plan -> !StringUtils.hasText(statusNormalized)
-                        || (plan.getStatus() != null && plan.getStatus().trim().toLowerCase(Locale.ROOT).equals(statusNormalized)))
                 .sorted(Comparator.comparing(p -> p.getPriceVndMonthly() == null ? Integer.MAX_VALUE : p.getPriceVndMonthly()))
                 .map(this::toSummary)
                 .collect(Collectors.toList());
