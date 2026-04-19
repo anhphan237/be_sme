@@ -18,7 +18,6 @@ import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -29,6 +28,8 @@ import org.springframework.util.StringUtils;
 @Component
 @RequiredArgsConstructor
 public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext> {
+
+    private static final String INSTANCE_STATUS_ACTIVE = "ACTIVE";
 
     private final ObjectMapper objectMapper;
     private final OnboardingInstanceMapper onboardingInstanceMapper;
@@ -51,8 +52,6 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
         final String employeeId = employeeScope
                 ? resolveEmployeeIdForOperator(context) // EMPLOYEE can only query own onboarding instances
                 : requestedEmployeeId;
-        String status = request == null ? null : request.getStatus();
-        final String statusNormalized = status == null ? null : status.trim().toLowerCase(Locale.ROOT);
         final Map<String, EmployeeLinkInfo> employeeLinkByOnboardingEmployeeId = new HashMap<>();
         final Map<String, String> managerNameByUserId = new HashMap<>();
 
@@ -68,8 +67,7 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
                     }
                     return !StringUtils.hasText(employeeId) || employeeId.trim().equals(normalize(row.getEmployeeId()));
                 })
-                .filter(row -> !StringUtils.hasText(statusNormalized)
-                        || (row.getStatus() != null && row.getStatus().trim().toLowerCase(Locale.ROOT).equals(statusNormalized)))
+                .filter(row -> INSTANCE_STATUS_ACTIVE.equalsIgnoreCase(StringUtils.trimWhitespace(row.getStatus())))
                 .map(row -> toDetailResponse(
                         row,
                         companyId,
