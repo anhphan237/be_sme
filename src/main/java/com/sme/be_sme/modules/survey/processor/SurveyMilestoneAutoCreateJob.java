@@ -21,7 +21,7 @@ public class SurveyMilestoneAutoCreateJob {
 
     private final SurveyMilestoneAutoCreateMapper surveyMilestoneAutoCreateMapper;
 
-    @Scheduled(fixedDelay = 300000)
+    @Scheduled(fixedDelay = 120000)
     public void autoCreateDefaultMilestoneSurveyInstances() {
         Date now = new Date();
 
