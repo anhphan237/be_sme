@@ -17,7 +17,7 @@ public class GeminiConfig {
         return GoogleAiGeminiChatModel.builder()
                 .apiKey(apiKey)
                 .modelName("gemini-2.0-flash")
-                .temperature(0.4)
+                .temperature(0.8)
                 .maxOutputTokens(2048)
                 .build();
     }
