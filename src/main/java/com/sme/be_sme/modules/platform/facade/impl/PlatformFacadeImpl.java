@@ -25,6 +25,7 @@ import com.sme.be_sme.modules.platform.processor.subscription.PlatformInvoiceLis
 import com.sme.be_sme.modules.platform.processor.subscription.PlatformPaymentListProcessor;
 import com.sme.be_sme.modules.platform.processor.subscription.PlatformSubscriptionDetailProcessor;
 import com.sme.be_sme.modules.platform.processor.subscription.PlatformSubscriptionListProcessor;
+import com.sme.be_sme.modules.platform.processor.template.PlatformCreateTemplateProcessor;
 import com.sme.be_sme.shared.gateway.core.BaseOperationFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -73,6 +74,7 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     private final PlatformForecastProcessor platformForecastProcessor;
     private final PlatformOnboardingTrendProcessor platformOnboardingTrendProcessor;
     private final PlatformRiskDashboardProcessor platformRiskDashboardProcessor;
+    private final PlatformCreateTemplateProcessor platformCreateTemplateProcessor;
 
     @Override
     public PlatformCompanyListResponse listCompanies(PlatformCompanyListRequest request) {
@@ -272,5 +274,10 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     @Override
     public PlatformRiskDashboardResponse getRiskDashboard(PlatformRiskDashboardRequest request) {
         return call(platformRiskDashboardProcessor, request, PlatformRiskDashboardResponse.class);
+    }
+
+    @Override
+    public CreatePlatformTemplateResponse createPlatformTemplate(CreatePlatformTemplateRequest request) {
+        return call(platformCreateTemplateProcessor, request, CreatePlatformTemplateResponse.class);
     }
 }

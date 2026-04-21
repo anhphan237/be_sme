@@ -126,4 +126,8 @@ public interface PlatformFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.platform.dashboard.risk")
     PlatformRiskDashboardResponse getRiskDashboard(PlatformRiskDashboardRequest request);
+
+    // Create Platform template
+    @OperationType("com.sme.platform.template.create")
+    CreatePlatformTemplateResponse createPlatformTemplate(CreatePlatformTemplateRequest request);
 }
