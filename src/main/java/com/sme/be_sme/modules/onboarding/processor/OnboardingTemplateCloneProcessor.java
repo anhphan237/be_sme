@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.onboarding.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateCloneRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateCreateRequest;
 import com.sme.be_sme.modules.onboarding.context.OnboardingTemplateCreateContext;
 import com.sme.be_sme.modules.onboarding.processor.template.core.OnboardingTemplateCreateBuildResponseCoreProcessor;
@@ -9,18 +10,20 @@ import com.sme.be_sme.modules.onboarding.processor.template.core.OnboardingTempl
 import com.sme.be_sme.modules.onboarding.processor.template.core.OnboardingTemplateCreateCloneSourceCoreProcessor;
 import com.sme.be_sme.modules.onboarding.processor.template.core.OnboardingTemplateCreateInsertTemplateCoreProcessor;
 import com.sme.be_sme.modules.onboarding.processor.template.core.OnboardingTemplateCreateValidateCoreProcessor;
+import com.sme.be_sme.shared.constant.ErrorCodes;
+import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseCoreProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import com.sme.be_sme.shared.util.UuidGenerator;
+import java.util.Date;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Date;
+import org.springframework.util.StringUtils;
 
 @Component
 @RequiredArgsConstructor
-public class OnboardingTemplateCreateProcessor extends BaseCoreProcessor<OnboardingTemplateCreateContext> {
+public class OnboardingTemplateCloneProcessor extends BaseCoreProcessor<OnboardingTemplateCreateContext> {
 
     private final ObjectMapper objectMapper;
     private final OnboardingTemplateCreateValidateCoreProcessor validate;
@@ -31,10 +34,19 @@ public class OnboardingTemplateCreateProcessor extends BaseCoreProcessor<Onboard
 
     @Override
     protected OnboardingTemplateCreateContext buildContext(BizContext biz, JsonNode payload) {
-        OnboardingTemplateCreateRequest request = objectMapper.convertValue(payload, OnboardingTemplateCreateRequest.class);
+        OnboardingTemplateCloneRequest request = objectMapper.convertValue(payload, OnboardingTemplateCloneRequest.class);
+        validateCloneRequest(request);
+
+        OnboardingTemplateCreateRequest createRequest = new OnboardingTemplateCreateRequest();
+        createRequest.setSourceTemplateId(request.getSourceTemplateId().trim());
+        createRequest.setName(request.getName().trim());
+        createRequest.setDescription(request.getDescription());
+        createRequest.setStatus(request.getStatus());
+        createRequest.setCreatedBy(request.getCreatedBy());
+
         OnboardingTemplateCreateContext ctx = new OnboardingTemplateCreateContext();
         ctx.setBiz(biz);
-        ctx.setRequest(request);
+        ctx.setRequest(createRequest);
         ctx.setCompanyId(biz.getTenantId());
         ctx.setTemplateId(UuidGenerator.generate());
         ctx.setNow(new Date());
@@ -50,5 +62,17 @@ public class OnboardingTemplateCreateProcessor extends BaseCoreProcessor<Onboard
         createChecklistsAndTasks.processWith(ctx);
         buildResponse.processWith(ctx);
         return ctx.getResponse();
+    }
+
+    private static void validateCloneRequest(OnboardingTemplateCloneRequest request) {
+        if (request == null) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "payload is required");
+        }
+        if (!StringUtils.hasText(request.getSourceTemplateId())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "sourceTemplateId is required");
+        }
+        if (!StringUtils.hasText(request.getName())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "name is required");
+        }
     }
 }

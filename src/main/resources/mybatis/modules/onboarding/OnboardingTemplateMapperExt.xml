@@ -8,7 +8,7 @@
         select onboarding_template_id, company_id, name, description, status, created_by, template_kind, department_type_code, level,
                created_at, updated_at
         from onboarding_templates
-        where company_id = #{companyId,jdbcType=VARCHAR}
+        where ((company_id = #{companyId,jdbcType=VARCHAR} and level = 'TENANT') or level = 'PLATFORM')
           and template_kind = 'ONBOARDING'
         <if test="status != null and status != ''">
             and status = #{status,jdbcType=VARCHAR}
@@ -34,7 +34,7 @@
         select onboarding_template_id, company_id, name, description, status, created_by, template_kind, department_type_code, level, created_at, updated_at
         from onboarding_templates
         where onboarding_template_id = #{templateId,jdbcType=VARCHAR}
-          and company_id = #{companyId,jdbcType=VARCHAR}
+          and ((company_id = #{companyId,jdbcType=VARCHAR} and level = 'TENANT') or level = 'PLATFORM')
     </select>
 
     <select id="selectTaskLibraryByIdAndCompany"

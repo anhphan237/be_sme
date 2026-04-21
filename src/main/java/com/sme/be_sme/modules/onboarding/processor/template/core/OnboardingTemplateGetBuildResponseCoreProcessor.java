@@ -24,6 +24,7 @@ public class OnboardingTemplateGetBuildResponseCoreProcessor extends BaseCorePro
         res.setDescription(ctx.getTemplate().getDescription());
         res.setTemplateKind(ctx.getTemplate().getTemplateKind());
         res.setDepartmentTypeCode(ctx.getTemplate().getDepartmentTypeCode());
+        res.setLevel(ctx.getTemplate().getLevel());
 
         // baseline tasks (flat list for backward compatibility)
         List<TaskTemplateRow> baselineTaskRows = ctx.getBaselineTaskRows() == null ? List.of() : ctx.getBaselineTaskRows();

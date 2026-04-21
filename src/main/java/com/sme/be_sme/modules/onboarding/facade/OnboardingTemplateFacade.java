@@ -1,6 +1,7 @@
 package com.sme.be_sme.modules.onboarding.facade;
 
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateCreateRequest;
+import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateCloneRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateGetRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateListRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateUpdateRequest;
@@ -14,6 +15,9 @@ public interface OnboardingTemplateFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.onboarding.template.create")
     OnboardingTemplateResponse createOnboardingTemplate(OnboardingTemplateCreateRequest request);
+
+    @OperationType("com.sme.onboarding.template.clone")
+    OnboardingTemplateResponse cloneOnboardingTemplate(OnboardingTemplateCloneRequest request);
 
     @OperationType("com.sme.onboarding.template.update")
     OnboardingTemplateResponse updateOnboardingTemplate(OnboardingTemplateUpdateRequest request);

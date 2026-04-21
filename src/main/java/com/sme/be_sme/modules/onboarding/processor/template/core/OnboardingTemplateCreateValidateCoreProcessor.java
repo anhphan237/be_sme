@@ -15,6 +15,10 @@ public class OnboardingTemplateCreateValidateCoreProcessor extends BaseCoreProce
         if (ctx.getRequest() == null || !StringUtils.hasText(ctx.getRequest().getName())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "name is required");
         }
+        if (StringUtils.hasText(ctx.getRequest().getSourceTemplateId())
+                && ctx.getRequest().getChecklists() != null) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "checklists must be empty when sourceTemplateId is provided");
+        }
         return null;
     }
 }
