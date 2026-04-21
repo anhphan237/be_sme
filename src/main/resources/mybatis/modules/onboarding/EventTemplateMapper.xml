@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.onboarding.infrastructure.mapper.EventTemplateMapper">
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.EventTemplateEntity">
+    <id column="event_template_id" jdbcType="VARCHAR" property="eventTemplateId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="content" jdbcType="VARCHAR" property="content" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.EventTemplateEntity">
+    insert into event_templates (
+      event_template_id,
+      company_id,
+      name,
+      content,
+      description,
+      status,
+      created_by,
+      created_at,
+      updated_at
+    )
+    values (
+      #{eventTemplateId,jdbcType=VARCHAR},
+      #{companyId,jdbcType=VARCHAR},
+      #{name,jdbcType=VARCHAR},
+      #{content,jdbcType=VARCHAR},
+      #{description,jdbcType=VARCHAR},
+      #{status,jdbcType=VARCHAR},
+      #{createdBy,jdbcType=VARCHAR},
+      #{createdAt,jdbcType=TIMESTAMP},
+      #{updatedAt,jdbcType=TIMESTAMP}
+    )
+  </insert>
+
+  <select id="selectByCompanyIdAndTemplateId" resultMap="BaseResultMap">
+    select event_template_id, company_id, name, content, description, status, created_by, created_at, updated_at
+    from event_templates
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and event_template_id = #{eventTemplateId,jdbcType=VARCHAR}
+  </select>
+</mapper>

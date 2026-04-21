@@ -5,11 +5,8 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class OnboardingTemplateResponse {
-    private String templateId;
+public class EventTemplateCreateResponse {
+    private String eventTemplateId;
     private String name;
     private String status;
-    private String templateKind;
-    private String departmentTypeCode;
-    private String level;
 }

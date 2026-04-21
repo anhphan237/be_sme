@@ -14,6 +14,7 @@ public class OnboardingTemplateGetResponse {
     private String description;
     private String templateKind;
     private String departmentTypeCode;
+    private String level;
 
     private List<ChecklistTemplateItemResponse> checklists;
     private List<TaskTemplateItemResponse> baselineTasks;

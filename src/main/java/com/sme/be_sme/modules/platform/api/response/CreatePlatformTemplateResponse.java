@@ -1,11 +1,9 @@
-package com.sme.be_sme.modules.onboarding.api.response;
+package com.sme.be_sme.modules.platform.api.response;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
-public class OnboardingTemplateResponse {
+@Data
+public class CreatePlatformTemplateResponse {
     private String templateId;
     private String name;
     private String status;
