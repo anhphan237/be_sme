@@ -1,30 +1,215 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
 <mapper namespace="com.sme.be_sme.modules.platform.infrastructure.mapper.ErrorLogMapper">
-  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.platform.infrastructure.persistence.entity.ErrorLogEntity">
-    <id column="error_id" jdbcType="VARCHAR" property="errorId" />
-    <result column="error_code" jdbcType="VARCHAR" property="errorCode" />
-    <result column="message" jdbcType="VARCHAR" property="message" />
-    <result column="stack_trace" jdbcType="VARCHAR" property="stackTrace" />
-    <result column="request_id" jdbcType="VARCHAR" property="requestId" />
-    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+
+  <resultMap id="ErrorLogResultMap"
+             type="com.sme.be_sme.modules.platform.infrastructure.persistence.entity.ErrorLogEntity">
+    <id property="errorId" column="error_id"/>
+    <result property="errorCode" column="error_code"/>
+    <result property="message" column="message"/>
+    <result property="stackTrace" column="stack_trace"/>
+    <result property="requestId" column="request_id"/>
+    <result property="createdAt" column="created_at"/>
+
+    <result property="operationType" column="operation_type"/>
+    <result property="tenantId" column="tenant_id"/>
+    <result property="companyId" column="company_id"/>
+    <result property="actorUserId" column="actor_user_id"/>
+    <result property="actorRole" column="actor_role"/>
+    <result property="severity" column="severity"/>
+    <result property="status" column="status"/>
+    <result property="payloadSnapshot" column="payload_snapshot"/>
+
+    <result property="resolvedAt" column="resolved_at"/>
+    <result property="resolvedBy" column="resolved_by"/>
+    <result property="resolutionNote" column="resolution_note"/>
   </resultMap>
 
-  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
-    select error_id, error_code, message, stack_trace, request_id, created_at
-    from error_logs
-    where error_id = #{errorId,jdbcType=VARCHAR}
-  </select>
+  <sql id="BaseColumns">
+    error_id,
+    error_code,
+    message,
+    stack_trace,
+    request_id,
+    created_at,
+    operation_type,
+    tenant_id,
+    company_id,
+    actor_user_id,
+    actor_role,
+    severity,
+    status,
+    payload_snapshot::text AS payload_snapshot,
+    resolved_at,
+    resolved_by,
+    resolution_note
+  </sql>
 
-  <select id="selectAll" resultMap="BaseResultMap">
-    select error_id, error_code, message, stack_trace, request_id, created_at
-    from error_logs
-    order by created_at desc
-  </select>
-
-  <insert id="insert" parameterType="com.sme.be_sme.modules.platform.infrastructure.persistence.entity.ErrorLogEntity">
-    insert into error_logs (error_id, error_code, message, stack_trace, request_id, created_at)
-    values (#{errorId,jdbcType=VARCHAR}, #{errorCode,jdbcType=VARCHAR}, #{message,jdbcType=VARCHAR},
-      #{stackTrace,jdbcType=VARCHAR}, #{requestId,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP})
+  <insert id="insert"
+          parameterType="com.sme.be_sme.modules.platform.infrastructure.persistence.entity.ErrorLogEntity">
+    INSERT INTO error_logs (
+    error_id,
+    error_code,
+    message,
+    stack_trace,
+    request_id,
+    created_at,
+    operation_type,
+    tenant_id,
+    company_id,
+    actor_user_id,
+    actor_role,
+    severity,
+    status,
+    payload_snapshot
+    )
+    VALUES (
+    #{errorId},
+    #{errorCode},
+    #{message},
+    #{stackTrace},
+    #{requestId},
+    now(),
+    #{operationType},
+    #{tenantId},
+    #{companyId},
+    #{actorUserId},
+    #{actorRole},
+    #{severity},
+    #{status},
+    CAST(#{payloadSnapshot} AS jsonb)
+    )
   </insert>
+
+  <select id="selectAll" resultMap="ErrorLogResultMap">
+    SELECT
+    <include refid="BaseColumns"/>
+    FROM error_logs
+    ORDER BY created_at DESC
+  </select>
+
+  <select id="selectById" resultMap="ErrorLogResultMap">
+    SELECT
+    <include refid="BaseColumns"/>
+    FROM error_logs
+    WHERE error_id = #{errorId}
+    LIMIT 1
+  </select>
+
+  <select id="selectPage" resultMap="ErrorLogResultMap">
+    SELECT
+    <include refid="BaseColumns"/>
+    FROM error_logs
+    WHERE 1 = 1
+
+    <if test="keyword != null and keyword != ''">
+      AND (
+      LOWER(COALESCE(message, '')) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+      OR LOWER(COALESCE(error_code, '')) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+      OR LOWER(COALESCE(operation_type, '')) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+      OR LOWER(COALESCE(request_id, '')) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+      )
+    </if>
+
+    <if test="errorCode != null and errorCode != ''">
+      AND error_code = #{errorCode}
+    </if>
+
+    <if test="severity != null and severity != ''">
+      AND severity = #{severity}
+    </if>
+
+    <if test="status != null and status != ''">
+      AND status = #{status}
+    </if>
+
+    <if test="operationType != null and operationType != ''">
+      AND operation_type = #{operationType}
+    </if>
+
+    <if test="companyId != null and companyId != ''">
+      AND company_id = #{companyId}
+    </if>
+
+    <if test="actorRole != null and actorRole != ''">
+      AND actor_role ILIKE CONCAT('%', #{actorRole}, '%')
+    </if>
+
+    <if test="startDate != null and startDate != ''">
+      AND created_at &gt;= CAST(#{startDate} AS timestamptz)
+    </if>
+
+    <if test="endDate != null and endDate != ''">
+      AND created_at &lt; CAST(#{endDate} AS timestamptz) + INTERVAL '1 day'
+    </if>
+
+    ORDER BY created_at DESC
+    LIMIT #{limit}
+    OFFSET #{offset}
+  </select>
+
+  <select id="countPage" resultType="int">
+    SELECT COUNT(*)
+    FROM error_logs
+    WHERE 1 = 1
+
+    <if test="keyword != null and keyword != ''">
+      AND (
+      LOWER(COALESCE(message, '')) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+      OR LOWER(COALESCE(error_code, '')) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+      OR LOWER(COALESCE(operation_type, '')) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+      OR LOWER(COALESCE(request_id, '')) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+      )
+    </if>
+
+    <if test="errorCode != null and errorCode != ''">
+      AND error_code = #{errorCode}
+    </if>
+
+    <if test="severity != null and severity != ''">
+      AND severity = #{severity}
+    </if>
+
+    <if test="status != null and status != ''">
+      AND status = #{status}
+    </if>
+
+    <if test="operationType != null and operationType != ''">
+      AND operation_type = #{operationType}
+    </if>
+
+    <if test="companyId != null and companyId != ''">
+      AND company_id = #{companyId}
+    </if>
+
+    <if test="actorRole != null and actorRole != ''">
+      AND actor_role ILIKE CONCAT('%', #{actorRole}, '%')
+    </if>
+
+    <if test="startDate != null and startDate != ''">
+      AND created_at &gt;= CAST(#{startDate} AS timestamptz)
+    </if>
+
+    <if test="endDate != null and endDate != ''">
+      AND created_at &lt; CAST(#{endDate} AS timestamptz) + INTERVAL '1 day'
+    </if>
+  </select>
+
+  <update id="updateStatus">
+    UPDATE error_logs
+    SET
+    status = #{status},
+    resolved_by = #{resolvedBy},
+    resolution_note = #{resolutionNote},
+    resolved_at =
+    CASE
+    WHEN #{status} = 'RESOLVED' THEN now()
+    ELSE resolved_at
+    END
+    WHERE error_id = #{errorId}
+  </update>
+
 </mapper>
