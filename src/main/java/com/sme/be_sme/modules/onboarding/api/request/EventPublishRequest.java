@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 public class EventPublishRequest {
     private String eventTemplateId;
-    private Date eventDate;
+    private Date eventAt;
     private List<String> departmentIds;
     private List<String> userIds;
 }

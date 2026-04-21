@@ -10,7 +10,7 @@ import lombok.Setter;
 public class EventPublishResponse {
     private String eventInstanceId;
     private String eventTemplateId;
-    private Date eventDate;
+    private Date eventAt;
     private Integer taskCount;
     private List<String> participantUserIds;
 }
