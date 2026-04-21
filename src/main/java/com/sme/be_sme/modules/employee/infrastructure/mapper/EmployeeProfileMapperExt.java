@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Date;
+import java.util.List;
 
 @Mapper
 public interface EmployeeProfileMapperExt {
@@ -28,5 +29,10 @@ public interface EmployeeProfileMapperExt {
      * Scans existing employee_code values ending with digits after ']'.
      */
     int getNextEmployeeSequence(@Param("companyId") String companyId);
+
+    List<String> selectActiveUserIdsByDepartmentIds(
+            @Param("companyId") String companyId,
+            @Param("departmentIds") List<String> departmentIds
+    );
 }
 

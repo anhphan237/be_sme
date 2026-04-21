@@ -83,4 +83,17 @@
         FROM employee_profiles
         WHERE company_id = #{companyId}
     </select>
+
+    <select id="selectActiveUserIdsByDepartmentIds" resultType="java.lang.String">
+        select distinct ep.user_id
+        from employee_profiles ep
+        join users u on u.user_id = ep.user_id
+        where ep.company_id = #{companyId}
+          and u.company_id = #{companyId}
+          and upper(coalesce(u.status, '')) = 'ACTIVE'
+          and ep.department_id in
+          <foreach collection="departmentIds" item="departmentId" open="(" separator="," close=")">
+              #{departmentId}
+          </foreach>
+    </select>
 </mapper>
