@@ -16,6 +16,7 @@ import org.springframework.util.StringUtils;
 public class OnboardingTemplateCreateInsertTemplateCoreProcessor extends BaseCoreProcessor<OnboardingTemplateCreateContext> {
 
     private final OnboardingTemplateMapper onboardingTemplateMapper;
+    private static final String LEVEL_TENANT = "TENANT";
 
     @Override
     protected Object process(OnboardingTemplateCreateContext ctx) {
@@ -34,6 +35,7 @@ public class OnboardingTemplateCreateInsertTemplateCoreProcessor extends BaseCor
                 StringUtils.hasText(ctx.getRequest().getDepartmentTypeCode())
                         ? ctx.getRequest().getDepartmentTypeCode().trim().toUpperCase()
                         : null);
+        entity.setLevel(LEVEL_TENANT);
         entity.setCreatedAt(ctx.getNow());
         entity.setUpdatedAt(ctx.getNow());
 

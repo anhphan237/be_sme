@@ -8,6 +8,8 @@ import java.util.List;
 @Getter
 @Setter
 public class OnboardingTemplateCreateRequest {
+    /** Optional: clone from an existing template (usually PLATFORM level). */
+    private String sourceTemplateId;
     private String name;
     private String description;
     private String status;

@@ -38,6 +38,7 @@ import org.springframework.util.StringUtils;
 @Component
 @RequiredArgsConstructor
 public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizContext> {
+    private static final String LEVEL_PLATFORM = "PLATFORM";
 
     private final ObjectMapper objectMapper;
     private final OnboardingTemplateMapper onboardingTemplateMapper;
@@ -58,6 +59,9 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
                 request.getTemplateId(), companyId);
         if (entity == null) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "onboarding template not found");
+        }
+        if (LEVEL_PLATFORM.equalsIgnoreCase(entity.getLevel())) {
+            throw AppException.of(ErrorCodes.FORBIDDEN, "platform template is read-only, please clone before editing");
         }
 
         if (request.getName() != null) {
@@ -98,6 +102,7 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
         response.setStatus(entity.getStatus());
         response.setTemplateKind(entity.getTemplateKind());
         response.setDepartmentTypeCode(entity.getDepartmentTypeCode());
+        response.setLevel(entity.getLevel());
         return response;
     }
 

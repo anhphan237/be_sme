@@ -1,6 +1,7 @@
 package com.sme.be_sme.modules.onboarding.facade.impl;
 
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateCreateRequest;
+import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateCloneRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateGetRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateListRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateUpdateRequest;
@@ -8,6 +9,7 @@ import com.sme.be_sme.modules.onboarding.api.response.OnboardingTemplateGetRespo
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTemplateListResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTemplateResponse;
 import com.sme.be_sme.modules.onboarding.facade.OnboardingTemplateFacade;
+import com.sme.be_sme.modules.onboarding.processor.OnboardingTemplateCloneProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTemplateCreateProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTemplateUpdateProcessor;
 import com.sme.be_sme.modules.onboarding.processor.template.OnboardingTemplateGetProcessor;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Component;
 public class OnboardingTemplateFacadeImpl extends BaseOperationFacade implements OnboardingTemplateFacade {
 
     private final OnboardingTemplateCreateProcessor onboardingTemplateCreateProcessor;
+    private final OnboardingTemplateCloneProcessor onboardingTemplateCloneProcessor;
     private final OnboardingTemplateUpdateProcessor onboardingTemplateUpdateProcessor;
     private final OnboardingTemplateListProcessor onboardingTemplateListProcessor;
     private final OnboardingTemplateGetProcessor onboardingTemplateGetProcessor;
@@ -28,6 +31,11 @@ public class OnboardingTemplateFacadeImpl extends BaseOperationFacade implements
     @Override
     public OnboardingTemplateResponse createOnboardingTemplate(OnboardingTemplateCreateRequest request) {
         return call(onboardingTemplateCreateProcessor, request, OnboardingTemplateResponse.class);
+    }
+
+    @Override
+    public OnboardingTemplateResponse cloneOnboardingTemplate(OnboardingTemplateCloneRequest request) {
+        return call(onboardingTemplateCloneProcessor, request, OnboardingTemplateResponse.class);
     }
 
     @Override

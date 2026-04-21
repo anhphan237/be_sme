@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class OnboardingInstanceCreateLoadTemplateCoreProcessor
         extends BaseCoreProcessor<OnboardingInstanceCreateContext> {
+    private static final String LEVEL_PLATFORM = "PLATFORM";
+    private static final String STATUS_ACTIVE = "ACTIVE";
 
     private final OnboardingTemplateMapperExt templateMapperExt;
 
@@ -24,6 +26,16 @@ public class OnboardingInstanceCreateLoadTemplateCoreProcessor
                 templateMapperExt.selectTemplateByIdAndCompany(templateId, companyId);
         if (tpl == null) {
             throw AppException.of("TEMPLATE_NOT_FOUND", "template not found");
+        }
+        if (LEVEL_PLATFORM.equalsIgnoreCase(tpl.getLevel())) {
+            throw AppException.of(
+                    "INVALID_TEMPLATE_LEVEL",
+                    "platform template is view-only, please clone to tenant template before onboarding");
+        }
+        if (!STATUS_ACTIVE.equalsIgnoreCase(tpl.getStatus())) {
+            throw AppException.of(
+                    "INVALID_TEMPLATE_STATUS",
+                    "template must be ACTIVE before onboarding");
         }
 
         ctx.setTemplate(tpl);

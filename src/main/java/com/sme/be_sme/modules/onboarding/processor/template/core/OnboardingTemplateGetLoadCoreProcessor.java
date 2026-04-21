@@ -31,9 +31,10 @@ public class OnboardingTemplateGetLoadCoreProcessor extends BaseCoreProcessor<On
             throw AppException.of("TEMPLATE_NOT_FOUND", "template not found");
         }
 
+        String templateCompanyId = template.getCompanyId();
         ctx.setTemplate(template);
-        ctx.setChecklistRows(onboardingTemplateMapperExt.selectChecklistRows(companyId, templateId));
-        ctx.setBaselineTaskRows(onboardingTemplateMapperExt.selectBaselineTaskRows(companyId, templateId));
+        ctx.setChecklistRows(onboardingTemplateMapperExt.selectChecklistRows(templateCompanyId, templateId));
+        ctx.setBaselineTaskRows(onboardingTemplateMapperExt.selectBaselineTaskRows(templateCompanyId, templateId));
         List<String> taskTemplateIds = ctx.getBaselineTaskRows() == null ? List.of()
                 : ctx.getBaselineTaskRows().stream()
                 .map(r -> r.getTaskTemplateId())
@@ -44,7 +45,7 @@ public class OnboardingTemplateGetLoadCoreProcessor extends BaseCoreProcessor<On
         } else {
             Map<String, List<String>> requiredDocsByTaskTemplateId =
                     taskTemplateRequiredDocumentMapper
-                            .selectByCompanyIdAndTaskTemplateIds(companyId, taskTemplateIds)
+                            .selectByCompanyIdAndTaskTemplateIds(templateCompanyId, taskTemplateIds)
                             .stream()
                             .collect(Collectors.groupingBy(
                                     TaskTemplateRequiredDocumentEntity::getTaskTemplateId,

@@ -53,6 +53,11 @@ public interface OnboardingInstanceMapper {
             @Param("requestNo") String requestNo
     );
 
+    OnboardingInstanceEntity selectInProgressByCompanyIdAndEmployeeId(
+            @Param("companyId") String companyId,
+            @Param("employeeId") String employeeId
+    );
+
     /** Count instances created in the given month (yyyy-MM). Used for usage check. */
     int countByCompanyIdAndMonth(
             @Param("companyId") String companyId,
