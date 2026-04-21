@@ -74,8 +74,8 @@ public class CompanyTaskCompletionProcessor extends BaseBizProcessor<BizContext>
     }
 
     private static void validate(BizContext context, CompanyTaskCompletionRequest request) {
-        if (context == null || !StringUtils.hasText(context.getTenantId())) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
+        if (context == null) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "context is required");
         }
         if (request == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "payload is required");
@@ -86,17 +86,57 @@ public class CompanyTaskCompletionProcessor extends BaseBizProcessor<BizContext>
         if (!StringUtils.hasText(request.getEndDate())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "endDate is required");
         }
-        if (StringUtils.hasText(request.getCompanyId())
-                && !Objects.equals(request.getCompanyId().trim(), context.getTenantId().trim())) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "companyId does not match tenant");
-        }
+
+        resolveCompanyId(context, request);
     }
 
     private static String resolveCompanyId(BizContext context, CompanyTaskCompletionRequest request) {
-        if (StringUtils.hasText(request.getCompanyId())) {
-            return request.getCompanyId().trim();
+        boolean platformAdmin = isPlatformAdmin(context);
+
+        String tenantId = trimToNull(context.getTenantId());
+        String requestCompanyId = trimToNull(request.getCompanyId());
+
+        if (platformAdmin) {
+            if (!StringUtils.hasText(requestCompanyId)) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "companyId is required for platform admin");
+            }
+            return requestCompanyId;
         }
-        return context.getTenantId().trim();
+
+        if (!StringUtils.hasText(tenantId)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
+        }
+
+        if (StringUtils.hasText(requestCompanyId) && !Objects.equals(requestCompanyId, tenantId)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "companyId does not match tenant");
+        }
+
+        return tenantId;
+    }
+
+    private static boolean isPlatformAdmin(BizContext context) {
+        if (context.getRoles() == null || context.getRoles().isEmpty()) {
+            return false;
+        }
+
+        return context.getRoles().stream()
+                .filter(Objects::nonNull)
+                .map(role -> role.trim().toUpperCase(Locale.ROOT))
+                .map(role -> role.replace("ROLE_", ""))
+                .map(role -> role.replace(" ", "_"))
+                .map(role -> role.replace("-", "_"))
+                .anyMatch(role ->
+                        "PLATFORM_ADMIN".equals(role)
+                                || "ADMIN_PLATFORM".equals(role)
+                                || "ADMIN".equals(role)
+                );
+    }
+
+    private static String trimToNull(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
     }
 
     private static LocalDate parseDate(String value, String fieldName) {
