@@ -20,6 +20,7 @@ public class OnboardingInstanceCreateProcessor
 
     private final OnboardingInstanceCreateValidateCoreProcessor validate;
     private final OnboardingInstanceCreateIdempotencyCoreProcessor idempotency;
+    private final OnboardingInstanceCreateEnsureEmployeeNotInProgressCoreProcessor ensureEmployeeNotInProgress;
     private final OnboardingInstanceCreateLoadTemplateCoreProcessor loadTemplate;
     private final OnboardingInstanceCreateUsageCheckCoreProcessor usageCheck;
     private final OnboardingInstanceCreateSubscriptionTrackCoreProcessor subscriptionTrack;
@@ -47,6 +48,7 @@ public class OnboardingInstanceCreateProcessor
             buildRes.processWith(ctx);
             return ctx.getResponse();
         }
+        ensureEmployeeNotInProgress.processWith(ctx);
         loadTemplate.processWith(ctx);
         usageCheck.processWith(ctx);
         subscriptionTrack.processWith(ctx);

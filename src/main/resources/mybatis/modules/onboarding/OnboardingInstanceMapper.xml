@@ -99,6 +99,17 @@
       and request_no = #{requestNo,jdbcType=VARCHAR}
     limit 1
   </select>
+  <select id="selectInProgressByCompanyIdAndEmployeeId" resultMap="BaseResultMap">
+    select onboarding_id, company_id, employee_id, onboarding_template_id, status, start_date,
+    completed_at, completed_by, created_by, created_at, updated_at, updated_by, progress_percent, request_no,
+    manager_user_id, it_staff_user_id
+    from onboarding_instances
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and employee_id = #{employeeId,jdbcType=VARCHAR}
+      and upper(status) in ('DRAFT', 'ACTIVE')
+    order by created_at desc
+    limit 1
+  </select>
   <select id="countByCompanyIdAndMonth" resultType="int">
     select count(*)
     from onboarding_instances
