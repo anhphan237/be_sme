@@ -93,7 +93,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         instance.setEventInstanceId(eventInstanceId);
         instance.setCompanyId(companyId);
         instance.setEventTemplateId(template.getEventTemplateId());
-        instance.setEventDate(request.getEventDate());
+        instance.setEventAt(request.getEventAt());
         instance.setSourceType(sourceType);
         instance.setSourceDepartmentIds(toJsonArray(departmentIds));
         instance.setSourceUserIds(toJsonArray(userIds));
@@ -115,8 +115,8 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         checklist.setStage("EVENT");
         checklist.setStatus("NOT_STARTED");
         checklist.setProgressPercent(0);
-        checklist.setOpenAt(request.getEventDate());
-        checklist.setDeadlineAt(request.getEventDate());
+        checklist.setOpenAt(request.getEventAt());
+        checklist.setDeadlineAt(request.getEventAt());
         checklist.setCreatedAt(now);
         checklist.setUpdatedAt(now);
         if (checklistInstanceMapper.insert(checklist) != 1) {
@@ -134,7 +134,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
             task.setTitle(template.getName());
             task.setDescription(taskDescription);
             task.setStatus(OnboardingTaskWorkflow.STATUS_ASSIGNED);
-            task.setDueDate(request.getEventDate());
+            task.setDueDate(request.getEventAt());
             task.setAssignedUserId(participantUserId);
             task.setAssignedDepartmentId(hasDepartments ? departmentIds.get(0) : null);
             task.setCreatedBy(operatorId);
@@ -153,7 +153,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         EventPublishResponse response = new EventPublishResponse();
         response.setEventInstanceId(eventInstanceId);
         response.setEventTemplateId(template.getEventTemplateId());
-        response.setEventDate(request.getEventDate());
+        response.setEventAt(request.getEventAt());
         response.setTaskCount(participantUserIds.size());
         response.setParticipantUserIds(participantUserIds);
         return response;
@@ -169,8 +169,8 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         if (!StringUtils.hasText(request.getEventTemplateId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "eventTemplateId is required");
         }
-        if (request.getEventDate() == null) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "eventDate is required");
+        if (request.getEventAt() == null) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "eventAt is required");
         }
     }
 
