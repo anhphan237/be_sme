@@ -6,7 +6,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
-public class PermissionService {
+    public class PermissionService {
 
     /** Platform-only permissions: not granted to company HR. */
     private static final String PLATFORM_PREFIX = "com.sme.analytics.platform.";
