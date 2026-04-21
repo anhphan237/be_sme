@@ -55,7 +55,7 @@
            participant_user_ids, status, notified_at, created_by, created_at, updated_at
     from event_instances
     where event_at >= #{windowStart,jdbcType=TIMESTAMP}
-      and event_at <= #{windowEnd,jdbcType=TIMESTAMP}
+      and event_at &lt;= #{windowEnd,jdbcType=TIMESTAMP}
       and notified_at is null
       and upper(coalesce(status, 'PUBLISHED')) = 'PUBLISHED'
     order by event_at asc
