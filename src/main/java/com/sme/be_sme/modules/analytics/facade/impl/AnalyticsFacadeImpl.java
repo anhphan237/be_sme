@@ -1,24 +1,9 @@
 package com.sme.be_sme.modules.analytics.facade.impl;
 
-import com.sme.be_sme.modules.analytics.api.request.CompanyOnboardingByDepartmentRequest;
-import com.sme.be_sme.modules.analytics.api.request.CompanyOnboardingFunnelRequest;
-import com.sme.be_sme.modules.analytics.api.request.CompanyOnboardingSummaryRequest;
-import com.sme.be_sme.modules.analytics.api.request.CompanyOnboardingTemplateScoreboardRequest;
-import com.sme.be_sme.modules.analytics.api.request.CompanyTaskCompletionRequest;
-import com.sme.be_sme.modules.analytics.api.request.PlatformSubscriptionMetricsRequest;
-import com.sme.be_sme.modules.analytics.api.response.CompanyOnboardingByDepartmentResponse;
-import com.sme.be_sme.modules.analytics.api.response.CompanyOnboardingFunnelResponse;
-import com.sme.be_sme.modules.analytics.api.response.CompanyOnboardingSummaryResponse;
-import com.sme.be_sme.modules.analytics.api.response.CompanyOnboardingTemplateScoreboardResponse;
-import com.sme.be_sme.modules.analytics.api.response.CompanyTaskCompletionResponse;
-import com.sme.be_sme.modules.analytics.api.response.PlatformSubscriptionMetricsResponse;
+import com.sme.be_sme.modules.analytics.api.request.*;
+import com.sme.be_sme.modules.analytics.api.response.*;
 import com.sme.be_sme.modules.analytics.facade.AnalyticsFacade;
-import com.sme.be_sme.modules.analytics.processor.CompanyOnboardingByDepartmentProcessor;
-import com.sme.be_sme.modules.analytics.processor.CompanyOnboardingFunnelProcessor;
-import com.sme.be_sme.modules.analytics.processor.CompanyOnboardingSummaryProcessor;
-import com.sme.be_sme.modules.analytics.processor.CompanyOnboardingTemplateScoreboardProcessor;
-import com.sme.be_sme.modules.analytics.processor.CompanyTaskCompletionProcessor;
-import com.sme.be_sme.modules.analytics.processor.PlatformSubscriptionMetricsProcessor;
+import com.sme.be_sme.modules.analytics.processor.*;
 import com.sme.be_sme.shared.gateway.core.BaseOperationFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -33,6 +18,7 @@ public class AnalyticsFacadeImpl extends BaseOperationFacade implements Analytic
     private final CompanyTaskCompletionProcessor companyTaskCompletionProcessor;
     private final CompanyOnboardingTemplateScoreboardProcessor companyOnboardingTemplateScoreboardProcessor;
     private final PlatformSubscriptionMetricsProcessor platformSubscriptionMetricsProcessor;
+    private final ManagerTeamSummaryProcessor managerTeamSummaryProcessor;
 
     @Override
     public CompanyOnboardingSummaryResponse getCompanyOnboardingSummary(CompanyOnboardingSummaryRequest request) {
@@ -66,5 +52,10 @@ public class AnalyticsFacadeImpl extends BaseOperationFacade implements Analytic
     @Override
     public PlatformSubscriptionMetricsResponse getPlatformSubscriptionMetrics(PlatformSubscriptionMetricsRequest request) {
         return call(platformSubscriptionMetricsProcessor, request, PlatformSubscriptionMetricsResponse.class);
+    }
+
+    @Override
+    public ManagerTeamSummaryResponse getManagerTeamSummary(ManagerTeamSummaryRequest request) {
+        return call(managerTeamSummaryProcessor, request, ManagerTeamSummaryResponse.class);
     }
 }
