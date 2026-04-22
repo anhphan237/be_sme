@@ -198,6 +198,41 @@
       </if>
   </select>
 
+  <select id="selectScheduledCalendarByCompanyAndUser" resultMap="AssigneeListRowMap">
+    SELECT t.task_id, t.company_id, t.checklist_id, c.onboarding_id, c.name AS checklist_name,
+           t.title, t.description, t.status, t.due_date, t.assigned_user_id, t.assigned_department_id,
+           t.completed_at, t.created_at, t.require_ack, t.require_doc, t.requires_manager_approval, t.approval_status, t.approver_user_id,
+           t.scheduled_start_at, t.scheduled_end_at, t.schedule_status, t.schedule_reschedule_reason, t.schedule_cancel_reason,
+           t.schedule_no_show_reason
+    FROM task_instances t
+    INNER JOIN checklist_instances c ON t.checklist_id = c.checklist_id AND t.company_id = c.company_id
+    WHERE t.company_id = #{companyId,jdbcType=VARCHAR}
+      AND t.assigned_user_id = #{assigneeUserId,jdbcType=VARCHAR}
+      AND t.scheduled_start_at IS NOT NULL
+      <if test="fromTime != null">
+        AND t.scheduled_start_at <![CDATA[ >= ]]> #{fromTime,jdbcType=TIMESTAMP}
+      </if>
+      <if test="toTime != null">
+        AND t.scheduled_start_at <![CDATA[ <= ]]> #{toTime,jdbcType=TIMESTAMP}
+      </if>
+    ORDER BY t.scheduled_start_at ASC, t.created_at ASC
+    LIMIT #{limit} OFFSET #{offset}
+  </select>
+
+  <select id="countScheduledCalendarByCompanyAndUser" resultType="java.lang.Integer">
+    SELECT COUNT(*)
+    FROM task_instances t
+    WHERE t.company_id = #{companyId,jdbcType=VARCHAR}
+      AND t.assigned_user_id = #{assigneeUserId,jdbcType=VARCHAR}
+      AND t.scheduled_start_at IS NOT NULL
+      <if test="fromTime != null">
+        AND t.scheduled_start_at <![CDATA[ >= ]]> #{fromTime,jdbcType=TIMESTAMP}
+      </if>
+      <if test="toTime != null">
+        AND t.scheduled_start_at <![CDATA[ <= ]]> #{toTime,jdbcType=TIMESTAMP}
+      </if>
+  </select>
+
   <select id="selectTimelineByOnboardingId" resultMap="AssigneeListRowMap">
     SELECT t.task_id, t.company_id, t.checklist_id, c.onboarding_id, c.name AS checklist_name,
            t.title, t.description, t.status, t.due_date, t.assigned_user_id, t.assigned_department_id,

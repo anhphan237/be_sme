@@ -53,6 +53,7 @@ import java.util.stream.Collectors;
                     || "com.sme.onboarding.task.comment.list".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.acknowledge".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.attachment.add".equalsIgnoreCase(perm)
+                    || "com.sme.onboarding.task.schedule.list".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.approve".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.reject".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.instance.list".equalsIgnoreCase(perm)
