@@ -6,6 +6,7 @@
     <result column="company_id" jdbcType="VARCHAR" property="companyId" />
     <result column="user_id" jdbcType="VARCHAR" property="userId" />
     <result column="action" jdbcType="VARCHAR" property="action" />
+    <result column="action_description" jdbcType="VARCHAR" property="actionDescription" />
     <result column="entity_type" jdbcType="VARCHAR" property="entityType" />
     <result column="entity_id" jdbcType="VARCHAR" property="entityId" />
     <result column="detail" jdbcType="VARCHAR" property="detail" />
@@ -13,19 +14,19 @@
   </resultMap>
 
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
-    select log_id, company_id, user_id, action, entity_type, entity_id, detail, created_at
+    select log_id, company_id, user_id, action, action_description, entity_type, entity_id, detail, created_at
     from activity_logs
     where log_id = #{logId,jdbcType=VARCHAR}
   </select>
 
   <select id="selectAll" resultMap="BaseResultMap">
-    select log_id, company_id, user_id, action, entity_type, entity_id, detail, created_at
+    select log_id, company_id, user_id, action, action_description, entity_type, entity_id, detail, created_at
     from activity_logs
     order by created_at desc
   </select>
 
   <select id="selectByUserIdWithPaging" resultMap="BaseResultMap">
-    select log_id, company_id, user_id, action, entity_type, entity_id, detail, created_at
+    select log_id, company_id, user_id, action, action_description, entity_type, entity_id, detail, created_at
     from activity_logs
     where user_id = #{userId,jdbcType=VARCHAR}
     order by created_at desc
@@ -39,7 +40,7 @@
   </select>
 
   <select id="selectPage" resultMap="BaseResultMap">
-    select log_id, company_id, user_id, action, entity_type, entity_id, detail, created_at
+    select log_id, company_id, user_id, action, action_description, entity_type, entity_id, detail, created_at
     from activity_logs
     order by created_at desc
     limit #{limit} offset #{offset}
@@ -51,9 +52,9 @@
   </select>
 
   <insert id="insert" parameterType="com.sme.be_sme.modules.platform.infrastructure.persistence.entity.ActivityLogEntity">
-    insert into activity_logs (log_id, company_id, user_id, action, entity_type, entity_id, detail, created_at)
+    insert into activity_logs (log_id, company_id, user_id, action, action_description, entity_type, entity_id, detail, created_at)
     values (#{logId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR},
-      #{action,jdbcType=VARCHAR}, #{entityType,jdbcType=VARCHAR}, #{entityId,jdbcType=VARCHAR},
+      #{action,jdbcType=VARCHAR}, #{actionDescription,jdbcType=VARCHAR}, #{entityType,jdbcType=VARCHAR}, #{entityId,jdbcType=VARCHAR},
       #{detail,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP})
   </insert>
 </mapper>

@@ -8,6 +8,7 @@ public class ActivityLogEntity {
     private String companyId;
     private String userId;
     private String action;
+    private String actionDescription;
     private String entityType;
     private String entityId;
     private String detail;
@@ -47,6 +48,14 @@ public class ActivityLogEntity {
 
     public String getEntityType() {
         return entityType;
+    }
+
+    public String getActionDescription() {
+        return actionDescription;
+    }
+
+    public void setActionDescription(String actionDescription) {
+        this.actionDescription = actionDescription == null ? null : actionDescription.trim();
     }
 
     public void setEntityType(String entityType) {
