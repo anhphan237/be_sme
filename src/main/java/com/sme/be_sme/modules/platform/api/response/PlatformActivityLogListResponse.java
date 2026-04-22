@@ -16,6 +16,7 @@ public class PlatformActivityLogListResponse {
         private String companyId;
         private String userId;
         private String action;
+        private String actionDescription;
         private String entityType;
         private String entityId;
         private String detail;

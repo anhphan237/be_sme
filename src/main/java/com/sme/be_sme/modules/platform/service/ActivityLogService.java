@@ -14,11 +14,23 @@ public class ActivityLogService {
     private final ActivityLogMapper activityLogMapper;
 
     public void log(String companyId, String userId, String action, String entityType, String entityId, String detail) {
+        log(companyId, userId, action, null, entityType, entityId, detail);
+    }
+
+    public void log(
+            String companyId,
+            String userId,
+            String action,
+            String actionDescription,
+            String entityType,
+            String entityId,
+            String detail) {
         ActivityLogEntity entity = new ActivityLogEntity();
         entity.setLogId(UuidGenerator.generate());
         entity.setCompanyId(companyId);
         entity.setUserId(userId);
         entity.setAction(action);
+        entity.setActionDescription(actionDescription);
         entity.setEntityType(entityType);
         entity.setEntityId(entityId);
         entity.setDetail(detail);

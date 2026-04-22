@@ -49,6 +49,7 @@ public class OperationController {
                         ctx.getTenantId(),
                         ctx.getOperatorId(),
                         operationType,
+                        "Executed operation " + operationType,
                         "OPERATION",
                         requestId,
                         "operation executed successfully");

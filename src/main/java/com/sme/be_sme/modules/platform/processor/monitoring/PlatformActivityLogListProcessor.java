@@ -59,6 +59,7 @@ public class PlatformActivityLogListProcessor extends BaseBizProcessor<BizContex
             item.setCompanyId(entity.getCompanyId());
             item.setUserId(entity.getUserId());
             item.setAction(entity.getAction());
+            item.setActionDescription(entity.getActionDescription());
             item.setEntityType(entity.getEntityType());
             item.setEntityId(entity.getEntityId());
             item.setDetail(entity.getDetail());
