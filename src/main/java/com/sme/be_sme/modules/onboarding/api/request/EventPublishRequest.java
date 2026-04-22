@@ -10,6 +10,7 @@ import lombok.Setter;
 public class EventPublishRequest {
     private String eventTemplateId;
     private Date eventAt;
+    private Date eventEndAt;
     private List<String> departmentIds;
     private List<String> userIds;
 }

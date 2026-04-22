@@ -11,6 +11,7 @@ public class EventPublishResponse {
     private String eventInstanceId;
     private String eventTemplateId;
     private Date eventAt;
+    private Date eventEndAt;
     private Integer taskCount;
     private List<String> participantUserIds;
 }
