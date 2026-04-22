@@ -31,6 +31,7 @@ public class SurveyFacadeImpl extends BaseOperationFacade implements SurveyFacad
     private final SurveyInstanceGetProcessor surveyInstanceGetProcessor;
     private final SurveyResponseSaveDraftProcessor surveyResponseSaveDraftProcessor;
     private final SurveyTemplateDeleteProcessor surveyTemplateDeleteProcessor;
+    private final SurveyAnalyticsAiSummaryProcessor surveyAnalyticsAiSummaryProcessor;
 
     @Override
     public SurveyTemplateResponse createSurveyTemplate(SurveyTemplateCreateRequest request) {
@@ -126,4 +127,10 @@ public class SurveyFacadeImpl extends BaseOperationFacade implements SurveyFacad
     public SurveyTemplateDeleteResponse deleteSurveyTemplate(SurveyTemplateDeleteRequest request) {
         return call(surveyTemplateDeleteProcessor, request, SurveyTemplateDeleteResponse.class);
     }
+
+    @Override
+    public SurveyAiSummaryResponse getSurveyAiSummary(SurveyAiSummaryRequest request) {
+        return call(surveyAnalyticsAiSummaryProcessor, request, SurveyAiSummaryResponse.class);
+    }
+
 }
