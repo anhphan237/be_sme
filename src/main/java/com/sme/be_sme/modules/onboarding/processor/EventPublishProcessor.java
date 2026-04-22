@@ -49,6 +49,9 @@ import org.springframework.util.StringUtils;
 public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
     private static final String TEMPLATE_TASK_ASSIGNED = "TASK_ASSIGNED";
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final String SOURCE_TYPE_DEPARTMENT = "DEPARTMENT";
+    private static final String SOURCE_TYPE_USER_LIST = "USER_LIST";
+    private static final String SOURCE_TYPE_DEPARTMENT_PLUS_USERS = "DEPARTMENT_PLUS_USERS";
 
     private final ObjectMapper objectMapper;
     private final EventTemplateMapper eventTemplateMapper;
@@ -80,20 +83,43 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         List<String> userIds = normalizeIds(request.getUserIds());
         boolean hasDepartments = !departmentIds.isEmpty();
         boolean hasUsers = !userIds.isEmpty();
-        if (hasDepartments == hasUsers) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "provide exactly one source: departmentIds or userIds");
+        if (!hasDepartments && !hasUsers) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "provide at least one source: departmentIds and/or userIds");
         }
 
         List<String> participantUserIds;
         String sourceType;
+        List<String> departmentUserIds = List.of();
         if (hasDepartments) {
             assertDepartments(companyId, departmentIds);
-            participantUserIds = resolveUsersFromDepartments(companyId, departmentIds);
-            sourceType = "DEPARTMENT";
-        } else {
+            departmentUserIds = resolveUsersFromDepartments(companyId, departmentIds);
+        }
+        if (hasUsers) {
             assertActiveUsers(companyId, userIds);
+        }
+        if (hasDepartments && hasUsers) {
+            Set<String> departmentUserSet = new LinkedHashSet<>(departmentUserIds);
+            List<String> duplicateUserIds = userIds.stream()
+                    .filter(departmentUserSet::contains)
+                    .toList();
+            if (!duplicateUserIds.isEmpty()) {
+                throw AppException.of(
+                        ErrorCodes.BAD_REQUEST,
+                        "specified userIds already belong to selected departments, please reassign: "
+                                + String.join(", ", duplicateUserIds));
+            }
+            LinkedHashSet<String> merged = new LinkedHashSet<>(departmentUserIds);
+            merged.addAll(userIds);
+            participantUserIds = new ArrayList<>(merged);
+            sourceType = SOURCE_TYPE_DEPARTMENT_PLUS_USERS;
+        } else if (hasDepartments) {
+            participantUserIds = departmentUserIds;
+            sourceType = SOURCE_TYPE_DEPARTMENT;
+        } else {
             participantUserIds = userIds;
-            sourceType = "USER_LIST";
+            sourceType = SOURCE_TYPE_USER_LIST;
         }
         if (participantUserIds.isEmpty()) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "no participants found for this event");
@@ -148,7 +174,8 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
             task.setStatus(OnboardingTaskWorkflow.STATUS_ASSIGNED);
             task.setDueDate(request.getEventAt());
             task.setAssignedUserId(participantUserId);
-            task.setAssignedDepartmentId(hasDepartments ? departmentIds.get(0) : null);
+            task.setAssignedDepartmentId(
+                    SOURCE_TYPE_DEPARTMENT.equals(sourceType) ? departmentIds.get(0) : null);
             task.setCreatedBy(operatorId);
             task.setCreatedAt(now);
             task.setUpdatedAt(now);
