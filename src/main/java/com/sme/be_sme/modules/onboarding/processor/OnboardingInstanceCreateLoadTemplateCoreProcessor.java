@@ -3,7 +3,10 @@ package com.sme.be_sme.modules.onboarding.processor;
 import com.sme.be_sme.modules.onboarding.context.OnboardingInstanceCreateContext;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingTemplateMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingTemplateEntity;
+import com.sme.be_sme.modules.onboarding.infrastructure.persistence.model.TaskTemplateRow;
 import com.sme.be_sme.shared.exception.AppException;
+import java.util.List;
+import org.springframework.util.StringUtils;
 import com.sme.be_sme.shared.gateway.core.BaseCoreProcessor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -40,7 +43,28 @@ public class OnboardingInstanceCreateLoadTemplateCoreProcessor
 
         ctx.setTemplate(tpl);
         ctx.setChecklistRows(templateMapperExt.selectChecklistRows(companyId, templateId));
-        ctx.setBaselineTaskRows(templateMapperExt.selectBaselineTaskRows(companyId, templateId));
+        List<TaskTemplateRow> baselineTaskRows = templateMapperExt.selectBaselineTaskRows(companyId, templateId);
+        List<String> invalidTasks = baselineTaskRows == null
+                ? List.of()
+                : baselineTaskRows.stream()
+                        .filter(task -> task != null && !StringUtils.hasText(task.getOwnerType()))
+                        .map(task -> {
+                            String taskId = StringUtils.hasText(task.getTaskTemplateId())
+                                    ? task.getTaskTemplateId().trim()
+                                    : "<unknown-task-id>";
+                            String taskName = StringUtils.hasText(task.getName())
+                                    ? task.getName().trim()
+                                    : "<unnamed-task>";
+                            return taskId + " (" + taskName + ")";
+                        })
+                        .toList();
+        if (!invalidTasks.isEmpty()) {
+            throw AppException.of(
+                    "INVALID_TEMPLATE_TASK_OWNER",
+                    "template has tasks without ownerType, please update before onboarding: "
+                            + String.join(", ", invalidTasks));
+        }
+        ctx.setBaselineTaskRows(baselineTaskRows);
         return null;
     }
 }
