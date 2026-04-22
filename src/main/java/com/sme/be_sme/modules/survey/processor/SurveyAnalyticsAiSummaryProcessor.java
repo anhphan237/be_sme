@@ -97,6 +97,17 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
         aiResponse.setFromCache(false);
         aiResponse.setGeneratedAt(now);
 
+        boolean shouldCache =
+                aiResponse.getSummary() != null
+                        && !aiResponse.getSummary().contains("quota Gemini")
+                        && !aiResponse.getSummary().contains("Gemini quota")
+                        && !aiResponse.getSummary().contains("RESOURCE_EXHAUSTED")
+                        && !aiResponse.getSummary().contains("429");
+
+        if (!shouldCache) {
+            return aiResponse;
+        }
+
         SurveyAiSummaryEntity entity = new SurveyAiSummaryEntity();
         entity.setSummaryId(UuidGenerator.generate());
         entity.setCompanyId(companyId);
