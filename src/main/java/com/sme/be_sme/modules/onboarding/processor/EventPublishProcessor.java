@@ -154,7 +154,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         checklist.setStatus("NOT_STARTED");
         checklist.setProgressPercent(0);
         checklist.setOpenAt(request.getEventAt());
-        checklist.setDeadlineAt(request.getEventAt());
+        checklist.setDeadlineAt(request.getEventEndAt() != null ? request.getEventEndAt() : request.getEventAt());
         checklist.setCreatedAt(now);
         checklist.setUpdatedAt(now);
         if (checklistInstanceMapper.insert(checklist) != 1) {
@@ -184,6 +184,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
             task.setRequiresManagerApproval(false);
             task.setApprovalStatus(OnboardingTaskWorkflow.APPROVAL_NONE);
             task.setScheduledStartAt(request.getEventAt());
+            task.setScheduledEndAt(request.getEventEndAt());
             task.setScheduleStatus(OnboardingTaskWorkflow.SCHEDULE_CONFIRMED);
             if (taskInstanceMapper.insert(task) != 1) {
                 throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create event task failed");
@@ -195,6 +196,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         response.setEventInstanceId(eventInstanceId);
         response.setEventTemplateId(template.getEventTemplateId());
         response.setEventAt(request.getEventAt());
+        response.setEventEndAt(request.getEventEndAt());
         response.setTaskCount(participantUserIds.size());
         response.setParticipantUserIds(participantUserIds);
         return response;
@@ -212,6 +214,9 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         }
         if (request.getEventAt() == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "eventAt is required");
+        }
+        if (request.getEventEndAt() != null && request.getEventEndAt().before(request.getEventAt())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "eventEndAt must be after or equal to eventAt");
         }
     }
 
