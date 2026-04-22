@@ -7,6 +7,8 @@ import com.sme.be_sme.modules.platform.api.response.PlatformActivityLogListRespo
 import com.sme.be_sme.modules.platform.api.response.PlatformActivityLogListResponse.ActivityLogItem;
 import com.sme.be_sme.modules.platform.infrastructure.mapper.ActivityLogMapper;
 import com.sme.be_sme.modules.platform.infrastructure.persistence.entity.ActivityLogEntity;
+import com.sme.be_sme.shared.constant.ErrorCodes;
+import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import java.util.ArrayList;
@@ -28,6 +30,9 @@ public class PlatformActivityLogListProcessor extends BaseBizProcessor<BizContex
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
         PlatformActivityLogListRequest request = objectMapper.convertValue(payload, PlatformActivityLogListRequest.class);
+        if (context == null || !StringUtils.hasText(context.getOperatorId())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "operatorId is required");
+        }
 
         int page = request.getPage() != null ? request.getPage() : DEFAULT_PAGE;
         int size = request.getSize() != null ? request.getSize() : DEFAULT_SIZE;
@@ -39,16 +44,13 @@ public class PlatformActivityLogListProcessor extends BaseBizProcessor<BizContex
         }
         int offset = page * size;
 
-        String userId = StringUtils.hasText(request.getUserId()) ? request.getUserId().trim() : null;
+        String userId = StringUtils.hasText(request.getUserId())
+                ? request.getUserId().trim()
+                : context.getOperatorId().trim();
         List<ActivityLogEntity> pageSlice;
         int total;
-        if (StringUtils.hasText(userId)) {
-            pageSlice = activityLogMapper.selectByUserIdWithPaging(userId, offset, size);
-            total = activityLogMapper.countByUserId(userId);
-        } else {
-            pageSlice = activityLogMapper.selectPage(offset, size);
-            total = activityLogMapper.countAll();
-        }
+        pageSlice = activityLogMapper.selectByUserIdWithPaging(userId, offset, size);
+        total = activityLogMapper.countByUserId(userId);
 
         List<ActivityLogItem> items = new ArrayList<>();
         for (ActivityLogEntity entity : pageSlice) {
