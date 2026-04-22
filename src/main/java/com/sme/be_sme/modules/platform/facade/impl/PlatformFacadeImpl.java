@@ -75,6 +75,7 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     private final PlatformOnboardingTrendProcessor platformOnboardingTrendProcessor;
     private final PlatformRiskDashboardProcessor platformRiskDashboardProcessor;
     private final PlatformCreateTemplateProcessor platformCreateTemplateProcessor;
+    private final PlatformErrorLogListProcessor platformErrorLogListProcessor;
 
     @Override
     public PlatformCompanyListResponse listCompanies(PlatformCompanyListRequest request) {
@@ -279,5 +280,10 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     @Override
     public CreatePlatformTemplateResponse createPlatformTemplate(CreatePlatformTemplateRequest request) {
         return call(platformCreateTemplateProcessor, request, CreatePlatformTemplateResponse.class);
+    }
+
+    @Override
+    public PlatformErrorLogListResponse listPlatformErrorLogs(PlatformErrorLogListRequest request) {
+        return call(platformErrorLogListProcessor, request, PlatformErrorLogListResponse.class);
     }
 }
