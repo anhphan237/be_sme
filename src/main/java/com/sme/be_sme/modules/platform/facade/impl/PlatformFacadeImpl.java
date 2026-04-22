@@ -25,6 +25,7 @@ import com.sme.be_sme.modules.platform.processor.subscription.PlatformInvoiceLis
 import com.sme.be_sme.modules.platform.processor.subscription.PlatformPaymentListProcessor;
 import com.sme.be_sme.modules.platform.processor.subscription.PlatformSubscriptionDetailProcessor;
 import com.sme.be_sme.modules.platform.processor.subscription.PlatformSubscriptionListProcessor;
+import com.sme.be_sme.modules.platform.processor.template.PlatformActivateTemplateProcessor;
 import com.sme.be_sme.modules.platform.processor.template.PlatformCreateTemplateProcessor;
 import com.sme.be_sme.shared.gateway.core.BaseOperationFacade;
 import lombok.RequiredArgsConstructor;
@@ -75,6 +76,7 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     private final PlatformOnboardingTrendProcessor platformOnboardingTrendProcessor;
     private final PlatformRiskDashboardProcessor platformRiskDashboardProcessor;
     private final PlatformCreateTemplateProcessor platformCreateTemplateProcessor;
+    private final PlatformActivateTemplateProcessor platformActivateTemplateProcessor;
     private final PlatformErrorLogListProcessor platformErrorLogListProcessor;
 
     @Override
@@ -280,6 +282,11 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     @Override
     public CreatePlatformTemplateResponse createPlatformTemplate(CreatePlatformTemplateRequest request) {
         return call(platformCreateTemplateProcessor, request, CreatePlatformTemplateResponse.class);
+    }
+
+    @Override
+    public CreatePlatformTemplateResponse activatePlatformTemplate(ActivatePlatformTemplateRequest request) {
+        return call(platformActivateTemplateProcessor, request, CreatePlatformTemplateResponse.class);
     }
 
     @Override
