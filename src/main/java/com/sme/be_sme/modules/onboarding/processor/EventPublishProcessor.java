@@ -183,7 +183,8 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
             task.setRequireDoc(false);
             task.setRequiresManagerApproval(false);
             task.setApprovalStatus(OnboardingTaskWorkflow.APPROVAL_NONE);
-            task.setScheduleStatus(OnboardingTaskWorkflow.SCHEDULE_UNSCHEDULED);
+            task.setScheduledStartAt(request.getEventAt());
+            task.setScheduleStatus(OnboardingTaskWorkflow.SCHEDULE_CONFIRMED);
             if (taskInstanceMapper.insert(task) != 1) {
                 throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create event task failed");
             }
