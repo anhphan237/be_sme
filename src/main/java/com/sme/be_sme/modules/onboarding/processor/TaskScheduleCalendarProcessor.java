@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.onboarding.api.request.TaskScheduleCalendarRequest
 import com.sme.be_sme.modules.onboarding.api.response.TaskScheduleCalendarResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskAssigneeListRow;
+import com.sme.be_sme.modules.onboarding.support.OnboardingTaskAuth;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -53,6 +54,7 @@ public class TaskScheduleCalendarProcessor extends BaseBizProcessor<BizContext> 
         String operatorId = context.getOperatorId().trim();
         String targetUserId = StringUtils.hasText(request.getUserId()) ? request.getUserId().trim() : operatorId;
         boolean selfView = operatorId.equals(targetUserId);
+        boolean fullView = selfView || OnboardingTaskAuth.isHrManagerAdmin(context.getRoles());
 
         List<TaskAssigneeListRow> rows = taskInstanceMapperExt.selectScheduledCalendarByCompanyAndUser(
                 companyId,
@@ -74,15 +76,15 @@ public class TaskScheduleCalendarProcessor extends BaseBizProcessor<BizContext> 
         response.setTotalCount(total);
         response.setPage(page);
         response.setSize(size);
-        response.setItems(rows.stream().map(row -> toItem(row, selfView)).toList());
+        response.setItems(rows.stream().map(row -> toItem(row, fullView)).toList());
         return response;
     }
 
-    private static TaskScheduleCalendarResponse.CalendarItem toItem(TaskAssigneeListRow row, boolean selfView) {
+    private static TaskScheduleCalendarResponse.CalendarItem toItem(TaskAssigneeListRow row, boolean fullView) {
         TaskScheduleCalendarResponse.CalendarItem item = new TaskScheduleCalendarResponse.CalendarItem();
         item.setScheduledStartAt(row.getScheduledStartAt());
         item.setScheduledEndAt(row.getScheduledEndAt());
-        if (selfView) {
+        if (fullView) {
             item.setTaskId(row.getTaskId());
             item.setTitle(row.getTitle());
             item.setStatus(row.getStatus());
