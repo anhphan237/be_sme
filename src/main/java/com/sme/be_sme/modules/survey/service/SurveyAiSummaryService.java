@@ -20,27 +20,73 @@ public class SurveyAiSummaryService {
     public SurveyAiSummaryResponse generate(JsonNode summaryInput, String language) {
         String prompt = buildPrompt(summaryInput, language);
 
-        String raw = chatLanguageModel.generate(prompt);
-        String json = extractJson(raw);
-
         try {
+            String raw = chatLanguageModel.generate(prompt);
+            String json = extractJson(raw);
+
             SurveyAiSummaryResponse response =
                     objectMapper.readValue(json, SurveyAiSummaryResponse.class);
 
             normalize(response);
             return response;
+
         } catch (Exception e) {
-            SurveyAiSummaryResponse fallback = new SurveyAiSummaryResponse();
-            fallback.setHealthLevel("WARNING");
-            fallback.setSummary(language != null && language.startsWith("en")
-                    ? "AI returned an invalid format. Please review the survey dashboard metrics manually."
-                    : "AI trả về định dạng chưa hợp lệ. HR vui lòng xem trực tiếp các chỉ số trên dashboard.");
+            return buildFallbackResponse(e, language);
+        }
+    }
+
+    private SurveyAiSummaryResponse buildFallbackResponse(Exception e, String language) {
+        boolean english = language != null && language.toLowerCase().startsWith("en");
+
+        String message = e.getMessage() == null ? "" : e.getMessage();
+        boolean quotaExceeded =
+                message.contains("RESOURCE_EXHAUSTED")
+                        || message.contains("429")
+                        || message.toLowerCase().contains("quota");
+
+        SurveyAiSummaryResponse fallback = new SurveyAiSummaryResponse();
+        fallback.setHealthLevel("WARNING");
+        fallback.setFromCache(false);
+        fallback.setKeyFindings(new ArrayList<>());
+        fallback.setRecommendedActions(new ArrayList<>());
+
+        if (quotaExceeded) {
+            fallback.setSummary(english
+                    ? "AI summary is temporarily unavailable because the Gemini quota has been exhausted. The dashboard can still be interpreted using the rule-based summary and charts."
+                    : "Tóm tắt AI hiện tạm thời chưa khả dụng vì quota Gemini đã hết hoặc đang bị giới hạn. HR vẫn có thể xem phần tóm tắt thường, KPI và biểu đồ hiện có.");
+
+            fallback.getKeyFindings().add(english
+                    ? "Gemini returned RESOURCE_EXHAUSTED / 429."
+                    : "Gemini trả về lỗi RESOURCE_EXHAUSTED / 429.");
+
+            fallback.getRecommendedActions().add(english
+                    ? "Try again later or use cached summary if available."
+                    : "Thử lại sau hoặc dùng bản tóm tắt cache nếu đã từng tạo trước đó.");
+
+            fallback.getRecommendedActions().add(english
+                    ? "Avoid force refreshing AI summary repeatedly."
+                    : "Không nên bấm làm mới AI liên tục vì sẽ tiếp tục tốn quota.");
+
             fallback.setRiskExplanation("");
             fallback.setPositiveSignal("");
-            fallback.setKeyFindings(new ArrayList<>());
-            fallback.setRecommendedActions(new ArrayList<>());
             return fallback;
         }
+
+        fallback.setSummary(english
+                ? "AI returned an invalid or unavailable response. Please review the survey dashboard metrics manually."
+                : "AI chưa trả về được kết quả hợp lệ. HR vui lòng xem trực tiếp các chỉ số trên dashboard.");
+
+        fallback.getKeyFindings().add(english
+                ? "AI summary generation failed."
+                : "Quá trình tạo tóm tắt AI bị lỗi.");
+
+        fallback.getRecommendedActions().add(english
+                ? "Use the rule-based summary and dashboard charts."
+                : "Sử dụng tóm tắt thường và các biểu đồ dashboard để phân tích.");
+
+        fallback.setRiskExplanation("");
+        fallback.setPositiveSignal("");
+        return fallback;
     }
 
     private void normalize(SurveyAiSummaryResponse response) {
