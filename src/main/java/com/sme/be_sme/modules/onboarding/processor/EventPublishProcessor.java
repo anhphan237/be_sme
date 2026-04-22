@@ -9,6 +9,8 @@ import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapp
 import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
 import com.sme.be_sme.modules.onboarding.api.request.EventPublishRequest;
 import com.sme.be_sme.modules.onboarding.api.response.EventPublishResponse;
+import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
+import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.EventInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.EventTemplateMapper;
@@ -23,13 +25,19 @@ import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import com.sme.be_sme.shared.util.UuidGenerator;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -37,13 +45,17 @@ import org.springframework.util.StringUtils;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
+    private static final String TEMPLATE_TASK_ASSIGNED = "TASK_ASSIGNED";
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private final ObjectMapper objectMapper;
     private final EventTemplateMapper eventTemplateMapper;
     private final EventInstanceMapper eventInstanceMapper;
     private final ChecklistInstanceMapper checklistInstanceMapper;
     private final TaskInstanceMapper taskInstanceMapper;
+    private final NotificationService notificationService;
     private final DepartmentMapper departmentMapper;
     private final EmployeeProfileMapperExt employeeProfileMapperExt;
     private final UserMapperExt userMapperExt;
@@ -148,6 +160,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
             if (taskInstanceMapper.insert(task) != 1) {
                 throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create event task failed");
             }
+            notifyTaskAssigned(task, template.getName());
         }
 
         EventPublishResponse response = new EventPublishResponse();
@@ -237,5 +250,39 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
             return description;
         }
         return description + "\n\n" + content;
+    }
+
+    private void notifyTaskAssigned(TaskInstanceEntity task, String eventName) {
+        if (task == null || !StringUtils.hasText(task.getAssignedUserId())) {
+            return;
+        }
+        String taskTitle = StringUtils.hasText(task.getTitle()) ? task.getTitle().trim() : "Event task";
+        String dueStr = task.getDueDate() != null
+                ? Instant.ofEpochMilli(task.getDueDate().getTime())
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate()
+                        .format(DATE_FMT)
+                : "";
+        String eventText = StringUtils.hasText(eventName) ? eventName.trim() : taskTitle;
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("taskTitle", taskTitle);
+        placeholders.put("dueDate", dueStr);
+        NotificationCreateParams params = NotificationCreateParams.builder()
+                .companyId(task.getCompanyId())
+                .userId(task.getAssignedUserId())
+                .type("TASK_ASSIGNED")
+                .title("New event task assigned: " + eventText)
+                .content("You have been assigned to event \"" + eventText + "\". Due: " + dueStr)
+                .refType("TASK")
+                .refId(task.getTaskId())
+                .sendEmail(true)
+                .emailTemplate(TEMPLATE_TASK_ASSIGNED)
+                .emailPlaceholders(placeholders)
+                .build();
+        try {
+            notificationService.create(params);
+        } catch (Exception e) {
+            log.warn("notify event assignment failed for task {}: {}", task.getTaskId(), e.getMessage());
+        }
     }
 }
