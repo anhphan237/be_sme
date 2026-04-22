@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyAiSummaryMapper">
+
+    <resultMap id="BaseResultMap"
+               type="com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyAiSummaryEntity">
+        <id column="summary_id" property="summaryId"/>
+        <result column="company_id" property="companyId"/>
+        <result column="template_id" property="templateId"/>
+        <result column="start_date" property="startDate"/>
+        <result column="end_date" property="endDate"/>
+        <result column="language" property="language"/>
+        <result column="input_hash" property="inputHash"/>
+        <result column="health_level" property="healthLevel"/>
+        <result column="summary_json" property="summaryJson"/>
+        <result column="generated_at" property="generatedAt"/>
+        <result column="generated_by" property="generatedBy"/>
+    </resultMap>
+
+    <select id="selectByCacheKey" resultMap="BaseResultMap">
+        SELECT
+        summary_id,
+        company_id,
+        template_id,
+        start_date,
+        end_date,
+        language,
+        input_hash,
+        health_level,
+        summary_json,
+        generated_at,
+        generated_by
+        FROM survey_ai_summaries
+        WHERE company_id = #{companyId}
+        AND COALESCE(template_id, '') = COALESCE(#{templateId}, '')
+        AND COALESCE(start_date, DATE '1970-01-01') = COALESCE(#{startDate}, DATE '1970-01-01')
+        AND COALESCE(end_date, DATE '1970-01-01') = COALESCE(#{endDate}, DATE '1970-01-01')
+        AND language = #{language}
+        AND input_hash = #{inputHash}
+        ORDER BY generated_at DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyAiSummaryEntity">
+        INSERT INTO survey_ai_summaries (
+        summary_id,
+        company_id,
+        template_id,
+        start_date,
+        end_date,
+        language,
+        input_hash,
+        health_level,
+        summary_json,
+        generated_at,
+        generated_by
+        )
+        VALUES (
+        #{summaryId},
+        #{companyId},
+        #{templateId},
+        #{startDate},
+        #{endDate},
+        #{language},
+        #{inputHash},
+        #{healthLevel},
+        #{summaryJson},
+        #{generatedAt},
+        #{generatedBy}
+        )
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <select id="countGeneratedSince" resultType="int">
+        SELECT COUNT(1)
+        FROM survey_ai_summaries
+        WHERE company_id = #{companyId}
+        AND generated_by = #{generatedBy}
+        AND generated_at >= #{since}
+    </select>
+
+</mapper>
