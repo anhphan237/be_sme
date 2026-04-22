@@ -60,5 +60,8 @@ public interface SurveyInstanceMapperExt {
             @Param("surveyInstanceId") String surveyInstanceId,
             @Param("sentAt") Date sentAt
     );
-
+    List<SurveyInstanceEntity> selectExpiredOpenInstances(
+            @Param("now") Date now,
+            @Param("limit") int limit
+    );
 }

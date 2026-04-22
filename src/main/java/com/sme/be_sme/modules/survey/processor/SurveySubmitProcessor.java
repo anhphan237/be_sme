@@ -34,7 +34,6 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -52,6 +51,7 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
     private static final String STATUS_SENT = "SENT";
     private static final String STATUS_SCHEDULED = "SCHEDULED";
     private static final String STATUS_PENDING = "PENDING";
+    private static final String STATUS_EXPIRED = "EXPIRED";
 
     private final ObjectMapper objectMapper;
     private final SurveyInstanceMapper surveyInstanceMapper;
@@ -80,6 +80,7 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
         if (instance == null || !tenantId.equals(instance.getCompanyId())) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey instance not found");
         }
+
         if (instance.getScheduledAt() != null
                 && instance.getScheduledAt().toInstant().isAfter(now.toInstant())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "Survey is not open yet");
@@ -90,15 +91,17 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
         }
 
         if (StringUtils.hasText(instance.getResponderUserId())
-                && !instance.getResponderUserId().equals(context.getOperatorId())) {
+                && !instance.getResponderUserId().equals(operatorId)) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "You are not allowed to submit this survey");
         }
 
         openScheduledSurveyIfDue(instance, now);
+        expireIfNeeded(instance, now);
 
         if (!STATUS_SENT.equalsIgnoreCase(instance.getStatus())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "survey is not available for submission");
         }
+
         SurveyTemplateEntity template =
                 surveyTemplateMapper.selectByPrimaryKey(instance.getSurveyTemplateId());
 
@@ -147,7 +150,6 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
         }
 
         instance.setStatus(STATUS_COMPLETED);
-        instance.setClosedAt(now);
         trySetUpdatedAt(instance, now);
 
         int updatedInstance = surveyInstanceMapper.updateByPrimaryKey(instance);
@@ -170,6 +172,7 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
         response.setStatus(STATUS_COMPLETED);
         return response;
     }
+
     private void openScheduledSurveyIfDue(SurveyInstanceEntity instance, Date now) {
         if (instance == null || !StringUtils.hasText(instance.getStatus())) {
             return;
@@ -190,8 +193,10 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
             return;
         }
 
-        if (instance.getClosedAt() != null
-                && !instance.getClosedAt().after(now)) {
+        if (instance.getClosedAt() != null && !instance.getClosedAt().after(now)) {
+            instance.setStatus(STATUS_EXPIRED);
+            trySetUpdatedAt(instance, now);
+            surveyInstanceMapper.updateByPrimaryKey(instance);
             throw AppException.of(ErrorCodes.BAD_REQUEST, "survey is expired");
         }
 
@@ -208,6 +213,24 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "open scheduled survey failed");
         }
     }
+
+    private void expireIfNeeded(SurveyInstanceEntity instance, Date now) {
+        if (instance == null) {
+            return;
+        }
+
+        if (instance.getClosedAt() != null && !instance.getClosedAt().after(now)) {
+            if (!STATUS_COMPLETED.equalsIgnoreCase(instance.getStatus())
+                    && !STATUS_EXPIRED.equalsIgnoreCase(instance.getStatus())) {
+                instance.setStatus(STATUS_EXPIRED);
+                trySetUpdatedAt(instance, now);
+                surveyInstanceMapper.updateByPrimaryKey(instance);
+            }
+
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "survey is expired");
+        }
+    }
+
     private void notifyHrWhenSubmitted(
             String tenantId,
             String operatorId,
@@ -255,12 +278,15 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
         if (context == null || !StringUtils.hasText(context.getTenantId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
         }
+
         if (request == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "payload is required");
         }
+
         if (!StringUtils.hasText(request.getSurveyInstanceId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "surveyInstanceId is required");
         }
+
         if (request.getAnswers() == null || request.getAnswers().isEmpty()) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "answers is required");
         }
@@ -269,21 +295,27 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
     private List<SurveyQuestionEntity> filterQuestions(String tenantId, String templateId) {
         List<SurveyQuestionEntity> questions = surveyQuestionMapper.selectByTemplateId(templateId);
         List<SurveyQuestionEntity> filtered = new ArrayList<>();
+
         if (questions == null) {
             return filtered;
         }
+
         for (SurveyQuestionEntity question : questions) {
             if (question == null) {
                 continue;
             }
+
             if (!tenantId.equals(question.getCompanyId())) {
                 continue;
             }
+
             if (!templateId.equals(question.getSurveyTemplateId())) {
                 continue;
             }
+
             filtered.add(question);
         }
+
         return filtered;
     }
 
@@ -320,6 +352,7 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
             if (question == null || Boolean.FALSE.equals(question.getRequired())) {
                 continue;
             }
+
             String answer = answers.get(question.getSurveyQuestionId());
             if (!StringUtils.hasText(answer)) {
                 throw AppException.of(
@@ -344,7 +377,9 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
                 continue;
             }
 
-            String type = question.getType() == null ? "" : question.getType().trim().toUpperCase(Locale.US);
+            String type = question.getType() == null
+                    ? ""
+                    : question.getType().trim().toUpperCase(Locale.US);
 
             switch (type) {
                 case "RATING" -> validateRatingAnswer(question, raw);
@@ -394,6 +429,7 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
 
     private Set<String> parseQuestionOptions(SurveyQuestionEntity question) {
         Set<String> options = new LinkedHashSet<>();
+
         if (question == null || question.getOptionsJson() == null) {
             return options;
         }
@@ -414,11 +450,13 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
 
     private List<String> parseSubmittedValues(String raw) {
         List<String> result = new ArrayList<>();
+
         if (!StringUtils.hasText(raw)) {
             return result;
         }
 
         String trimmed = raw.trim();
+
         try {
             if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
                 List<String> values = objectMapper.readValue(trimmed, new TypeReference<List<String>>() {});
@@ -437,6 +475,7 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
                 result.add(value.trim().replace("\"", ""));
             }
         }
+
         return result;
     }
 
@@ -446,24 +485,30 @@ public class SurveySubmitProcessor extends BaseBizProcessor<BizContext> {
     ) {
         int ratingCount = 0;
         int ratingSum = 0;
+
         for (SurveyQuestionEntity question : questions) {
             if (question == null) {
                 continue;
             }
+
             if (!"RATING".equalsIgnoreCase(question.getType())) {
                 continue;
             }
+
             String raw = answers.get(question.getSurveyQuestionId());
             if (!StringUtils.hasText(raw)) {
                 continue;
             }
+
             Integer rating = parseInteger(raw.trim());
             if (rating == null) {
                 continue;
             }
+
             ratingCount++;
             ratingSum += rating;
         }
+
         if (ratingCount == 0) {
             return null;
         }

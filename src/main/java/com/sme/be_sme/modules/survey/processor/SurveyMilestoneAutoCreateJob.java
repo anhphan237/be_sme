@@ -11,6 +11,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.lang.reflect.Method;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -24,6 +28,8 @@ import java.util.Map;
 public class SurveyMilestoneAutoCreateJob {
 
     private static final int BATCH_SIZE = 100;
+    private static final int DEFAULT_DUE_DAYS = 7;
+    private static final int D60_DUE_DAYS = 14;
 
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -31,18 +37,6 @@ public class SurveyMilestoneAutoCreateJob {
     private final SurveyMilestoneAutoCreateMapper surveyMilestoneAutoCreateMapper;
     private final NotificationService notificationService;
 
-    /**
-     * Tự động gửi survey khi employee đạt đủ mốc onboarding.
-     *
-     * Rule:
-     * - Job chạy mỗi 2 phút.
-     * - Template phải ACTIVE.
-     * - Template phải is_default = true.
-     * - Stage thuộc D7 / D30 / D60.
-     * - target_role = EMPLOYEE thì gửi employee.
-     * - target_role = MANAGER thì gửi manager_user_id của employee.
-     * - Tạo survey_instance với status = SENT để user làm được ngay.
-     */
     @Scheduled(fixedDelay = 120000)
     public void autoSendDefaultMilestoneSurveys() {
         Date now = new Date();
@@ -67,6 +61,8 @@ public class SurveyMilestoneAutoCreateJob {
                     );
                     continue;
                 }
+
+                ensureClosedAt(candidate, now);
 
                 candidate.setSurveyInstanceId(UuidGenerator.generate());
 
@@ -103,6 +99,29 @@ public class SurveyMilestoneAutoCreateJob {
                         e
                 );
             }
+        }
+    }
+
+    private void ensureClosedAt(SurveyMilestoneCandidate candidate, Date now) {
+        if (candidate == null || candidate.getClosedAt() != null) {
+            return;
+        }
+
+        int dueDays = "D60".equalsIgnoreCase(candidate.getStage())
+                ? D60_DUE_DAYS
+                : DEFAULT_DUE_DAYS;
+
+        Date closedAt = plusDaysEndOfDay(now, dueDays);
+
+        try {
+            Method method = SurveyMilestoneCandidate.class.getMethod("setClosedAt", Date.class);
+            method.invoke(candidate, closedAt);
+        } catch (Exception e) {
+            log.warn(
+                    "Cannot set closedAt on milestone candidate, onboardingId={}, templateId={}",
+                    candidate.getOnboardingId(),
+                    candidate.getTemplateId()
+            );
         }
     }
 
@@ -155,7 +174,24 @@ public class SurveyMilestoneAutoCreateJob {
                 && StringUtils.hasText(candidate.getOnboardingId())
                 && StringUtils.hasText(candidate.getTemplateId())
                 && StringUtils.hasText(candidate.getTargetRole())
+                && isValidTargetRole(candidate.getTargetRole())
                 && StringUtils.hasText(candidate.getResponderUserId())
                 && candidate.getScheduledAt() != null;
+    }
+
+    private boolean isValidTargetRole(String targetRole) {
+        return "EMPLOYEE".equalsIgnoreCase(targetRole)
+                || "MANAGER".equalsIgnoreCase(targetRole);
+    }
+
+    private static Date plusDaysEndOfDay(Date start, int days) {
+        LocalDate date = start.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .plusDays(days);
+
+        LocalDateTime endOfDay = LocalDateTime.of(date, LocalTime.of(23, 59, 59));
+
+        return Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant());
     }
 }

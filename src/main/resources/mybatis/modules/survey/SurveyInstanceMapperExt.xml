@@ -164,4 +164,15 @@
         WHERE survey_instance_id = #{surveyInstanceId}
         AND status = 'SCHEDULED'
     </update>
+    <select id="selectExpiredOpenInstances"
+            resultMap="com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapper.BaseResultMap">
+        SELECT
+            *
+        FROM survey_instances
+        WHERE status IN ('SENT', 'SCHEDULED', 'PENDING')
+          AND closed_at IS NOT NULL
+          AND closed_at &lt;= #{now}
+        ORDER BY closed_at ASC
+            LIMIT #{limit}
+    </select>
 </mapper>
