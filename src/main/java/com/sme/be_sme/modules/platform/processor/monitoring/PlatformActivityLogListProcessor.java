@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Component
 @RequiredArgsConstructor
@@ -30,12 +31,24 @@ public class PlatformActivityLogListProcessor extends BaseBizProcessor<BizContex
 
         int page = request.getPage() != null ? request.getPage() : DEFAULT_PAGE;
         int size = request.getSize() != null ? request.getSize() : DEFAULT_SIZE;
+        if (page < 0) {
+            page = DEFAULT_PAGE;
+        }
+        if (size <= 0) {
+            size = DEFAULT_SIZE;
+        }
+        int offset = page * size;
 
-        List<ActivityLogEntity> allLogs = activityLogMapper.selectAll();
-        int total = allLogs.size();
-        int fromIndex = Math.min(page * size, total);
-        int toIndex = Math.min(fromIndex + size, total);
-        List<ActivityLogEntity> pageSlice = allLogs.subList(fromIndex, toIndex);
+        String userId = StringUtils.hasText(request.getUserId()) ? request.getUserId().trim() : null;
+        List<ActivityLogEntity> pageSlice;
+        int total;
+        if (StringUtils.hasText(userId)) {
+            pageSlice = activityLogMapper.selectByUserIdWithPaging(userId, offset, size);
+            total = activityLogMapper.countByUserId(userId);
+        } else {
+            pageSlice = activityLogMapper.selectPage(offset, size);
+            total = activityLogMapper.countAll();
+        }
 
         List<ActivityLogItem> items = new ArrayList<>();
         for (ActivityLogEntity entity : pageSlice) {

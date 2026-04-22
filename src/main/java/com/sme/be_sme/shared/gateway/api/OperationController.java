@@ -1,6 +1,7 @@
 package com.sme.be_sme.shared.gateway.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.sme.be_sme.modules.platform.service.ActivityLogService;
 import com.sme.be_sme.modules.platform.service.PlatformErrorLogSupport;
 import com.sme.be_sme.shared.api.BaseResponse;
 import com.sme.be_sme.shared.gateway.core.BizContext;
@@ -19,6 +20,7 @@ public class OperationController {
     private final OperationRouter router;
     private final GatewayAuthGuard authGuard;
     private final PlatformErrorLogSupport platformErrorLogSupport;
+    private final ActivityLogService activityLogService;
 
     @PostMapping
     public BaseResponse<Object> handle(@RequestBody OperationRequest req,
@@ -42,6 +44,15 @@ public class OperationController {
             );
 
             Object data = router.route(ctx);
+            if (ctx != null && ctx.getOperatorId() != null && !ctx.getOperatorId().isBlank()) {
+                activityLogService.log(
+                        ctx.getTenantId(),
+                        ctx.getOperatorId(),
+                        operationType,
+                        "OPERATION",
+                        requestId,
+                        "operation executed successfully");
+            }
 
             return BaseResponse.success(requestId, data);
         } catch (Exception ex) {
