@@ -6,4 +6,5 @@ import lombok.Data;
 public class PlatformActivityLogListRequest {
     private Integer page;
     private Integer size;
+    private String userId;
 }

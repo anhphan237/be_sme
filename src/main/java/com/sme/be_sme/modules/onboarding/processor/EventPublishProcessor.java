@@ -9,6 +9,8 @@ import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapp
 import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
 import com.sme.be_sme.modules.onboarding.api.request.EventPublishRequest;
 import com.sme.be_sme.modules.onboarding.api.response.EventPublishResponse;
+import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
+import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.EventInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.EventTemplateMapper;
@@ -23,13 +25,19 @@ import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import com.sme.be_sme.shared.util.UuidGenerator;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -37,13 +45,20 @@ import org.springframework.util.StringUtils;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
+    private static final String TEMPLATE_TASK_ASSIGNED = "TASK_ASSIGNED";
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final String SOURCE_TYPE_DEPARTMENT = "DEPARTMENT";
+    private static final String SOURCE_TYPE_USER_LIST = "USER_LIST";
+    private static final String SOURCE_TYPE_DEPARTMENT_PLUS_USERS = "DEPARTMENT_PLUS_USERS";
 
     private final ObjectMapper objectMapper;
     private final EventTemplateMapper eventTemplateMapper;
     private final EventInstanceMapper eventInstanceMapper;
     private final ChecklistInstanceMapper checklistInstanceMapper;
     private final TaskInstanceMapper taskInstanceMapper;
+    private final NotificationService notificationService;
     private final DepartmentMapper departmentMapper;
     private final EmployeeProfileMapperExt employeeProfileMapperExt;
     private final UserMapperExt userMapperExt;
@@ -68,20 +83,43 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         List<String> userIds = normalizeIds(request.getUserIds());
         boolean hasDepartments = !departmentIds.isEmpty();
         boolean hasUsers = !userIds.isEmpty();
-        if (hasDepartments == hasUsers) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "provide exactly one source: departmentIds or userIds");
+        if (!hasDepartments && !hasUsers) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "provide at least one source: departmentIds and/or userIds");
         }
 
         List<String> participantUserIds;
         String sourceType;
+        List<String> departmentUserIds = List.of();
         if (hasDepartments) {
             assertDepartments(companyId, departmentIds);
-            participantUserIds = resolveUsersFromDepartments(companyId, departmentIds);
-            sourceType = "DEPARTMENT";
-        } else {
+            departmentUserIds = resolveUsersFromDepartments(companyId, departmentIds);
+        }
+        if (hasUsers) {
             assertActiveUsers(companyId, userIds);
+        }
+        if (hasDepartments && hasUsers) {
+            Set<String> departmentUserSet = new LinkedHashSet<>(departmentUserIds);
+            List<String> duplicateUserIds = userIds.stream()
+                    .filter(departmentUserSet::contains)
+                    .toList();
+            if (!duplicateUserIds.isEmpty()) {
+                throw AppException.of(
+                        ErrorCodes.BAD_REQUEST,
+                        "specified userIds already belong to selected departments, please reassign: "
+                                + String.join(", ", duplicateUserIds));
+            }
+            LinkedHashSet<String> merged = new LinkedHashSet<>(departmentUserIds);
+            merged.addAll(userIds);
+            participantUserIds = new ArrayList<>(merged);
+            sourceType = SOURCE_TYPE_DEPARTMENT_PLUS_USERS;
+        } else if (hasDepartments) {
+            participantUserIds = departmentUserIds;
+            sourceType = SOURCE_TYPE_DEPARTMENT;
+        } else {
             participantUserIds = userIds;
-            sourceType = "USER_LIST";
+            sourceType = SOURCE_TYPE_USER_LIST;
         }
         if (participantUserIds.isEmpty()) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "no participants found for this event");
@@ -136,7 +174,8 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
             task.setStatus(OnboardingTaskWorkflow.STATUS_ASSIGNED);
             task.setDueDate(request.getEventAt());
             task.setAssignedUserId(participantUserId);
-            task.setAssignedDepartmentId(hasDepartments ? departmentIds.get(0) : null);
+            task.setAssignedDepartmentId(
+                    SOURCE_TYPE_DEPARTMENT.equals(sourceType) ? departmentIds.get(0) : null);
             task.setCreatedBy(operatorId);
             task.setCreatedAt(now);
             task.setUpdatedAt(now);
@@ -148,6 +187,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
             if (taskInstanceMapper.insert(task) != 1) {
                 throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create event task failed");
             }
+            notifyTaskAssigned(task, template.getName());
         }
 
         EventPublishResponse response = new EventPublishResponse();
@@ -237,5 +277,39 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
             return description;
         }
         return description + "\n\n" + content;
+    }
+
+    private void notifyTaskAssigned(TaskInstanceEntity task, String eventName) {
+        if (task == null || !StringUtils.hasText(task.getAssignedUserId())) {
+            return;
+        }
+        String taskTitle = StringUtils.hasText(task.getTitle()) ? task.getTitle().trim() : "Event task";
+        String dueStr = task.getDueDate() != null
+                ? Instant.ofEpochMilli(task.getDueDate().getTime())
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate()
+                        .format(DATE_FMT)
+                : "";
+        String eventText = StringUtils.hasText(eventName) ? eventName.trim() : taskTitle;
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("taskTitle", taskTitle);
+        placeholders.put("dueDate", dueStr);
+        NotificationCreateParams params = NotificationCreateParams.builder()
+                .companyId(task.getCompanyId())
+                .userId(task.getAssignedUserId())
+                .type("TASK_ASSIGNED")
+                .title("New event task assigned: " + eventText)
+                .content("You have been assigned to event \"" + eventText + "\". Due: " + dueStr)
+                .refType("TASK")
+                .refId(task.getTaskId())
+                .sendEmail(true)
+                .emailTemplate(TEMPLATE_TASK_ASSIGNED)
+                .emailPlaceholders(placeholders)
+                .build();
+        try {
+            notificationService.create(params);
+        } catch (Exception e) {
+            log.warn("notify event assignment failed for task {}: {}", task.getTaskId(), e.getMessage());
+        }
     }
 }
