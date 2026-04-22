@@ -10,6 +10,7 @@ import com.sme.be_sme.modules.onboarding.api.request.TaskAttachmentAddRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskCommentAddRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskCommentListRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskScheduleCancelRequest;
+import com.sme.be_sme.modules.onboarding.api.request.TaskScheduleCalendarRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskScheduleConfirmRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskScheduleMarkNoShowRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskScheduleProposeRequest;
@@ -26,6 +27,7 @@ import com.sme.be_sme.modules.onboarding.api.response.TaskCommentListResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskDetailResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskListByAssigneeResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskListByOnboardingResponse;
+import com.sme.be_sme.modules.onboarding.api.response.TaskScheduleCalendarResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskScheduleResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskTimelineByOnboardingResponse;
 import com.sme.be_sme.modules.onboarding.facade.OnboardingTaskFacade;
@@ -43,6 +45,7 @@ import com.sme.be_sme.modules.onboarding.processor.TaskListByAssigneeProcessor;
 import com.sme.be_sme.modules.onboarding.processor.TaskListByOnboardingProcessor;
 import com.sme.be_sme.modules.onboarding.processor.TaskScheduleConfirmProcessor;
 import com.sme.be_sme.modules.onboarding.processor.TaskScheduleCancelProcessor;
+import com.sme.be_sme.modules.onboarding.processor.TaskScheduleCalendarProcessor;
 import com.sme.be_sme.modules.onboarding.processor.TaskScheduleMarkNoShowProcessor;
 import com.sme.be_sme.modules.onboarding.processor.TaskScheduleProposeProcessor;
 import com.sme.be_sme.modules.onboarding.processor.TaskScheduleRescheduleProcessor;
@@ -72,6 +75,7 @@ public class OnboardingTaskFacadeImpl extends BaseOperationFacade implements Onb
     private final TaskScheduleRescheduleProcessor taskScheduleRescheduleProcessor;
     private final TaskScheduleCancelProcessor taskScheduleCancelProcessor;
     private final TaskScheduleMarkNoShowProcessor taskScheduleMarkNoShowProcessor;
+    private final TaskScheduleCalendarProcessor taskScheduleCalendarProcessor;
     private final TaskDetailProcessor taskDetailProcessor;
 
     @Override
@@ -157,6 +161,11 @@ public class OnboardingTaskFacadeImpl extends BaseOperationFacade implements Onb
     @Override
     public TaskScheduleResponse markTaskScheduleNoShow(TaskScheduleMarkNoShowRequest request) {
         return call(taskScheduleMarkNoShowProcessor, request, TaskScheduleResponse.class);
+    }
+
+    @Override
+    public TaskScheduleCalendarResponse queryTaskScheduleCalendar(TaskScheduleCalendarRequest request) {
+        return call(taskScheduleCalendarProcessor, request, TaskScheduleCalendarResponse.class);
     }
 
     @Override

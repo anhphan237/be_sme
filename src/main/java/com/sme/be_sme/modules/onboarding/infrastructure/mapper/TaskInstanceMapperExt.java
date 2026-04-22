@@ -90,6 +90,22 @@ public interface TaskInstanceMapperExt {
             @Param("status") String status
     );
 
+    List<TaskAssigneeListRow> selectScheduledCalendarByCompanyAndUser(
+            @Param("companyId") String companyId,
+            @Param("assigneeUserId") String assigneeUserId,
+            @Param("fromTime") Date fromTime,
+            @Param("toTime") Date toTime,
+            @Param("offset") int offset,
+            @Param("limit") int limit
+    );
+
+    Integer countScheduledCalendarByCompanyAndUser(
+            @Param("companyId") String companyId,
+            @Param("assigneeUserId") String assigneeUserId,
+            @Param("fromTime") Date fromTime,
+            @Param("toTime") Date toTime
+    );
+
     List<TaskAssigneeListRow> selectTimelineByOnboardingId(
             @Param("companyId") String companyId,
             @Param("onboardingId") String onboardingId,
