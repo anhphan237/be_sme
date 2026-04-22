@@ -24,6 +24,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -34,7 +36,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
 
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final int DEFAULT_DUE_DAYS = 7;
+    private static final int MAX_DUE_DAYS = 30;
+    private static final DateTimeFormatter DATE_FMT =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final ObjectMapper objectMapper;
     private final SurveyTemplateMapper surveyTemplateMapper;
@@ -48,6 +53,7 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
     protected Object doProcess(BizContext context, JsonNode payload) {
         SurveyScheduleRequest request =
                 objectMapper.convertValue(payload, SurveyScheduleRequest.class);
+
         validate(context, request);
 
         SurveyTemplateEntity template =
@@ -56,6 +62,7 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         if (template == null || !context.getTenantId().equals(template.getCompanyId())) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "survey template not found");
         }
+
         if (!"ACTIVE".equalsIgnoreCase(template.getStatus())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "only ACTIVE template can be scheduled");
         }
@@ -77,25 +84,23 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
 
         Date scheduledAt = scheduledDate.isEqual(today) ? now : requestedScheduledAt;
 
-        int dueDays = request.getDueDays() != null ? request.getDueDays() : 3;
-        Date closedAt = plusDays(scheduledAt, dueDays);
+        int dueDays = resolveDueDays(request.getDueDays());
+        Date closedAt = plusDaysEndOfDay(scheduledAt, dueDays);
 
         String targetRole = StringUtils.hasText(request.getTargetRole())
                 ? request.getTargetRole().trim()
                 : template.getTargetRole();
 
-        if (!"EMPLOYEE".equalsIgnoreCase(targetRole) && !"MANAGER".equalsIgnoreCase(targetRole)) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid targetRole");
-        }
+        validateTargetRole(targetRole);
 
-        String employeeId = request.getResponderUserId().trim();
-        String actualResponderUserId = request.getResponderUserId().trim();
+        String actualResponderUserId = resolveActualResponderUserId(
+                request.getResponderUserId().trim(),
+                targetRole
+        );
 
-        if ("MANAGER".equalsIgnoreCase(targetRole)) {
-            String managerId = userMapperExt.selectManagerUserIdByUserId(actualResponderUserId);
-            if (StringUtils.hasText(managerId)) {
-                actualResponderUserId = managerId;
-            }
+        UserEntity actualUser = userMapper.selectByPrimaryKey(actualResponderUserId);
+        if (actualUser == null) {
+            throw AppException.of(ErrorCodes.NOT_FOUND, "responder user not found");
         }
 
         boolean sendNow = !scheduledAt.after(now);
@@ -111,8 +116,6 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
                 now
         );
 
-        UserEntity actualUser = userMapper.selectByPrimaryKey(actualResponderUserId);
-
         SurveyScheduleResponse response = new SurveyScheduleResponse();
         response.setScheduleId(createdInstanceId);
         response.setStatus(sendNow ? "SENT" : "SCHEDULED");
@@ -121,11 +124,8 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         response.setTemplateId(template.getSurveyTemplateId());
         response.setResponderUserId(actualResponderUserId);
         response.setInstanceId(createdInstanceId);
-
-        if (actualUser != null) {
-            response.setEmployeeName(actualUser.getFullName());
-            response.setEmail(actualUser.getEmail());
-        }
+        response.setEmployeeName(actualUser.getFullName());
+        response.setEmail(actualUser.getEmail());
 
         return response;
     }
@@ -184,6 +184,23 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         return entity.getSurveyInstanceId();
     }
 
+    private String resolveActualResponderUserId(String responderUserId, String targetRole) {
+        if (!StringUtils.hasText(responderUserId)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "responderUserId is required");
+        }
+
+        if ("EMPLOYEE".equalsIgnoreCase(targetRole)) {
+            return responderUserId;
+        }
+
+        String managerId = userMapperExt.selectManagerUserIdByUserId(responderUserId);
+        if (!StringUtils.hasText(managerId)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "manager not found for employee");
+        }
+
+        return managerId;
+    }
+
     private void notifySurveyReady(SurveyInstanceEntity entity) {
         if (entity == null || !StringUtils.hasText(entity.getResponderUserId())) {
             return;
@@ -218,31 +235,71 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         notificationService.create(params);
     }
 
-    private static Date plusDays(Date start, int days) {
-        return new Date(start.getTime() + (long) days * 24 * 60 * 60 * 1000);
+    private static int resolveDueDays(Integer dueDays) {
+        if (dueDays == null) {
+            return DEFAULT_DUE_DAYS;
+        }
+
+        if (dueDays < 1) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "dueDays must be >= 1");
+        }
+
+        if (dueDays > MAX_DUE_DAYS) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "dueDays must be <= " + MAX_DUE_DAYS);
+        }
+
+        return dueDays;
+    }
+
+    private static void validateTargetRole(String targetRole) {
+        if (!"EMPLOYEE".equalsIgnoreCase(targetRole)
+                && !"MANAGER".equalsIgnoreCase(targetRole)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid targetRole");
+        }
+    }
+
+    private static Date plusDaysEndOfDay(Date start, int days) {
+        LocalDate date = start.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .plusDays(days);
+
+        LocalDateTime endOfDay = LocalDateTime.of(date, LocalTime.of(23, 59, 59));
+
+        return Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant());
     }
 
     private static void validate(BizContext context, SurveyScheduleRequest request) {
         if (context == null || !StringUtils.hasText(context.getTenantId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
         }
+
         if (request == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "payload is required");
         }
+
         if (!StringUtils.hasText(request.getTemplateId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "templateId is required");
         }
+
         if (!StringUtils.hasText(request.getOnboardingId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "onboardingId is required");
         }
+
         if (!StringUtils.hasText(request.getResponderUserId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "responderUserId is required");
         }
+
         if (request.getScheduledAt() == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "scheduledAt is required");
         }
-        if (request.getDueDays() != null && request.getDueDays() < 0) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "dueDays must be >= 0");
+
+        if (request.getDueDays() != null && request.getDueDays() < 1) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "dueDays must be >= 1");
+        }
+
+        if (request.getDueDays() != null && request.getDueDays() > MAX_DUE_DAYS) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "dueDays must be <= " + MAX_DUE_DAYS);
         }
     }
 }
