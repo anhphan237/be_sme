@@ -131,6 +131,10 @@ public interface PlatformFacade extends OperationFacadeProvider {
     @OperationType("com.sme.platform.template.create")
     CreatePlatformTemplateResponse createPlatformTemplate(CreatePlatformTemplateRequest request);
 
+    /** Activate a PLATFORM onboarding template: only DRAFT → ACTIVE; other fields unchanged. */
+    @OperationType("com.sme.platform.template.activate")
+    CreatePlatformTemplateResponse activatePlatformTemplate(ActivatePlatformTemplateRequest request);
+
     @OperationType("com.sme.platform.errorLog.list")
     PlatformErrorLogListResponse listPlatformErrorLogs(PlatformErrorLogListRequest request);
 }
