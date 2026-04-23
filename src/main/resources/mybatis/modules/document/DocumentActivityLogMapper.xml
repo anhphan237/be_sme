@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.document.infrastructure.mapper.DocumentActivityLogMapper">
+
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentActivityLogEntity">
+    <id column="document_activity_log_id" jdbcType="VARCHAR" property="documentActivityLogId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="document_id" jdbcType="VARCHAR" property="documentId" />
+    <result column="action" jdbcType="VARCHAR" property="action" />
+    <result column="actor_user_id" jdbcType="VARCHAR" property="actorUserId" />
+    <result column="detail_json" jdbcType="LONGVARCHAR" property="detailJson" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentActivityLogEntity">
+    insert into document_activity_logs (document_activity_log_id, company_id, document_id,
+      action, actor_user_id, detail_json, created_at)
+    values (#{documentActivityLogId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{documentId,jdbcType=VARCHAR},
+      #{action,jdbcType=VARCHAR}, #{actorUserId,jdbcType=VARCHAR}, #{detailJson,jdbcType=LONGVARCHAR}, #{createdAt,jdbcType=TIMESTAMP})
+  </insert>
+
+  <select id="selectRecentByDocumentId" resultMap="BaseResultMap">
+    select document_activity_log_id, company_id, document_id, action, actor_user_id, detail_json, created_at
+    from document_activity_logs
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and document_id = #{documentId,jdbcType=VARCHAR}
+    order by created_at desc
+    limit #{limit}
+  </select>
+</mapper>

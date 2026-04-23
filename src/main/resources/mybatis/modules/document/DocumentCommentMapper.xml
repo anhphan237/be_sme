@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.document.infrastructure.mapper.DocumentCommentMapper">
+
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentCommentEntity">
+    <id column="document_comment_id" jdbcType="VARCHAR" property="documentCommentId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="document_id" jdbcType="VARCHAR" property="documentId" />
+    <result column="parent_comment_id" jdbcType="VARCHAR" property="parentCommentId" />
+    <result column="author_user_id" jdbcType="VARCHAR" property="authorUserId" />
+    <result column="body" jdbcType="LONGVARCHAR" property="body" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentCommentEntity">
+    insert into document_comments (document_comment_id, company_id, document_id, parent_comment_id,
+      author_user_id, body, status, created_at, updated_at)
+    values (#{documentCommentId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{documentId,jdbcType=VARCHAR},
+      #{parentCommentId,jdbcType=VARCHAR}, #{authorUserId,jdbcType=VARCHAR}, #{body,jdbcType=LONGVARCHAR},
+      #{status,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
+  </insert>
+
+  <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentCommentEntity">
+    update document_comments
+    set company_id = #{companyId,jdbcType=VARCHAR},
+        document_id = #{documentId,jdbcType=VARCHAR},
+        parent_comment_id = #{parentCommentId,jdbcType=VARCHAR},
+        author_user_id = #{authorUserId,jdbcType=VARCHAR},
+        body = #{body,jdbcType=LONGVARCHAR},
+        status = #{status,jdbcType=VARCHAR},
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where document_comment_id = #{documentCommentId,jdbcType=VARCHAR}
+  </update>
+
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+    select document_comment_id, company_id, document_id, parent_comment_id, author_user_id, body, status, created_at, updated_at
+    from document_comments
+    where document_comment_id = #{documentCommentId,jdbcType=VARCHAR}
+  </select>
+
+  <select id="selectByCompanyIdAndDocumentIdOrderByCreatedAsc" resultMap="BaseResultMap">
+    select document_comment_id, company_id, document_id, parent_comment_id, author_user_id, body, status, created_at, updated_at
+    from document_comments
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and document_id = #{documentId,jdbcType=VARCHAR}
+      and upper(coalesce(trim(status), '')) = 'ACTIVE'
+    order by created_at asc
+    limit #{limit,jdbcType=INTEGER}
+  </select>
+</mapper>

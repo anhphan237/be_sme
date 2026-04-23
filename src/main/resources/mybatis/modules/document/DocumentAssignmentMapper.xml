@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAssignmentMapper">
+
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentAssignmentEntity">
+    <id column="document_assignment_id" jdbcType="VARCHAR" property="documentAssignmentId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="document_id" jdbcType="VARCHAR" property="documentId" />
+    <result column="assignee_user_id" jdbcType="VARCHAR" property="assigneeUserId" />
+    <result column="assigned_by_user_id" jdbcType="VARCHAR" property="assignedByUserId" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="assigned_at" jdbcType="TIMESTAMP" property="assignedAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentAssignmentEntity">
+    insert into document_assignments (document_assignment_id, company_id, document_id, assignee_user_id,
+      assigned_by_user_id, status, assigned_at, updated_at)
+    values (#{documentAssignmentId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{documentId,jdbcType=VARCHAR},
+      #{assigneeUserId,jdbcType=VARCHAR}, #{assignedByUserId,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR},
+      #{assignedAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
+  </insert>
+
+  <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentAssignmentEntity">
+    update document_assignments
+    set company_id = #{companyId,jdbcType=VARCHAR},
+        document_id = #{documentId,jdbcType=VARCHAR},
+        assignee_user_id = #{assigneeUserId,jdbcType=VARCHAR},
+        assigned_by_user_id = #{assignedByUserId,jdbcType=VARCHAR},
+        status = #{status,jdbcType=VARCHAR},
+        assigned_at = #{assignedAt,jdbcType=TIMESTAMP},
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where document_assignment_id = #{documentAssignmentId,jdbcType=VARCHAR}
+  </update>
+
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+    select document_assignment_id, company_id, document_id, assignee_user_id, assigned_by_user_id, status, assigned_at, updated_at
+    from document_assignments
+    where document_assignment_id = #{documentAssignmentId,jdbcType=VARCHAR}
+  </select>
+
+  <select id="selectActiveByCompanyAndDocument" resultMap="BaseResultMap">
+    select document_assignment_id, company_id, document_id, assignee_user_id, assigned_by_user_id, status, assigned_at, updated_at
+    from document_assignments
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and document_id = #{documentId,jdbcType=VARCHAR}
+      and upper(coalesce(trim(status), '')) = 'ASSIGNED'
+    order by assigned_at desc
+    limit #{limit,jdbcType=INTEGER}
+  </select>
+
+  <select id="selectActiveByCompanyDocumentAndAssignee" resultMap="BaseResultMap">
+    select document_assignment_id, company_id, document_id, assignee_user_id, assigned_by_user_id, status, assigned_at, updated_at
+    from document_assignments
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and document_id = #{documentId,jdbcType=VARCHAR}
+      and assignee_user_id = #{assigneeUserId,jdbcType=VARCHAR}
+      and upper(coalesce(trim(status), '')) = 'ASSIGNED'
+    limit 1
+  </select>
+
+  <select id="selectLatestByCompanyDocumentAndAssignee" resultMap="BaseResultMap">
+    select document_assignment_id, company_id, document_id, assignee_user_id, assigned_by_user_id, status, assigned_at, updated_at
+    from document_assignments
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and document_id = #{documentId,jdbcType=VARCHAR}
+      and assignee_user_id = #{assigneeUserId,jdbcType=VARCHAR}
+    order by updated_at desc nulls last, assigned_at desc
+    limit 1
+  </select>
+</mapper>

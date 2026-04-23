@@ -59,4 +59,9 @@ public interface DocumentAcknowledgementMapper {
             @Param("documentIds") List<String> documentIds,
             @Param("userId") String userId,
             @Param("onboardingId") String onboardingId);
+
+    List<DocumentAcknowledgementEntity> selectByCompanyAndDocumentOrderByLastInteraction(
+            @Param("companyId") String companyId,
+            @Param("documentId") String documentId,
+            @Param("limit") int limit);
 }

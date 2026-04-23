@@ -332,4 +332,15 @@ public class DocumentVersionEntity {
     public void setUploadedAt(Date uploadedAt) {
         this.uploadedAt = uploadedAt;
     }
+
+    /** Rich-text snapshot JSON; null for file-upload versions */
+    private String contentJson;
+
+    public String getContentJson() {
+        return contentJson;
+    }
+
+    public void setContentJson(String contentJson) {
+        this.contentJson = contentJson;
+    }
 }
