@@ -142,6 +142,7 @@
     <result column="assigned_department_id" jdbcType="VARCHAR" property="assignedDepartmentId" />
     <result column="completed_at" jdbcType="TIMESTAMP" property="completedAt" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
     <result column="require_ack" jdbcType="BIT" property="requireAck" />
     <result column="require_doc" jdbcType="BIT" property="requireDoc" />
     <result column="requires_manager_approval" jdbcType="BIT" property="requiresManagerApproval" />
@@ -158,7 +159,7 @@
   <select id="selectByCompanyIdAndAssignee" resultMap="AssigneeListRowMap">
     SELECT t.task_id, t.company_id, t.checklist_id, c.onboarding_id, c.name AS checklist_name,
            t.title, t.description, t.status, t.due_date, t.assigned_user_id, t.assigned_department_id,
-           t.completed_at, t.created_at, t.require_ack, t.require_doc, t.requires_manager_approval, t.approval_status, t.approver_user_id,
+           t.completed_at, t.created_at, t.created_by, t.require_ack, t.require_doc, t.requires_manager_approval, t.approval_status, t.approver_user_id,
            t.scheduled_start_at, t.scheduled_end_at, t.schedule_status, t.schedule_reschedule_reason, t.schedule_cancel_reason,
            t.schedule_no_show_reason
     FROM task_instances t
@@ -201,7 +202,7 @@
   <select id="selectScheduledCalendarByCompanyAndUser" resultMap="AssigneeListRowMap">
     SELECT t.task_id, t.company_id, t.checklist_id, c.onboarding_id, c.name AS checklist_name,
            t.title, t.description, t.status, t.due_date, t.assigned_user_id, t.assigned_department_id,
-           t.completed_at, t.created_at, t.require_ack, t.require_doc, t.requires_manager_approval, t.approval_status, t.approver_user_id,
+           t.completed_at, t.created_at, t.created_by, t.require_ack, t.require_doc, t.requires_manager_approval, t.approval_status, t.approver_user_id,
            t.scheduled_start_at, t.scheduled_end_at, t.schedule_status, t.schedule_reschedule_reason, t.schedule_cancel_reason,
            t.schedule_no_show_reason
     FROM task_instances t
@@ -238,7 +239,7 @@
   <select id="selectTimelineByOnboardingId" resultMap="AssigneeListRowMap">
     SELECT t.task_id, t.company_id, t.checklist_id, c.onboarding_id, c.name AS checklist_name,
            t.title, t.description, t.status, t.due_date, t.assigned_user_id, t.assigned_department_id,
-           t.completed_at, t.created_at, t.require_ack, t.require_doc, t.requires_manager_approval, t.approval_status, t.approver_user_id,
+           t.completed_at, t.created_at, t.created_by, t.require_ack, t.require_doc, t.requires_manager_approval, t.approval_status, t.approver_user_id,
            t.scheduled_start_at, t.scheduled_end_at, t.schedule_status, t.schedule_reschedule_reason, t.schedule_cancel_reason,
            t.schedule_no_show_reason
     FROM task_instances t

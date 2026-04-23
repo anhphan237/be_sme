@@ -54,6 +54,9 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
         }
 
         String companyId = context.getTenantId();
+        String reporterUserId = StringUtils.hasText(context.getOperatorId())
+                ? context.getOperatorId().trim()
+                : (StringUtils.hasText(instance.getCreatedBy()) ? instance.getCreatedBy().trim() : "system");
         List<ChecklistInstanceEntity> existingChecklists =
                 checklistInstanceMapper.selectByCompanyIdAndOnboardingId(companyId, instance.getOnboardingId());
         List<TaskInstanceEntity> existingTasks = taskInstanceMapper.selectByCompanyIdAndOnboardingId(
@@ -158,7 +161,7 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
                                 : null);
                 taskInstance.setApprovalStatus(OnboardingTaskWorkflow.APPROVAL_NONE);
                 taskInstance.setScheduleStatus(OnboardingTaskWorkflow.SCHEDULE_UNSCHEDULED);
-                taskInstance.setCreatedBy("system");
+                taskInstance.setCreatedBy(reporterUserId);
                 taskInstance.setCreatedAt(now);
                 taskInstance.setUpdatedAt(now);
 

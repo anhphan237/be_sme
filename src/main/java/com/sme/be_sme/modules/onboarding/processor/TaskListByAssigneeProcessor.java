@@ -2,6 +2,8 @@ package com.sme.be_sme.modules.onboarding.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapper;
+import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
 import com.sme.be_sme.modules.onboarding.api.request.TaskListByAssigneeRequest;
 import com.sme.be_sme.modules.onboarding.api.response.TaskListByAssigneeResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapperExt;
@@ -11,7 +13,13 @@ import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -27,6 +35,7 @@ public class TaskListByAssigneeProcessor extends BaseBizProcessor<BizContext> {
 
     private final ObjectMapper objectMapper;
     private final TaskInstanceMapperExt taskInstanceMapperExt;
+    private final UserMapper userMapper;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -73,6 +82,7 @@ public class TaskListByAssigneeProcessor extends BaseBizProcessor<BizContext> {
                 companyId, assigneeUserId, status, sortBy, sortOrder, offset, size);
         Integer totalCountObj = taskInstanceMapperExt.countByCompanyIdAndAssignee(companyId, assigneeUserId, status);
         int totalCount = totalCountObj == null ? 0 : totalCountObj;
+        Map<String, String> userNameMap = loadReporterNames(rows);
 
         TaskListByAssigneeResponse response = new TaskListByAssigneeResponse();
         response.setAssigneeUserId(assigneeUserId);
@@ -81,12 +91,15 @@ public class TaskListByAssigneeProcessor extends BaseBizProcessor<BizContext> {
         response.setSize(size);
         response.setTasks(
                 rows.stream()
-                        .map(this::toItem)
+                        .map(r -> toItem(r, userNameMap))
                         .collect(Collectors.toList()));
         return response;
     }
 
-    private TaskListByAssigneeResponse.TaskItem toItem(TaskAssigneeListRow r) {
+    private TaskListByAssigneeResponse.TaskItem toItem(
+            TaskAssigneeListRow r,
+            Map<String, String> userNameMap
+    ) {
         TaskListByAssigneeResponse.TaskItem item = new TaskListByAssigneeResponse.TaskItem();
         item.setTaskId(r.getTaskId());
         item.setOnboardingId(r.getOnboardingId());
@@ -100,6 +113,8 @@ public class TaskListByAssigneeProcessor extends BaseBizProcessor<BizContext> {
         item.setAssignedDepartmentId(r.getAssignedDepartmentId());
         item.setCompletedAt(r.getCompletedAt());
         item.setCreatedAt(r.getCreatedAt());
+        item.setReporterUserId(r.getCreatedBy());
+        item.setReporterUserName(userNameMap.get(r.getCreatedBy()));
         item.setScheduledStartAt(r.getScheduledStartAt());
         item.setScheduledEndAt(r.getScheduledEndAt());
         item.setScheduleStatus(r.getScheduleStatus());
@@ -112,6 +127,26 @@ public class TaskListByAssigneeProcessor extends BaseBizProcessor<BizContext> {
         item.setApprovalStatus(r.getApprovalStatus());
         item.setApproverUserId(r.getApproverUserId());
         return item;
+    }
+
+    private Map<String, String> loadReporterNames(List<TaskAssigneeListRow> rows) {
+        Set<String> userIds = new HashSet<>();
+        for (TaskAssigneeListRow row : rows) {
+            if (row != null && StringUtils.hasText(row.getCreatedBy())) {
+                userIds.add(row.getCreatedBy().trim());
+            }
+        }
+        if (userIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<UserEntity> users = userMapper.selectByUserIds(new ArrayList<>(userIds));
+        Map<String, String> result = new HashMap<>();
+        for (UserEntity user : users) {
+            if (user != null && StringUtils.hasText(user.getUserId())) {
+                result.put(user.getUserId(), user.getFullName());
+            }
+        }
+        return result;
     }
 
     private static boolean isValidStatus(String status) {

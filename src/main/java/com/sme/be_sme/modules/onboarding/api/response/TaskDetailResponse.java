@@ -22,6 +22,7 @@ public class TaskDetailResponse {
     private Date createdAt;
     private Date updatedAt;
     private String createdBy;
+    private String reporterUserId;
 
     private Boolean requireAck;
     private Boolean requireDoc;
@@ -48,6 +49,7 @@ public class TaskDetailResponse {
     private ChecklistInfo checklist;
     private UserInfo assignedUser;
     private UserInfo createdByUser;
+    private UserInfo reporterUser;
     private DepartmentInfo assignedDepartment;
 
     // Related collections
