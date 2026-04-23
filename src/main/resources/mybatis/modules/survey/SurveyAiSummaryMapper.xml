@@ -1,26 +1,26 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyAiSummaryMapper">
 
-    <resultMap id="BaseResultMap"
+    <resultMap id="SurveyAiSummaryEntityMap"
                type="com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyAiSummaryEntity">
-        <id column="summary_id" property="summaryId"/>
-        <result column="company_id" property="companyId"/>
-        <result column="template_id" property="templateId"/>
-        <result column="start_date" property="startDate"/>
-        <result column="end_date" property="endDate"/>
-        <result column="language" property="language"/>
-        <result column="input_hash" property="inputHash"/>
-        <result column="health_level" property="healthLevel"/>
-        <result column="summary_json" property="summaryJson"/>
-        <result column="generated_at" property="generatedAt"/>
-        <result column="generated_by" property="generatedBy"/>
+        <id property="summaryId" column="summary_id"/>
+        <result property="companyId" column="company_id"/>
+        <result property="templateId" column="template_id"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="language" column="language"/>
+        <result property="inputHash" column="input_hash"/>
+        <result property="healthLevel" column="health_level"/>
+        <result property="summaryJson" column="summary_json"/>
+        <result property="generatedAt" column="generated_at"/>
+        <result property="generatedBy" column="generated_by"/>
     </resultMap>
 
-    <select id="selectByCacheKey" resultMap="BaseResultMap">
+    <select id="selectByCacheKey" resultMap="SurveyAiSummaryEntityMap">
         SELECT
         summary_id,
         company_id,
@@ -35,13 +35,30 @@
         generated_by
         FROM survey_ai_summaries
         WHERE company_id = #{companyId}
-        AND COALESCE(template_id, '') = COALESCE(#{templateId}, '')
-        AND COALESCE(start_date, DATE '1970-01-01') = COALESCE(#{startDate}, DATE '1970-01-01')
-        AND COALESCE(end_date, DATE '1970-01-01') = COALESCE(#{endDate}, DATE '1970-01-01')
+        AND (
+        (#{templateId,jdbcType=VARCHAR} IS NULL AND template_id IS NULL)
+        OR template_id = #{templateId,jdbcType=VARCHAR}
+        )
+        AND (
+        (#{startDate,jdbcType=DATE} IS NULL AND start_date IS NULL)
+        OR start_date = #{startDate,jdbcType=DATE}
+        )
+        AND (
+        (#{endDate,jdbcType=DATE} IS NULL AND end_date IS NULL)
+        OR end_date = #{endDate,jdbcType=DATE}
+        )
         AND language = #{language}
         AND input_hash = #{inputHash}
         ORDER BY generated_at DESC
         LIMIT 1
+    </select>
+
+    <select id="countGeneratedSince" resultType="int">
+        SELECT COUNT(1)
+        FROM survey_ai_summaries
+        WHERE company_id = #{companyId}
+        AND generated_by = #{generatedBy}
+        AND generated_at >= #{since}
     </select>
 
     <insert id="insert" parameterType="com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyAiSummaryEntity">
@@ -61,9 +78,9 @@
         VALUES (
         #{summaryId},
         #{companyId},
-        #{templateId},
-        #{startDate},
-        #{endDate},
+        #{templateId,jdbcType=VARCHAR},
+        #{startDate,jdbcType=DATE},
+        #{endDate,jdbcType=DATE},
         #{language},
         #{inputHash},
         #{healthLevel},
@@ -71,15 +88,16 @@
         #{generatedAt},
         #{generatedBy}
         )
-        ON CONFLICT DO NOTHING
     </insert>
 
-    <select id="countGeneratedSince" resultType="int">
-        SELECT COUNT(1)
-        FROM survey_ai_summaries
-        WHERE company_id = #{companyId}
-        AND generated_by = #{generatedBy}
-        AND generated_at >= #{since}
-    </select>
+    <update id="updateBySummaryId" parameterType="com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyAiSummaryEntity">
+        UPDATE survey_ai_summaries
+        SET
+        health_level = #{healthLevel},
+        summary_json = #{summaryJson},
+        generated_at = #{generatedAt},
+        generated_by = #{generatedBy}
+        WHERE summary_id = #{summaryId}
+    </update>
 
 </mapper>
