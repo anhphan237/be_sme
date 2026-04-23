@@ -8,4 +8,5 @@ import lombok.Setter;
 public class TaskCommentAddRequest {
     private String taskId;
     private String content;
+    private String parentCommentId;
 }

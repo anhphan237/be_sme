@@ -287,6 +287,7 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
             .map(c -> {
                 TaskDetailResponse.CommentItem item = new TaskDetailResponse.CommentItem();
                 item.setCommentId(c.getTaskCommentId());
+                item.setParentCommentId(c.getParentCommentId());
                 item.setContent(c.getContent());
                 item.setCreatedBy(c.getCreatedBy());
                 item.setCreatedByName(userNameMap.get(c.getCreatedBy()));
@@ -340,8 +341,45 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
             })
             .collect(Collectors.toList());
         response.setActivityLogs(logItems);
+        response.setAllLogs(buildAllLogs(comments, activityLogs, userNameMap));
 
         return response;
+    }
+
+    private List<TaskDetailResponse.AllLogItem> buildAllLogs(
+        List<TaskCommentEntity> comments,
+        List<TaskActivityLogEntity> activityLogs,
+        Map<String, String> userNameMap
+    ) {
+        List<TaskDetailResponse.AllLogItem> items = new ArrayList<>();
+        for (TaskCommentEntity c : comments) {
+            TaskDetailResponse.AllLogItem item = new TaskDetailResponse.AllLogItem();
+            item.setType("COMMENT");
+            item.setCreatedAt(c.getCreatedAt());
+            item.setActorUserId(c.getCreatedBy());
+            item.setActorName(userNameMap.get(c.getCreatedBy()));
+            item.setCommentId(c.getTaskCommentId());
+            item.setParentCommentId(c.getParentCommentId());
+            item.setContent(c.getContent());
+            items.add(item);
+        }
+        for (TaskActivityLogEntity l : activityLogs) {
+            TaskDetailResponse.AllLogItem item = new TaskDetailResponse.AllLogItem();
+            item.setType("HISTORY");
+            item.setCreatedAt(l.getCreatedAt());
+            item.setActorUserId(l.getActorUserId());
+            item.setActorName(userNameMap.get(l.getActorUserId()));
+            item.setLogId(l.getTaskActivityLogId());
+            item.setAction(l.getAction());
+            item.setOldValue(l.getOldValue());
+            item.setNewValue(l.getNewValue());
+            items.add(item);
+        }
+        items.sort(Comparator.comparing(
+                TaskDetailResponse.AllLogItem::getCreatedAt,
+                Comparator.nullsLast(Comparator.naturalOrder()))
+            .reversed());
+        return items;
     }
 
     private Map<String, DocumentEntity> loadRequiredDocuments(List<TaskRequiredDocumentEntity> links) {
