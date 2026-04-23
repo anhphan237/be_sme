@@ -19,11 +19,13 @@ public interface SurveyAiSummaryMapper {
             @Param("inputHash") String inputHash
     );
 
-    int insert(SurveyAiSummaryEntity entity);
-
     int countGeneratedSince(
             @Param("companyId") String companyId,
             @Param("generatedBy") String generatedBy,
             @Param("since") Date since
     );
+
+    int insert(SurveyAiSummaryEntity entity);
+
+    int updateBySummaryId(SurveyAiSummaryEntity entity);
 }

@@ -53,10 +53,12 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
                 : "system";
 
         String language = normalizeLanguage(request.getLanguage());
+        String scope = resolveScope(request);
         JsonNode sanitizedSnapshot = sanitizeSnapshot(request.getAnalyticsSnapshot());
 
         JsonNode inputForHash = buildInputForHash(
                 companyId,
+                scope,
                 request.getTemplateId(),
                 request.getStartDate(),
                 request.getEndDate(),
@@ -78,15 +80,10 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
 
         // Bình thường: có cache thì trả luôn
         if (!forceRefresh && cached != null) {
-            return toResponse(
-                    cached,
-                    true,
-                    "CACHE",
-                    null
-            );
+            return toResponse(cached, true, "CACHE", null);
         }
 
-        // Nếu user bấm refresh quá nhiều mà đã có cache, trả cache cũ thay vì chặn cứng
+        // Nếu user làm mới quá nhiều mà đã có cache thì ưu tiên trả cache
         if (isRateLimited(companyId, operatorId)) {
             if (cached != null) {
                 return toResponse(
@@ -105,6 +102,7 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
 
         JsonNode promptInput = buildPromptInput(
                 request,
+                scope,
                 language,
                 sanitizedSnapshot
         );
@@ -127,6 +125,7 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
             aiResponse.setGeneratedAt(new Date());
 
             saveCache(
+                    cached,
                     companyId,
                     operatorId,
                     request,
@@ -138,7 +137,7 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
             return aiResponse;
 
         } catch (Exception e) {
-            // Nếu AI fail mà đã có cache cũ, trả cache cũ cho mượt
+            // AI fail mà có cache cũ thì vẫn trả cache
             if (cached != null) {
                 return toResponse(
                         cached,
@@ -150,6 +149,18 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
 
             return buildFallbackResponse(language, e);
         }
+    }
+
+    private String resolveScope(SurveyAiSummaryRequest request) {
+        boolean hasTemplate = StringUtils.hasText(request.getTemplateId());
+        boolean hasStartDate = request.getStartDate() != null;
+        boolean hasEndDate = request.getEndDate() != null;
+
+        if (!hasTemplate && !hasStartDate && !hasEndDate) {
+            return "ALL_SURVEYS";
+        }
+
+        return "FILTERED";
     }
 
     private boolean isRateLimited(String companyId, String operatorId) {
@@ -165,6 +176,7 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
     }
 
     private void saveCache(
+            SurveyAiSummaryEntity existingCache,
             String companyId,
             String operatorId,
             SurveyAiSummaryRequest request,
@@ -174,6 +186,16 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
     ) {
         Date now = new Date();
         aiResponse.setGeneratedAt(now);
+
+        if (existingCache != null) {
+            existingCache.setHealthLevel(aiResponse.getHealthLevel());
+            existingCache.setSummaryJson(writeJson(aiResponse));
+            existingCache.setGeneratedAt(now);
+            existingCache.setGeneratedBy(operatorId);
+
+            surveyAiSummaryMapper.updateBySummaryId(existingCache);
+            return;
+        }
 
         SurveyAiSummaryEntity entity = new SurveyAiSummaryEntity();
         entity.setSummaryId(UuidGenerator.generate());
@@ -277,7 +299,7 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
 
         if (quotaError) {
             return english
-                    ? "The AI service is temporarily busy or has reached its usage limit. Showing the latest available summary."
+                    ? "The AI service is temporarily busy or has reached its usage limit. Showing the latest available summary when possible."
                     : "Dịch vụ AI đang tạm quá tải hoặc đã chạm giới hạn sử dụng. Hệ thống sẽ ưu tiên hiển thị bản tóm tắt gần nhất nếu có.";
         }
 
@@ -288,11 +310,13 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
 
     private JsonNode buildPromptInput(
             SurveyAiSummaryRequest request,
+            String scope,
             String language,
             JsonNode sanitizedSnapshot
     ) {
         ObjectNode root = objectMapper.createObjectNode();
 
+        root.put("scope", scope);
         root.put("language", language);
 
         ObjectNode filters = root.putObject("filters");
@@ -307,6 +331,7 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
 
     private JsonNode buildInputForHash(
             String companyId,
+            String scope,
             String templateId,
             LocalDate startDate,
             LocalDate endDate,
@@ -316,6 +341,7 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
         ObjectNode root = objectMapper.createObjectNode();
 
         root.put("companyId", companyId);
+        root.put("scope", scope);
         root.put("templateId", trimToNull(templateId));
         root.put("startDate", startDate == null ? null : startDate.toString());
         root.put("endDate", endDate == null ? null : endDate.toString());
