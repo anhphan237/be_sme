@@ -17,4 +17,8 @@ public class SurveyAiSummaryResponse {
     private String positiveSignal;
     private Boolean fromCache;
     private Date generatedAt;
+
+    private String source;
+    private Boolean aiAvailable;
+    private String errorMessage;
 }
