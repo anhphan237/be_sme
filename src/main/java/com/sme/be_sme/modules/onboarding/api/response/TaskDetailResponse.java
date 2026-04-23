@@ -55,6 +55,7 @@ public class TaskDetailResponse {
     private List<CommentItem> comments;
     private List<AttachmentItem> attachments;
     private List<ActivityLogItem> activityLogs;
+    private List<AllLogItem> allLogs;
 
     // Nested classes
     @Getter
@@ -122,5 +123,25 @@ public class TaskDetailResponse {
         private String actorUserId;
         private String actorName;
         private Date createdAt;
+    }
+
+    @Getter
+    @Setter
+    public static class AllLogItem {
+        private String type; // COMMENT | HISTORY
+        private Date createdAt;
+        private String actorUserId;
+        private String actorName;
+
+        // COMMENT payload
+        private String commentId;
+        private String parentCommentId;
+        private String content;
+
+        // HISTORY payload
+        private String logId;
+        private String action;
+        private String oldValue;
+        private String newValue;
     }
 }
