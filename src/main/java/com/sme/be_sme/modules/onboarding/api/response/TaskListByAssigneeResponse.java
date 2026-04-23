@@ -30,6 +30,8 @@ public class TaskListByAssigneeResponse {
         private String assignedDepartmentId;
         private Date completedAt;
         private Date createdAt;
+        private String reporterUserId;
+        private String reporterUserName;
         private Date scheduledStartAt;
         private Date scheduledEndAt;
         private String scheduleStatus;

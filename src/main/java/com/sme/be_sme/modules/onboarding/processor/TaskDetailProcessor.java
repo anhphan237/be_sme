@@ -225,6 +225,7 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
         response.setCreatedAt(task.getCreatedAt());
         response.setUpdatedAt(task.getUpdatedAt());
         response.setCreatedBy(task.getCreatedBy());
+        response.setReporterUserId(task.getCreatedBy());
         response.setRequireAck(task.getRequireAck());
         response.setRequireDoc(task.getRequireDoc());
         response.setAcknowledgedAt(task.getAcknowledgedAt());
@@ -272,6 +273,7 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
             userInfo.setFullName(createdByUser.getFullName());
             userInfo.setEmail(createdByUser.getEmail());
             response.setCreatedByUser(userInfo);
+            response.setReporterUser(userInfo);
         }
 
         // Department info

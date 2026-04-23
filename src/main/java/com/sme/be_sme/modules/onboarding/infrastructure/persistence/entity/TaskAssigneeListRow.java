@@ -25,6 +25,7 @@ public class TaskAssigneeListRow {
     private String assignedDepartmentId;
     private Date completedAt;
     private Date createdAt;
+    private String createdBy;
     private Boolean requireAck;
     private Boolean requireDoc;
     private Boolean requiresManagerApproval;

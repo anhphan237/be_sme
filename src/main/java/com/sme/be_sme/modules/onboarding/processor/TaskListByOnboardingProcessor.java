@@ -6,6 +6,8 @@ import com.sme.be_sme.modules.onboarding.api.request.TaskListByOnboardingRequest
 import com.sme.be_sme.modules.onboarding.api.response.TaskListByOnboardingResponse;
 import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
 import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapper;
+import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstanceMapper;
@@ -34,6 +36,7 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
     private final TaskInstanceMapperExt taskInstanceMapperExt;
     private final ChecklistInstanceMapper checklistInstanceMapper;
     private final EmployeeProfileMapperExt employeeProfileMapperExt;
+    private final UserMapper userMapper;
     private final OnboardingTaskSlaService slaService;
 
     private static final int DEFAULT_PAGE = 1;
@@ -91,9 +94,10 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
 
         // 5. Enrich with checklist names
         Map<String, String> checklistNameMap = loadChecklistNames(tenantId, tasks);
+        Map<String, String> userNameMap = loadUserNames(tasks);
 
         // 6. Build Response
-        return buildResponse(request.getOnboardingId().trim(), tasks, checklistNameMap, totalCount, page, size);
+        return buildResponse(request.getOnboardingId().trim(), tasks, checklistNameMap, userNameMap, totalCount, page, size);
     }
 
     private void validate(BizContext context, TaskListByOnboardingRequest request) {
@@ -157,6 +161,7 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
         String onboardingId,
         List<TaskInstanceEntity> entities,
         Map<String, String> checklistNameMap,
+        Map<String, String> userNameMap,
         Integer totalCount,
         int page,
         int size
@@ -178,9 +183,12 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
                 item.setStatus(e.getStatus());
                 item.setDueDate(e.getDueDate());
                 item.setAssignedUserId(e.getAssignedUserId());
+                item.setAssignedUserName(userNameMap.get(e.getAssignedUserId()));
                 item.setAssignedDepartmentId(e.getAssignedDepartmentId());
                 item.setCompletedAt(e.getCompletedAt());
                 item.setCreatedAt(e.getCreatedAt());
+                item.setReporterUserId(e.getCreatedBy());
+                item.setReporterUserName(userNameMap.get(e.getCreatedBy()));
                 item.setScheduledStartAt(e.getScheduledStartAt());
                 item.setScheduledEndAt(e.getScheduledEndAt());
                 item.setScheduleStatus(e.getScheduleStatus());
@@ -202,6 +210,32 @@ public class TaskListByOnboardingProcessor extends BaseBizProcessor<BizContext> 
 
         response.setTasks(items);
         return response;
+    }
+
+    private Map<String, String> loadUserNames(List<TaskInstanceEntity> tasks) {
+        Set<String> userIds = new HashSet<>();
+        for (TaskInstanceEntity task : tasks) {
+            if (task == null) {
+                continue;
+            }
+            if (StringUtils.hasText(task.getAssignedUserId())) {
+                userIds.add(task.getAssignedUserId().trim());
+            }
+            if (StringUtils.hasText(task.getCreatedBy())) {
+                userIds.add(task.getCreatedBy().trim());
+            }
+        }
+        if (userIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<UserEntity> users = userMapper.selectByUserIds(new ArrayList<>(userIds));
+        Map<String, String> result = new HashMap<>();
+        for (UserEntity user : users) {
+            if (user != null && StringUtils.hasText(user.getUserId())) {
+                result.put(user.getUserId(), user.getFullName());
+            }
+        }
+        return result;
     }
 
     private void enforceEmployeeOwnInstanceOnly(BizContext context, OnboardingInstanceEntity instance) {
