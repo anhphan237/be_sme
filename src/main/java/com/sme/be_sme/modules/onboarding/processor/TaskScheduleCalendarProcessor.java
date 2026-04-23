@@ -85,9 +85,11 @@ public class TaskScheduleCalendarProcessor extends BaseBizProcessor<BizContext> 
         item.setScheduledStartAt(row.getScheduledStartAt());
         item.setScheduledEndAt(row.getScheduledEndAt());
         if (fullView) {
+            item.setDueDate(row.getDueDate());
             item.setTaskId(row.getTaskId());
             item.setTitle(row.getTitle());
             item.setStatus(row.getStatus());
+            item.setDone("DONE".equalsIgnoreCase(row.getStatus()));
             item.setOnboardingId(row.getOnboardingId());
             item.setChecklistName(row.getChecklistName());
         }
