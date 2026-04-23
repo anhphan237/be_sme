@@ -287,6 +287,7 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
             .map(c -> {
                 TaskDetailResponse.CommentItem item = new TaskDetailResponse.CommentItem();
                 item.setCommentId(c.getTaskCommentId());
+                item.setParentCommentId(c.getParentCommentId());
                 item.setContent(c.getContent());
                 item.setCreatedBy(c.getCreatedBy());
                 item.setCreatedByName(userNameMap.get(c.getCreatedBy()));

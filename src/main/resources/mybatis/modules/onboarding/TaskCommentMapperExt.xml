@@ -6,13 +6,14 @@
     <id column="task_comment_id" jdbcType="VARCHAR" property="taskCommentId" />
     <result column="company_id" jdbcType="VARCHAR" property="companyId" />
     <result column="task_id" jdbcType="VARCHAR" property="taskId" />
+    <result column="parent_comment_id" jdbcType="VARCHAR" property="parentCommentId" />
     <result column="content" jdbcType="VARCHAR" property="content" />
     <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
   </resultMap>
 
   <select id="selectByTaskId" resultMap="BaseResultMap">
-    SELECT task_comment_id, company_id, task_id, content, created_by, created_at
+    SELECT task_comment_id, company_id, task_id, parent_comment_id, content, created_by, created_at
     FROM task_comments
     WHERE company_id = #{companyId}
       AND task_id = #{taskId}

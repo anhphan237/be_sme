@@ -85,6 +85,7 @@ public class TaskDetailResponse {
     @Setter
     public static class CommentItem {
         private String commentId;
+        private String parentCommentId;
         private String content;
         private String createdBy;
         private String createdByName;

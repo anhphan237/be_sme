@@ -58,9 +58,22 @@ public class TaskCommentAddProcessor extends BaseBizProcessor<BizContext> {
 
         TaskCommentEntity row = new TaskCommentEntity();
         String commentId = UuidGenerator.generate();
+        String parentCommentId = null;
+        if (StringUtils.hasText(request.getParentCommentId())) {
+            parentCommentId = request.getParentCommentId().trim();
+            TaskCommentEntity parentComment = taskCommentMapper.selectByPrimaryKey(parentCommentId);
+            if (parentComment == null) {
+                throw AppException.of(ErrorCodes.NOT_FOUND, "parent comment not found");
+            }
+            if (!companyId.equals(parentComment.getCompanyId())
+                    || !task.getTaskId().equals(parentComment.getTaskId())) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "parent comment does not belong to this task");
+            }
+        }
         row.setTaskCommentId(commentId);
         row.setCompanyId(companyId);
         row.setTaskId(task.getTaskId());
+        row.setParentCommentId(parentCommentId);
         row.setContent(request.getContent().trim());
         row.setCreatedBy(context.getOperatorId());
         row.setCreatedAt(new Date());
