@@ -8,7 +8,7 @@ import com.sme.be_sme.modules.survey.api.request.SurveyAiSummaryRequest;
 import com.sme.be_sme.modules.survey.api.response.SurveyAiSummaryResponse;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyAiSummaryMapper;
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyAiSummaryEntity;
-import com.sme.be_sme.modules.survey.service.SurveyAiSummaryService;
+import com.sme.be_sme.modules.survey.service.SurveyOpenAiSummaryService;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -21,8 +21,10 @@ import org.springframework.util.StringUtils;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -34,7 +36,7 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
 
     private final ObjectMapper objectMapper;
     private final SurveyAiSummaryMapper surveyAiSummaryMapper;
-    private final SurveyAiSummaryService surveyAiSummaryService;
+    private final SurveyOpenAiSummaryService surveyOpenAiSummaryService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -63,7 +65,6 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
         );
 
         String inputHash = sha256(toStableJson(inputForHash));
-
         boolean forceRefresh = Boolean.TRUE.equals(request.getForceRefresh());
 
         if (!forceRefresh) {
@@ -89,22 +90,30 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
                 sanitizedSnapshot
         );
 
-        SurveyAiSummaryResponse aiResponse =
-                surveyAiSummaryService.generate(promptInput, language);
+        SurveyAiSummaryResponse aiResponse;
+        try {
+            String prompt = buildPrompt(promptInput, language);
+            String raw = surveyOpenAiSummaryService.generateRawJson(prompt);
+
+            aiResponse = objectMapper.readValue(
+                    extractJson(raw),
+                    SurveyAiSummaryResponse.class
+            );
+
+            normalizeAiResponse(aiResponse);
+            aiResponse.setSource("AI");
+            aiResponse.setAiAvailable(true);
+            aiResponse.setErrorMessage(null);
+            aiResponse.setFromCache(false);
+            aiResponse.setGeneratedAt(new Date());
+        } catch (Exception e) {
+            return buildFallbackResponse(language, e);
+        }
 
         Date now = new Date();
-
-        aiResponse.setFromCache(false);
         aiResponse.setGeneratedAt(now);
 
-        boolean shouldCache =
-                aiResponse.getSummary() != null
-                        && !aiResponse.getSummary().contains("quota Gemini")
-                        && !aiResponse.getSummary().contains("Gemini quota")
-                        && !aiResponse.getSummary().contains("RESOURCE_EXHAUSTED")
-                        && !aiResponse.getSummary().contains("429");
-
-        if (!shouldCache) {
+        if (!Boolean.TRUE.equals(aiResponse.getAiAvailable())) {
             return aiResponse;
         }
 
@@ -138,7 +147,7 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
         if (count >= MAX_GENERATE_PER_USER_PER_5_MINUTES) {
             throw AppException.of(
                     ErrorCodes.BAD_REQUEST,
-                    "AI summary generate limit reached. Please try again later."
+                    "Bạn vừa tạo tóm tắt AI quá nhiều lần trong thời gian ngắn. Vui lòng thử lại sau ít phút."
             );
         }
     }
@@ -150,15 +159,81 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
 
             response.setFromCache(fromCache);
             response.setGeneratedAt(entity.getGeneratedAt());
+            response.setSource("CACHE");
+            response.setAiAvailable(true);
+            response.setErrorMessage(null);
 
             if (!StringUtils.hasText(response.getHealthLevel())) {
                 response.setHealthLevel(entity.getHealthLevel());
             }
 
+            normalizeAiResponse(response);
             return response;
         } catch (Exception e) {
-            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "invalid cached AI summary");
+            throw AppException.of(
+                    ErrorCodes.INTERNAL_ERROR,
+                    "Không thể đọc dữ liệu tóm tắt AI đã lưu. Vui lòng thử tạo lại tóm tắt mới."
+            );
         }
+    }
+
+    private SurveyAiSummaryResponse buildFallbackResponse(String language, Exception e) {
+        boolean english = language != null && language.toLowerCase().startsWith("en");
+
+        String message = e == null || e.getMessage() == null
+                ? ""
+                : e.getMessage();
+
+        boolean quotaError =
+                message.contains("RESOURCE_EXHAUSTED")
+                        || message.contains("429")
+                        || message.toLowerCase().contains("quota")
+                        || message.toLowerCase().contains("rate limit")
+                        || message.toLowerCase().contains("resource exhausted");
+
+        SurveyAiSummaryResponse fallback = new SurveyAiSummaryResponse();
+        fallback.setHealthLevel("WARNING");
+        fallback.setSource("FALLBACK");
+        fallback.setAiAvailable(false);
+        fallback.setFromCache(false);
+        fallback.setGeneratedAt(new Date());
+
+        fallback.setSummary(english
+                ? "AI summary is temporarily unavailable. Please review the survey dashboard metrics directly."
+                : "Hiện hệ thống chưa thể tạo tóm tắt AI. HR vẫn có thể theo dõi tình hình qua các chỉ số, biểu đồ và phần tóm tắt mặc định trên dashboard.");
+
+        fallback.setKeyFindings(new ArrayList<>(List.of(
+                english
+                        ? "The AI provider could not generate a summary at this moment."
+                        : "Tóm tắt AI chưa khả dụng tại thời điểm này.",
+                english
+                        ? "The dashboard metrics are still available and can be used for manual review."
+                        : "Các chỉ số khảo sát trên dashboard vẫn đầy đủ để HR theo dõi và đánh giá."
+        )));
+
+        fallback.setRecommendedActions(new ArrayList<>(List.of(
+                english
+                        ? "Use the rule-based summary and dashboard charts for now."
+                        : "Tạm thời sử dụng phần tóm tắt mặc định và các biểu đồ trên dashboard.",
+                english
+                        ? "Try generating the AI summary again later."
+                        : "Thử tạo lại tóm tắt AI sau vài phút."
+        )));
+
+        fallback.setRiskExplanation("");
+        fallback.setPositiveSignal("");
+
+        if (quotaError) {
+            fallback.setErrorMessage(english
+                    ? "The AI service is currently busy or has reached its usage limit. Please try again later."
+                    : "Dịch vụ AI đang tạm quá tải hoặc đã chạm giới hạn sử dụng. Vui lòng thử lại sau.");
+        } else {
+            fallback.setErrorMessage(english
+                    ? "The AI summary could not be generated right now."
+                    : "Hiện chưa thể tạo tóm tắt AI. Vui lòng thử lại sau.");
+        }
+
+        return fallback;
     }
 
     private JsonNode buildPromptInput(
@@ -202,7 +277,10 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
 
     private JsonNode sanitizeSnapshot(JsonNode raw) {
         if (raw == null || raw.isNull()) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "analyticsSnapshot is required");
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "Chưa có đủ dữ liệu khảo sát để tạo tóm tắt AI."
+            );
         }
 
         ObjectNode root = objectMapper.createObjectNode();
@@ -229,6 +307,99 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
         }
     }
 
+    private String buildPrompt(JsonNode summaryInput, String language) {
+        boolean english = language != null && language.toLowerCase().startsWith("en");
+
+        String langInstruction = english
+                ? "Write in English."
+                : "Viết bằng tiếng Việt, ngắn gọn, thực tế, không sáo rỗng.";
+
+        return """
+                You are an HR analytics assistant for an employee onboarding survey dashboard.
+
+                Your job:
+                - Analyze ONLY the data provided.
+                - Do NOT invent numbers.
+                - Do NOT mention data that is not present.
+                - If data is insufficient, say it clearly.
+                - Focus on what HR should understand and do next.
+                - Keep the summary practical and easy to read.
+                - %s
+
+                Return ONLY valid JSON. No markdown. No explanation outside JSON.
+
+                JSON schema:
+                {
+                  "healthLevel": "GOOD | STABLE | WARNING",
+                  "summary": "string",
+                  "keyFindings": ["string"],
+                  "recommendedActions": ["string"],
+                  "riskExplanation": "string",
+                  "positiveSignal": "string"
+                }
+
+                Data:
+                %s
+                """.formatted(langInstruction, truncate(summaryInput.toString(), 12000));
+    }
+
+    private String extractJson(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return "{}";
+        }
+
+        String text = raw.trim();
+
+        if (text.startsWith("```json")) {
+            text = text.replaceFirst("```json", "").trim();
+        }
+
+        if (text.startsWith("```")) {
+            text = text.replaceFirst("```", "").trim();
+        }
+
+        if (text.endsWith("```")) {
+            text = text.substring(0, text.length() - 3).trim();
+        }
+
+        int start = text.indexOf('{');
+        int end = text.lastIndexOf('}');
+
+        if (start >= 0 && end > start) {
+            return text.substring(start, end + 1);
+        }
+
+        return text;
+    }
+
+    private void normalizeAiResponse(SurveyAiSummaryResponse response) {
+        if (!StringUtils.hasText(response.getHealthLevel())) {
+            response.setHealthLevel("STABLE");
+        } else {
+            response.setHealthLevel(response.getHealthLevel().trim().toUpperCase());
+        }
+
+        if (!StringUtils.hasText(response.getSummary())) {
+            response.setSummary("");
+        }
+
+        if (response.getKeyFindings() == null) {
+            response.setKeyFindings(new ArrayList<>());
+        }
+
+        if (response.getRecommendedActions() == null) {
+            response.setRecommendedActions(new ArrayList<>());
+        }
+
+        if (response.getRiskExplanation() == null) {
+            response.setRiskExplanation("");
+        }
+
+        if (response.getPositiveSignal() == null) {
+            response.setPositiveSignal("");
+        }
+    }
+
     private String toStableJson(JsonNode node) {
         try {
             Object sorted = sortJson(node);
@@ -237,7 +408,10 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
                     .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
                     .writeValueAsString(sorted);
         } catch (Exception e) {
-            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "cannot hash AI summary input");
+            throw AppException.of(
+                    ErrorCodes.INTERNAL_ERROR,
+                    "Không thể xử lý dữ liệu khảo sát để tạo tóm tắt AI."
+            );
         }
     }
 
@@ -259,7 +433,11 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
         }
 
         if (node.isArray()) {
-            return objectMapper.convertValue(node, Object.class);
+            List<Object> list = new ArrayList<>();
+            for (JsonNode item : node) {
+                list.add(sortJson(item));
+            }
+            return list;
         }
 
         if (node.isNumber()) {
@@ -285,7 +463,10 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
 
             return hex.toString();
         } catch (Exception e) {
-            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "cannot create input hash");
+            throw AppException.of(
+                    ErrorCodes.INTERNAL_ERROR,
+                    "Không thể kiểm tra dữ liệu tóm tắt AI hiện tại."
+            );
         }
     }
 
@@ -293,7 +474,10 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
         try {
             return objectMapper.writeValueAsString(value);
         } catch (Exception e) {
-            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "cannot save AI summary");
+            throw AppException.of(
+                    ErrorCodes.INTERNAL_ERROR,
+                    "Đã tạo được tóm tắt AI nhưng không thể lưu lại. Vui lòng thử lại sau."
+            );
         }
     }
 
@@ -329,17 +513,34 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
 
     private void validateContext(BizContext context) {
         if (context == null || !StringUtils.hasText(context.getTenantId())) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "Không xác định được công ty hiện tại. Vui lòng tải lại trang và thử lại."
+            );
         }
     }
 
     private void validateRequest(SurveyAiSummaryRequest request) {
         if (request == null) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "payload is required");
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "Thiếu dữ liệu đầu vào để tạo tóm tắt AI."
+            );
         }
 
         if (request.getAnalyticsSnapshot() == null || request.getAnalyticsSnapshot().isNull()) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "analyticsSnapshot is required");
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "Chưa có đủ dữ liệu khảo sát để tạo tóm tắt AI."
+            );
         }
+    }
+
+    private String truncate(String value, int max) {
+        if (value == null) {
+            return "";
+        }
+
+        return value.length() <= max ? value : value.substring(0, max);
     }
 }
