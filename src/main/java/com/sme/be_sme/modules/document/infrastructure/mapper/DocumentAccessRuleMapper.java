@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.document.infrastructure.mapper;
 
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentAccessRuleEntity;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -46,4 +47,8 @@ public interface DocumentAccessRuleMapper {
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
     int updateByPrimaryKey(DocumentAccessRuleEntity row);
+
+    List<DocumentAccessRuleEntity> selectActiveByCompanyAndDocumentId(
+            @Param("companyId") String companyId,
+            @Param("documentId") String documentId);
 }

@@ -17,6 +17,7 @@
     <result column="file_size_bytes" jdbcType="BIGINT" property="fileSizeBytes" />
     <result column="uploaded_by" jdbcType="VARCHAR" property="uploadedBy" />
     <result column="uploaded_at" jdbcType="TIMESTAMP" property="uploadedAt" />
+    <result column="content_json" jdbcType="LONGVARCHAR" property="contentJson" />
   </resultMap>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
     <!--
@@ -36,11 +37,11 @@
     insert into document_versions (document_version_id, company_id, document_id, 
       version_no, file_url, file_name, 
       file_type, file_size_bytes, uploaded_by, 
-      uploaded_at)
+      uploaded_at, content_json)
     values (#{documentVersionId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{documentId,jdbcType=VARCHAR}, 
       #{versionNo,jdbcType=INTEGER}, #{fileUrl,jdbcType=VARCHAR}, #{fileName,jdbcType=VARCHAR}, 
       #{fileType,jdbcType=VARCHAR}, #{fileSizeBytes,jdbcType=BIGINT}, #{uploadedBy,jdbcType=VARCHAR}, 
-      #{uploadedAt,jdbcType=TIMESTAMP})
+      #{uploadedAt,jdbcType=TIMESTAMP}, #{contentJson,jdbcType=LONGVARCHAR})
   </insert>
   <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentVersionEntity">
     <!--
@@ -57,7 +58,8 @@
       file_type = #{fileType,jdbcType=VARCHAR},
       file_size_bytes = #{fileSizeBytes,jdbcType=BIGINT},
       uploaded_by = #{uploadedBy,jdbcType=VARCHAR},
-      uploaded_at = #{uploadedAt,jdbcType=TIMESTAMP}
+      uploaded_at = #{uploadedAt,jdbcType=TIMESTAMP},
+      content_json = #{contentJson,jdbcType=LONGVARCHAR}
     where document_version_id = #{documentVersionId,jdbcType=VARCHAR}
   </update>
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
@@ -67,7 +69,7 @@
       This element was generated on Thu Jan 22 16:08:37 ICT 2026.
     -->
     select document_version_id, company_id, document_id, version_no, file_url, file_name, 
-    file_type, file_size_bytes, uploaded_by, uploaded_at
+    file_type, file_size_bytes, uploaded_by, uploaded_at, content_json
     from document_versions
     where document_version_id = #{documentVersionId,jdbcType=VARCHAR}
   </select>
@@ -78,12 +80,12 @@
       This element was generated on Thu Jan 22 16:08:37 ICT 2026.
     -->
     select document_version_id, company_id, document_id, version_no, file_url, file_name, 
-    file_type, file_size_bytes, uploaded_by, uploaded_at
+    file_type, file_size_bytes, uploaded_by, uploaded_at, content_json
     from document_versions
   </select>
   <select id="selectByDocumentId" resultMap="BaseResultMap">
     select document_version_id, company_id, document_id, version_no, file_url, file_name,
-    file_type, file_size_bytes, uploaded_by, uploaded_at
+    file_type, file_size_bytes, uploaded_by, uploaded_at, content_json
     from document_versions
     where document_id = #{documentId,jdbcType=VARCHAR}
     order by version_no desc

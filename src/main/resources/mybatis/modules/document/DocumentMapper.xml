@@ -17,6 +17,11 @@
     <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+    <result column="content_kind" jdbcType="VARCHAR" property="contentKind" />
+    <result column="draft_json" jdbcType="LONGVARCHAR" property="draftJson" />
+    <result column="published_json" jdbcType="LONGVARCHAR" property="publishedJson" />
+    <result column="published_at" jdbcType="TIMESTAMP" property="publishedAt" />
+    <result column="published_by" jdbcType="VARCHAR" property="publishedBy" />
   </resultMap>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
     <!--
@@ -36,11 +41,13 @@
     insert into documents (document_id, company_id, document_category_id, 
       title, description, visibility, 
       status, created_by, created_at, 
-      updated_at)
+      updated_at, content_kind, draft_json, 
+      published_json, published_at, published_by)
     values (#{documentId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{documentCategoryId,jdbcType=VARCHAR}, 
       #{title,jdbcType=VARCHAR}, #{description,jdbcType=VARCHAR}, #{visibility,jdbcType=VARCHAR}, 
       #{status,jdbcType=VARCHAR}, #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, 
-      #{updatedAt,jdbcType=TIMESTAMP})
+      #{updatedAt,jdbcType=TIMESTAMP}, #{contentKind,jdbcType=VARCHAR}, #{draftJson,jdbcType=LONGVARCHAR}, 
+      #{publishedJson,jdbcType=LONGVARCHAR}, #{publishedAt,jdbcType=TIMESTAMP}, #{publishedBy,jdbcType=VARCHAR})
   </insert>
   <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentEntity">
     <!--
@@ -57,7 +64,12 @@
       status = #{status,jdbcType=VARCHAR},
       created_by = #{createdBy,jdbcType=VARCHAR},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
-      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      content_kind = #{contentKind,jdbcType=VARCHAR},
+      draft_json = #{draftJson,jdbcType=LONGVARCHAR},
+      published_json = #{publishedJson,jdbcType=LONGVARCHAR},
+      published_at = #{publishedAt,jdbcType=TIMESTAMP},
+      published_by = #{publishedBy,jdbcType=VARCHAR}
     where document_id = #{documentId,jdbcType=VARCHAR}
   </update>
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
@@ -67,7 +79,8 @@
       This element was generated on Thu Jan 22 16:08:37 ICT 2026.
     -->
     select document_id, company_id, document_category_id, title, description, visibility, 
-    status, created_by, created_at, updated_at
+    status, created_by, created_at, updated_at, content_kind, draft_json, published_json, 
+    published_at, published_by
     from documents
     where document_id = #{documentId,jdbcType=VARCHAR}
   </select>
@@ -78,12 +91,14 @@
       This element was generated on Thu Jan 22 16:08:37 ICT 2026.
     -->
     select document_id, company_id, document_category_id, title, description, visibility, 
-    status, created_by, created_at, updated_at
+    status, created_by, created_at, updated_at, content_kind, draft_json, published_json, 
+    published_at, published_by
     from documents
   </select>
   <select id="selectByCompanyId" resultMap="BaseResultMap">
     select document_id, company_id, document_category_id, title, description, visibility,
-    status, created_by, created_at, updated_at
+    status, created_by, created_at, updated_at, content_kind, draft_json, published_json,
+    published_at, published_by
     from documents
     where company_id = #{companyId,jdbcType=VARCHAR}
     order by created_at desc

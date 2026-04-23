@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAttachmentMapper">
+
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentAttachmentEntity">
+    <id column="document_attachment_id" jdbcType="VARCHAR" property="documentAttachmentId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="document_id" jdbcType="VARCHAR" property="documentId" />
+    <result column="file_url" jdbcType="LONGVARCHAR" property="fileUrl" />
+    <result column="file_name" jdbcType="VARCHAR" property="fileName" />
+    <result column="file_type" jdbcType="VARCHAR" property="fileType" />
+    <result column="file_size_bytes" jdbcType="BIGINT" property="fileSizeBytes" />
+    <result column="media_kind" jdbcType="VARCHAR" property="mediaKind" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="uploaded_by" jdbcType="VARCHAR" property="uploadedBy" />
+    <result column="uploaded_at" jdbcType="TIMESTAMP" property="uploadedAt" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentAttachmentEntity">
+    insert into document_attachments (document_attachment_id, company_id, document_id, file_url, file_name,
+      file_type, file_size_bytes, media_kind, status, uploaded_by, uploaded_at)
+    values (#{documentAttachmentId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{documentId,jdbcType=VARCHAR},
+      #{fileUrl,jdbcType=LONGVARCHAR}, #{fileName,jdbcType=VARCHAR}, #{fileType,jdbcType=VARCHAR},
+      #{fileSizeBytes,jdbcType=BIGINT}, #{mediaKind,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR},
+      #{uploadedBy,jdbcType=VARCHAR}, #{uploadedAt,jdbcType=TIMESTAMP})
+  </insert>
+
+  <delete id="deleteByPrimaryKey">
+    delete from document_attachments where document_attachment_id = #{documentAttachmentId,jdbcType=VARCHAR}
+  </delete>
+
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+    select document_attachment_id, company_id, document_id, file_url, file_name, file_type, file_size_bytes,
+           media_kind, status, uploaded_by, uploaded_at
+    from document_attachments
+    where document_attachment_id = #{documentAttachmentId,jdbcType=VARCHAR}
+  </select>
+
+  <select id="selectActiveByCompanyAndDocument" resultMap="BaseResultMap">
+    select document_attachment_id, company_id, document_id, file_url, file_name, file_type, file_size_bytes,
+           media_kind, status, uploaded_by, uploaded_at
+    from document_attachments
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and document_id = #{documentId,jdbcType=VARCHAR}
+      and upper(coalesce(trim(status), '')) = 'ACTIVE'
+    order by uploaded_at desc
+    limit #{limit,jdbcType=INTEGER}
+  </select>
+</mapper>

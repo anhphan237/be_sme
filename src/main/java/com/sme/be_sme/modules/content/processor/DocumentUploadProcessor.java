@@ -58,6 +58,7 @@ public class DocumentUploadProcessor extends BaseBizProcessor<BizContext> {
         doc.setDocumentCategoryId(StringUtils.hasText(request.getDocumentCategoryId()) ? request.getDocumentCategoryId().trim() : null);
         doc.setVisibility("TENANT");
         doc.setStatus("ACTIVE");
+        doc.setContentKind("FILE");
         doc.setCreatedBy(operatorId);
         doc.setCreatedAt(now);
         doc.setUpdatedAt(now);

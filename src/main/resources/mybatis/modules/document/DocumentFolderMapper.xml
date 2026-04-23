@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.document.infrastructure.mapper.DocumentFolderMapper">
+
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentFolderEntity">
+    <id column="folder_id" jdbcType="VARCHAR" property="folderId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="parent_folder_id" jdbcType="VARCHAR" property="parentFolderId" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="sort_order" jdbcType="INTEGER" property="sortOrder" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentFolderEntity">
+    insert into document_folders (folder_id, company_id, parent_folder_id, name, sort_order, status, created_by, created_at, updated_at)
+    values (#{folderId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{parentFolderId,jdbcType=VARCHAR},
+      #{name,jdbcType=VARCHAR}, #{sortOrder,jdbcType=INTEGER}, #{status,jdbcType=VARCHAR}, #{createdBy,jdbcType=VARCHAR},
+      #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
+  </insert>
+
+  <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentFolderEntity">
+    update document_folders
+    set company_id = #{companyId,jdbcType=VARCHAR},
+        parent_folder_id = #{parentFolderId,jdbcType=VARCHAR},
+        name = #{name,jdbcType=VARCHAR},
+        sort_order = #{sortOrder,jdbcType=INTEGER},
+        status = #{status,jdbcType=VARCHAR},
+        created_by = #{createdBy,jdbcType=VARCHAR},
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where folder_id = #{folderId,jdbcType=VARCHAR}
+  </update>
+
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+    select folder_id, company_id, parent_folder_id, name, sort_order, status, created_by, created_at, updated_at
+    from document_folders
+    where folder_id = #{folderId,jdbcType=VARCHAR}
+  </select>
+
+  <select id="selectByCompanyId" resultMap="BaseResultMap">
+    select folder_id, company_id, parent_folder_id, name, sort_order, status, created_by, created_at, updated_at
+    from document_folders
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and upper(coalesce(trim(status), '')) = 'ACTIVE'
+    order by parent_folder_id nulls first, sort_order asc, name asc
+  </select>
+</mapper>

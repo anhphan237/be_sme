@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper">
+
+  <select id="selectByCompanyIdAndContentKind" resultMap="BaseResultMap">
+    select document_id, company_id, document_category_id, title, description, visibility,
+           status, created_by, created_at, updated_at, content_kind, draft_json, published_json,
+           published_at, published_by
+    from documents
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and content_kind = #{contentKind,jdbcType=VARCHAR}
+    order by updated_at desc nulls last, created_at desc
+  </select>
+
+  <sql id="editorDocWhereHr">
+    where d.company_id = #{companyId,jdbcType=VARCHAR}
+      and d.content_kind = #{contentKind,jdbcType=VARCHAR}
+    <if test="titleQuery != null and titleQuery != ''">
+      and d.title ilike concat('%', #{titleQuery,jdbcType=VARCHAR}, '%')
+    </if>
+  </sql>
+
+  <select id="countEditorDocumentsHrPaged" resultType="long">
+    select count(1)
+    from documents d
+    <include refid="editorDocWhereHr"/>
+  </select>
+
+  <select id="selectEditorDocumentsHrPaged" resultMap="BaseResultMap">
+    select d.document_id, d.company_id, d.document_category_id, d.title, d.description, d.visibility,
+           d.status, d.created_by, d.created_at, d.updated_at, d.content_kind, d.draft_json, d.published_json,
+           d.published_at, d.published_by
+    from documents d
+    <include refid="editorDocWhereHr"/>
+    order by d.updated_at desc nulls last, d.created_at desc
+    limit #{limit} offset #{offset}
+  </select>
+
+  <sql id="editorDocAccessMatch">
+    (
+      not exists (
+        select 1
+        from document_access_rules r0
+        where r0.company_id = d.company_id
+          and r0.document_id = d.document_id
+          and upper(trim(coalesce(r0.status, ''))) = 'ACTIVE'
+      )
+      or exists (
+        select 1
+        from document_access_rules r
+        where r.company_id = d.company_id
+          and r.document_id = d.document_id
+          and upper(trim(coalesce(r.status, ''))) = 'ACTIVE'
+          and (
+            (r.role_id is null or length(trim(r.role_id)) = 0)
+            <if test="roleIds != null and roleIds.size() &gt; 0">
+            or r.role_id in
+            <foreach collection="roleIds" item="rid" open="(" separator="," close=")">
+              #{rid,jdbcType=VARCHAR}
+            </foreach>
+            </if>
+          )
+          and (
+            (r.department_id is null or length(trim(r.department_id)) = 0)
+            or (#{departmentId,jdbcType=VARCHAR} is not null and r.department_id = #{departmentId,jdbcType=VARCHAR})
+          )
+      )
+    )
+  </sql>
+
+  <select id="countEditorDocumentsAccessiblePaged" resultType="long">
+    select count(1)
+    from documents d
+    where d.company_id = #{companyId,jdbcType=VARCHAR}
+      and d.content_kind = #{contentKind,jdbcType=VARCHAR}
+    <if test="titleQuery != null and titleQuery != ''">
+      and d.title ilike concat('%', #{titleQuery,jdbcType=VARCHAR}, '%')
+    </if>
+    and <include refid="editorDocAccessMatch"/>
+  </select>
+
+  <select id="selectEditorDocumentsAccessiblePaged" resultMap="BaseResultMap">
+    select d.document_id, d.company_id, d.document_category_id, d.title, d.description, d.visibility,
+           d.status, d.created_by, d.created_at, d.updated_at, d.content_kind, d.draft_json, d.published_json,
+           d.published_at, d.published_by
+    from documents d
+    where d.company_id = #{companyId,jdbcType=VARCHAR}
+      and d.content_kind = #{contentKind,jdbcType=VARCHAR}
+    <if test="titleQuery != null and titleQuery != ''">
+      and d.title ilike concat('%', #{titleQuery,jdbcType=VARCHAR}, '%')
+    </if>
+    and <include refid="editorDocAccessMatch"/>
+    order by d.updated_at desc nulls last, d.created_at desc
+    limit #{limit} offset #{offset}
+  </select>
+</mapper>

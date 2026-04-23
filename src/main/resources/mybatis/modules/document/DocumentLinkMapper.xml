@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.document.infrastructure.mapper.DocumentLinkMapper">
+
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentLinkEntity">
+    <id column="document_link_id" jdbcType="VARCHAR" property="documentLinkId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="source_document_id" jdbcType="VARCHAR" property="sourceDocumentId" />
+    <result column="target_document_id" jdbcType="VARCHAR" property="targetDocumentId" />
+    <result column="link_type" jdbcType="VARCHAR" property="linkType" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentLinkEntity">
+    insert into document_links (document_link_id, company_id, source_document_id, target_document_id,
+      link_type, status, created_by, created_at)
+    values (#{documentLinkId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{sourceDocumentId,jdbcType=VARCHAR},
+      #{targetDocumentId,jdbcType=VARCHAR}, #{linkType,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR},
+      #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP})
+  </insert>
+
+  <delete id="deleteByPrimaryKey">
+    delete from document_links where document_link_id = #{documentLinkId,jdbcType=VARCHAR}
+  </delete>
+
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+    select document_link_id, company_id, source_document_id, target_document_id, link_type, status, created_by, created_at
+    from document_links
+    where document_link_id = #{documentLinkId,jdbcType=VARCHAR}
+  </select>
+
+  <select id="selectActiveOutgoingByCompanyAndSource" resultMap="BaseResultMap">
+    select document_link_id, company_id, source_document_id, target_document_id, link_type, status, created_by, created_at
+    from document_links
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and source_document_id = #{sourceDocumentId,jdbcType=VARCHAR}
+      and upper(coalesce(trim(status), '')) = 'ACTIVE'
+    order by created_at desc
+    limit #{limit,jdbcType=INTEGER}
+  </select>
+
+  <select id="selectActiveIncomingByCompanyAndTarget" resultMap="BaseResultMap">
+    select document_link_id, company_id, source_document_id, target_document_id, link_type, status, created_by, created_at
+    from document_links
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and target_document_id = #{targetDocumentId,jdbcType=VARCHAR}
+      and upper(coalesce(trim(status), '')) = 'ACTIVE'
+    order by created_at desc
+    limit #{limit,jdbcType=INTEGER}
+  </select>
+</mapper>

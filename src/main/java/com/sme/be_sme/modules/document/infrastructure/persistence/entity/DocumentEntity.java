@@ -332,4 +332,55 @@ public class DocumentEntity {
     public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    /** FILE (default) or EDITOR — see DB migration V59 */
+    private String contentKind;
+
+    private String draftJson;
+
+    private String publishedJson;
+
+    private Date publishedAt;
+
+    private String publishedBy;
+
+    public String getContentKind() {
+        return contentKind;
+    }
+
+    public void setContentKind(String contentKind) {
+        this.contentKind = contentKind == null ? null : contentKind.trim();
+    }
+
+    public String getDraftJson() {
+        return draftJson;
+    }
+
+    public void setDraftJson(String draftJson) {
+        this.draftJson = draftJson;
+    }
+
+    public String getPublishedJson() {
+        return publishedJson;
+    }
+
+    public void setPublishedJson(String publishedJson) {
+        this.publishedJson = publishedJson;
+    }
+
+    public Date getPublishedAt() {
+        return publishedAt;
+    }
+
+    public void setPublishedAt(Date publishedAt) {
+        this.publishedAt = publishedAt;
+    }
+
+    public String getPublishedBy() {
+        return publishedBy;
+    }
+
+    public void setPublishedBy(String publishedBy) {
+        this.publishedBy = publishedBy == null ? null : publishedBy.trim();
+    }
 }

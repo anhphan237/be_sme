@@ -33,6 +33,11 @@ public interface UserRoleMapperExt {
             @Param("userId") String userId
     );
 
+    List<String> selectRoleIdsByCompanyAndUser(
+            @Param("companyId") String companyId,
+            @Param("userId") String userId
+    );
+
     int updateRoleForUser(
             @Param("companyId") String companyId,
             @Param("userId") String userId,

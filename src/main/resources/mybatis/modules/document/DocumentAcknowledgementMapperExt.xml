@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAcknowledgementMapper">
+
+  <select id="selectByCompanyAndDocumentOrderByLastInteraction" resultMap="BaseResultMap">
+    select document_acknowledgement_id, company_id, document_id, user_id, onboarding_id,
+           status, read_at, acked_at, created_at
+    from document_acknowledgements
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and document_id = #{documentId,jdbcType=VARCHAR}
+    order by coalesce(read_at, acked_at, created_at) desc nulls last
+    limit #{limit,jdbcType=INTEGER}
+  </select>
+</mapper>

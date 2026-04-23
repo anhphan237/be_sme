@@ -49,4 +49,6 @@ public interface DocumentVersionMapper {
     int updateByPrimaryKey(DocumentVersionEntity row);
 
     List<DocumentVersionEntity> selectByDocumentId(@Param("documentId") String documentId);
+
+    Integer selectMaxVersionNoByDocumentId(@Param("documentId") String documentId);
 }

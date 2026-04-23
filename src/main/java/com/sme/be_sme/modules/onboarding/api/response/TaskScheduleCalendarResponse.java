@@ -20,9 +20,11 @@ public class TaskScheduleCalendarResponse {
     public static class CalendarItem {
         private Date scheduledStartAt;
         private Date scheduledEndAt;
+        private Date dueDate;
         private String taskId;
         private String title;
         private String status;
+        private Boolean done;
         private String onboardingId;
         private String checklistName;
     }
