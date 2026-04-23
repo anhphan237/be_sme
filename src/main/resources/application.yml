@@ -93,3 +93,7 @@ logging:
 
 server:
   port: ${PORT:8080}
+
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  model: gpt-5.4-mini
