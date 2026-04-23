@@ -67,22 +67,41 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
         String inputHash = sha256(toStableJson(inputForHash));
         boolean forceRefresh = Boolean.TRUE.equals(request.getForceRefresh());
 
-        if (!forceRefresh) {
-            SurveyAiSummaryEntity cached = surveyAiSummaryMapper.selectByCacheKey(
-                    companyId,
-                    trimToNull(request.getTemplateId()),
-                    request.getStartDate(),
-                    request.getEndDate(),
-                    language,
-                    inputHash
-            );
+        SurveyAiSummaryEntity cached = surveyAiSummaryMapper.selectByCacheKey(
+                companyId,
+                trimToNull(request.getTemplateId()),
+                request.getStartDate(),
+                request.getEndDate(),
+                language,
+                inputHash
+        );
 
-            if (cached != null) {
-                return toResponse(cached, true);
-            }
+        // Bình thường: có cache thì trả luôn
+        if (!forceRefresh && cached != null) {
+            return toResponse(
+                    cached,
+                    true,
+                    "CACHE",
+                    null
+            );
         }
 
-        checkRateLimit(companyId, operatorId);
+        // Nếu user bấm refresh quá nhiều mà đã có cache, trả cache cũ thay vì chặn cứng
+        if (isRateLimited(companyId, operatorId)) {
+            if (cached != null) {
+                return toResponse(
+                        cached,
+                        true,
+                        "CACHE_STALE",
+                        "Đang hiển thị bản tóm tắt gần nhất vì bạn vừa làm mới AI quá nhiều lần trong thời gian ngắn."
+                );
+            }
+
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "Bạn vừa tạo tóm tắt AI quá nhiều lần trong thời gian ngắn. Vui lòng thử lại sau ít phút."
+            );
+        }
 
         JsonNode promptInput = buildPromptInput(
                 request,
@@ -90,32 +109,71 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
                 sanitizedSnapshot
         );
 
-        SurveyAiSummaryResponse aiResponse;
         try {
             String prompt = buildPrompt(promptInput, language);
             String raw = surveyOpenAiSummaryService.generateRawJson(prompt);
 
-            aiResponse = objectMapper.readValue(
+            SurveyAiSummaryResponse aiResponse = objectMapper.readValue(
                     extractJson(raw),
                     SurveyAiSummaryResponse.class
             );
 
             normalizeAiResponse(aiResponse);
+
             aiResponse.setSource("AI");
             aiResponse.setAiAvailable(true);
             aiResponse.setErrorMessage(null);
             aiResponse.setFromCache(false);
             aiResponse.setGeneratedAt(new Date());
+
+            saveCache(
+                    companyId,
+                    operatorId,
+                    request,
+                    language,
+                    inputHash,
+                    aiResponse
+            );
+
+            return aiResponse;
+
         } catch (Exception e) {
+            // Nếu AI fail mà đã có cache cũ, trả cache cũ cho mượt
+            if (cached != null) {
+                return toResponse(
+                        cached,
+                        true,
+                        "CACHE_STALE",
+                        buildAiUnavailableMessage(language, e)
+                );
+            }
+
             return buildFallbackResponse(language, e);
         }
+    }
 
+    private boolean isRateLimited(String companyId, String operatorId) {
+        Date since = new Date(System.currentTimeMillis() - 5L * 60L * 1000L);
+
+        int count = surveyAiSummaryMapper.countGeneratedSince(
+                companyId,
+                operatorId,
+                since
+        );
+
+        return count >= MAX_GENERATE_PER_USER_PER_5_MINUTES;
+    }
+
+    private void saveCache(
+            String companyId,
+            String operatorId,
+            SurveyAiSummaryRequest request,
+            String language,
+            String inputHash,
+            SurveyAiSummaryResponse aiResponse
+    ) {
         Date now = new Date();
         aiResponse.setGeneratedAt(now);
-
-        if (!Boolean.TRUE.equals(aiResponse.getAiAvailable())) {
-            return aiResponse;
-        }
 
         SurveyAiSummaryEntity entity = new SurveyAiSummaryEntity();
         entity.setSummaryId(UuidGenerator.generate());
@@ -131,43 +189,30 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
         entity.setGeneratedBy(operatorId);
 
         surveyAiSummaryMapper.insert(entity);
-
-        return aiResponse;
     }
 
-    private void checkRateLimit(String companyId, String operatorId) {
-        Date since = new Date(System.currentTimeMillis() - 5L * 60L * 1000L);
-
-        int count = surveyAiSummaryMapper.countGeneratedSince(
-                companyId,
-                operatorId,
-                since
-        );
-
-        if (count >= MAX_GENERATE_PER_USER_PER_5_MINUTES) {
-            throw AppException.of(
-                    ErrorCodes.BAD_REQUEST,
-                    "Bạn vừa tạo tóm tắt AI quá nhiều lần trong thời gian ngắn. Vui lòng thử lại sau ít phút."
-            );
-        }
-    }
-
-    private SurveyAiSummaryResponse toResponse(SurveyAiSummaryEntity entity, boolean fromCache) {
+    private SurveyAiSummaryResponse toResponse(
+            SurveyAiSummaryEntity entity,
+            boolean fromCache,
+            String source,
+            String errorMessage
+    ) {
         try {
             SurveyAiSummaryResponse response =
                     objectMapper.readValue(entity.getSummaryJson(), SurveyAiSummaryResponse.class);
 
+            normalizeAiResponse(response);
+
             response.setFromCache(fromCache);
             response.setGeneratedAt(entity.getGeneratedAt());
-            response.setSource("CACHE");
+            response.setSource(source);
             response.setAiAvailable(true);
-            response.setErrorMessage(null);
+            response.setErrorMessage(errorMessage);
 
             if (!StringUtils.hasText(response.getHealthLevel())) {
                 response.setHealthLevel(entity.getHealthLevel());
             }
 
-            normalizeAiResponse(response);
             return response;
         } catch (Exception e) {
             throw AppException.of(
@@ -178,6 +223,45 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
     }
 
     private SurveyAiSummaryResponse buildFallbackResponse(String language, Exception e) {
+        boolean english = language != null && language.toLowerCase().startsWith("en");
+
+        SurveyAiSummaryResponse fallback = new SurveyAiSummaryResponse();
+        fallback.setHealthLevel("WARNING");
+        fallback.setSource("FALLBACK");
+        fallback.setAiAvailable(false);
+        fallback.setFromCache(false);
+        fallback.setGeneratedAt(new Date());
+
+        fallback.setSummary(english
+                ? "AI summary is temporarily unavailable. Please review the survey dashboard metrics directly."
+                : "Hiện hệ thống chưa thể tạo tóm tắt AI. HR vẫn có thể theo dõi tình hình qua KPI, biểu đồ và phần tóm tắt mặc định.");
+
+        fallback.setKeyFindings(new ArrayList<>(List.of(
+                english
+                        ? "The AI provider could not generate a summary at this moment."
+                        : "Tóm tắt AI chưa khả dụng tại thời điểm này.",
+                english
+                        ? "The survey dashboard metrics are still available for review."
+                        : "Các chỉ số khảo sát trên dashboard vẫn đầy đủ để HR theo dõi và đánh giá."
+        )));
+
+        fallback.setRecommendedActions(new ArrayList<>(List.of(
+                english
+                        ? "Use the standard summary and dashboard charts for now."
+                        : "Tạm thời sử dụng phần tóm tắt mặc định và các biểu đồ trên dashboard.",
+                english
+                        ? "Try generating the AI summary again later."
+                        : "Thử tạo lại tóm tắt AI sau ít phút."
+        )));
+
+        fallback.setRiskExplanation("");
+        fallback.setPositiveSignal("");
+        fallback.setErrorMessage(buildAiUnavailableMessage(language, e));
+
+        return fallback;
+    }
+
+    private String buildAiUnavailableMessage(String language, Exception e) {
         boolean english = language != null && language.toLowerCase().startsWith("en");
 
         String message = e == null || e.getMessage() == null
@@ -191,49 +275,15 @@ public class SurveyAnalyticsAiSummaryProcessor extends BaseBizProcessor<BizConte
                         || message.toLowerCase().contains("rate limit")
                         || message.toLowerCase().contains("resource exhausted");
 
-        SurveyAiSummaryResponse fallback = new SurveyAiSummaryResponse();
-        fallback.setHealthLevel("WARNING");
-        fallback.setSource("FALLBACK");
-        fallback.setAiAvailable(false);
-        fallback.setFromCache(false);
-        fallback.setGeneratedAt(new Date());
-
-        fallback.setSummary(english
-                ? "AI summary is temporarily unavailable. Please review the survey dashboard metrics directly."
-                : "Hiện hệ thống chưa thể tạo tóm tắt AI. HR vẫn có thể theo dõi tình hình qua các chỉ số, biểu đồ và phần tóm tắt mặc định trên dashboard.");
-
-        fallback.setKeyFindings(new ArrayList<>(List.of(
-                english
-                        ? "The AI provider could not generate a summary at this moment."
-                        : "Tóm tắt AI chưa khả dụng tại thời điểm này.",
-                english
-                        ? "The dashboard metrics are still available and can be used for manual review."
-                        : "Các chỉ số khảo sát trên dashboard vẫn đầy đủ để HR theo dõi và đánh giá."
-        )));
-
-        fallback.setRecommendedActions(new ArrayList<>(List.of(
-                english
-                        ? "Use the rule-based summary and dashboard charts for now."
-                        : "Tạm thời sử dụng phần tóm tắt mặc định và các biểu đồ trên dashboard.",
-                english
-                        ? "Try generating the AI summary again later."
-                        : "Thử tạo lại tóm tắt AI sau vài phút."
-        )));
-
-        fallback.setRiskExplanation("");
-        fallback.setPositiveSignal("");
-
         if (quotaError) {
-            fallback.setErrorMessage(english
-                    ? "The AI service is currently busy or has reached its usage limit. Please try again later."
-                    : "Dịch vụ AI đang tạm quá tải hoặc đã chạm giới hạn sử dụng. Vui lòng thử lại sau.");
-        } else {
-            fallback.setErrorMessage(english
-                    ? "The AI summary could not be generated right now."
-                    : "Hiện chưa thể tạo tóm tắt AI. Vui lòng thử lại sau.");
+            return english
+                    ? "The AI service is temporarily busy or has reached its usage limit. Showing the latest available summary."
+                    : "Dịch vụ AI đang tạm quá tải hoặc đã chạm giới hạn sử dụng. Hệ thống sẽ ưu tiên hiển thị bản tóm tắt gần nhất nếu có.";
         }
 
-        return fallback;
+        return english
+                ? "The AI summary could not be generated right now."
+                : "Hiện chưa thể tạo tóm tắt AI. Vui lòng thử lại sau.";
     }
 
     private JsonNode buildPromptInput(
