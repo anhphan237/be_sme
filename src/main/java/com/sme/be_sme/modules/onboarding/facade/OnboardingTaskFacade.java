@@ -9,6 +9,7 @@ import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskUpdateStatusR
 import com.sme.be_sme.modules.onboarding.api.request.TaskAttachmentAddRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskCommentAddRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskCommentListRequest;
+import com.sme.be_sme.modules.onboarding.api.request.TaskCommentTreeRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskScheduleCancelRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskScheduleCalendarRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskScheduleConfirmRequest;
@@ -24,6 +25,7 @@ import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskAttachmentAddResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskCommentAddResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskCommentListResponse;
+import com.sme.be_sme.modules.onboarding.api.response.TaskCommentTreeResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskDetailResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskListByAssigneeResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskListByOnboardingResponse;
@@ -61,6 +63,9 @@ public interface OnboardingTaskFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.onboarding.task.comment.list")
     TaskCommentListResponse listTaskComments(TaskCommentListRequest request);
+
+    @OperationType("com.sme.onboarding.task.comment.tree")
+    TaskCommentTreeResponse treeTaskComments(TaskCommentTreeRequest request);
 
     @OperationType("com.sme.onboarding.task.listByOnboarding")
     TaskListByOnboardingResponse listTasksByOnboarding(TaskListByOnboardingRequest request);

@@ -38,6 +38,12 @@ import java.util.stream.Collectors;
             return true;
         }
 
+        // Onboarding task comments: any authenticated tenant user may invoke comment operations;
+        // fine-grained access per task/comment is enforced in processors.
+        if (requiredPerm != null && requiredPerm.startsWith("com.sme.onboarding.task.comment.") && !rolesUpper.isEmpty()) {
+            return true;
+        }
+
         // user.list: STAFF (platform) can view list
         if ("com.sme.identity.user.list".equals(requiredPerm) && rolesUpper.contains("STAFF")) {
             return true;
@@ -57,6 +63,7 @@ import java.util.stream.Collectors;
                     || "com.sme.onboarding.task.detail".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.comment.add".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.comment.list".equalsIgnoreCase(perm)
+                    || "com.sme.onboarding.task.comment.tree".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.acknowledge".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.attachment.add".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.task.schedule.list".equalsIgnoreCase(perm)
