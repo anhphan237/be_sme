@@ -47,4 +47,12 @@
       and upper(coalesce(trim(status), '')) = 'ACTIVE'
     order by parent_folder_id nulls first, sort_order asc, name asc
   </select>
+
+  <select id="countActiveChildrenByCompanyAndParentId" resultType="int">
+    select count(1)
+    from document_folders
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and parent_folder_id = #{parentFolderId,jdbcType=VARCHAR}
+      and upper(coalesce(trim(status), '')) = 'ACTIVE'
+  </select>
 </mapper>

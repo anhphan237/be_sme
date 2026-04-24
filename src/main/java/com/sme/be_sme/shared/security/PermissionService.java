@@ -32,6 +32,12 @@ import java.util.stream.Collectors;
             return true;
         }
 
+        // Document editor / collaboration: any authenticated tenant user may invoke gateway operations;
+        // fine-grained access per document is enforced in processors (e.g. DocumentAccessEvaluator).
+        if (requiredPerm != null && requiredPerm.startsWith("com.sme.document.") && !rolesUpper.isEmpty()) {
+            return true;
+        }
+
         // user.list: STAFF (platform) can view list
         if ("com.sme.identity.user.list".equals(requiredPerm) && rolesUpper.contains("STAFF")) {
             return true;
@@ -72,6 +78,7 @@ import java.util.stream.Collectors;
                     || "com.sme.document.read.list".equalsIgnoreCase(perm)
                     || "com.sme.document.folder.list".equalsIgnoreCase(perm)
                     || "com.sme.document.folder.tree".equalsIgnoreCase(perm)
+                    || "com.sme.document.folder.delete".equalsIgnoreCase(perm)
                     || "com.sme.document.comment.list".equalsIgnoreCase(perm)
                     || "com.sme.document.comment.add".equalsIgnoreCase(perm)
                     || "com.sme.document.comment.delete".equalsIgnoreCase(perm)

@@ -27,6 +27,7 @@ public class DocumentEditorFacadeImpl extends BaseOperationFacade implements Doc
     private final DocumentFolderMoveProcessor documentFolderMoveProcessor;
     private final DocumentFolderListProcessor documentFolderListProcessor;
     private final DocumentFolderTreeProcessor documentFolderTreeProcessor;
+    private final DocumentFolderDeleteProcessor documentFolderDeleteProcessor;
     private final DocumentFolderAddDocumentProcessor documentFolderAddDocumentProcessor;
     private final DocumentFolderRemoveDocumentProcessor documentFolderRemoveDocumentProcessor;
     private final DocumentCommentAddProcessor documentCommentAddProcessor;
@@ -124,6 +125,11 @@ public class DocumentEditorFacadeImpl extends BaseOperationFacade implements Doc
     @Override
     public DocumentFolderTreeResponse folderTree(DocumentFolderTreeRequest request) {
         return call(documentFolderTreeProcessor, request, DocumentFolderTreeResponse.class);
+    }
+
+    @Override
+    public DocumentFolderDeleteResponse deleteFolder(DocumentFolderDeleteRequest request) {
+        return call(documentFolderDeleteProcessor, request, DocumentFolderDeleteResponse.class);
     }
 
     @Override
