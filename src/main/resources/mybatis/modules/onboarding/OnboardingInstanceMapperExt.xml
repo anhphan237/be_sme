@@ -10,4 +10,11 @@
     where status = 'ACTIVE'
       and start_date = #{startDate,jdbcType=DATE}
   </select>
+    <select id="selectManagerUserIdByOnboardingId" resultType="java.lang.String">
+        SELECT manager_user_id
+        FROM onboarding_instances
+        WHERE company_id = #{companyId}
+        AND onboarding_id = #{onboardingId}
+        LIMIT 1
+    </select>
 </mapper>
