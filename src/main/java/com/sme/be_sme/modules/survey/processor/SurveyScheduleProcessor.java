@@ -3,10 +3,10 @@ package com.sme.be_sme.modules.survey.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapper;
-import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
 import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
 import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
 import com.sme.be_sme.modules.notification.service.NotificationService;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapperExt;
 import com.sme.be_sme.modules.survey.api.request.SurveyScheduleRequest;
 import com.sme.be_sme.modules.survey.api.response.SurveyScheduleResponse;
 import com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyInstanceMapper;
@@ -46,7 +46,7 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
     private final SurveyInstanceMapper surveyInstanceMapper;
     private final SurveyInstanceMapperExt surveyInstanceMapperExt;
     private final UserMapper userMapper;
-    private final UserMapperExt userMapperExt;
+    private final OnboardingInstanceMapperExt onboardingInstanceMapperExt;
     private final NotificationService notificationService;
 
     @Override
@@ -94,12 +94,14 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         validateTargetRole(targetRole);
 
         String actualResponderUserId = resolveActualResponderUserId(
+                context.getTenantId(),
+                request.getOnboardingId().trim(),
                 request.getResponderUserId().trim(),
                 targetRole
         );
 
         UserEntity actualUser = userMapper.selectByPrimaryKey(actualResponderUserId);
-        if (actualUser == null) {
+        if (actualUser == null || !context.getTenantId().equals(actualUser.getCompanyId())) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "responder user not found");
         }
 
@@ -184,7 +186,12 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
         return entity.getSurveyInstanceId();
     }
 
-    private String resolveActualResponderUserId(String responderUserId, String targetRole) {
+    private String resolveActualResponderUserId(
+            String companyId,
+            String onboardingId,
+            String responderUserId,
+            String targetRole
+    ) {
         if (!StringUtils.hasText(responderUserId)) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "responderUserId is required");
         }
@@ -193,12 +200,21 @@ public class SurveyScheduleProcessor extends BaseBizProcessor<BizContext> {
             return responderUserId;
         }
 
-        String managerId = userMapperExt.selectManagerUserIdByUserId(responderUserId);
-        if (!StringUtils.hasText(managerId)) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "manager not found for employee");
+        String assignedManagerUserId =
+                onboardingInstanceMapperExt.selectManagerUserIdByOnboardingId(companyId, onboardingId);
+
+        if (!StringUtils.hasText(assignedManagerUserId)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "onboarding manager is not assigned");
         }
 
-        return managerId;
+        if (!assignedManagerUserId.equals(responderUserId)) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "selected responder is not the assigned manager of this onboarding"
+            );
+        }
+
+        return responderUserId;
     }
 
     private void notifySurveyReady(SurveyInstanceEntity entity) {

@@ -14,4 +14,9 @@ public interface OnboardingInstanceMapperExt {
      * Instances with start_date = the given date and status = ACTIVE (for pre-first-day email).
      */
     List<OnboardingInstanceEntity> selectByStartDateAndActive(@Param("startDate") Date startDate);
+
+    String selectManagerUserIdByOnboardingId(
+            @Param("companyId") String companyId,
+            @Param("onboardingId") String onboardingId
+    );
 }
