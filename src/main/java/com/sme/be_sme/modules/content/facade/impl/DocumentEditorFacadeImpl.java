@@ -32,6 +32,7 @@ public class DocumentEditorFacadeImpl extends BaseOperationFacade implements Doc
     private final DocumentFolderRemoveDocumentProcessor documentFolderRemoveDocumentProcessor;
     private final DocumentCommentAddProcessor documentCommentAddProcessor;
     private final DocumentCommentListProcessor documentCommentListProcessor;
+    private final DocumentCommentTreeProcessor documentCommentTreeProcessor;
     private final DocumentCommentDeleteProcessor documentCommentDeleteProcessor;
     private final DocumentCommentUpdateProcessor documentCommentUpdateProcessor;
     private final DocumentAccessRuleAddProcessor documentAccessRuleAddProcessor;
@@ -150,6 +151,11 @@ public class DocumentEditorFacadeImpl extends BaseOperationFacade implements Doc
     @Override
     public DocumentCommentListResponse listComments(DocumentCommentListRequest request) {
         return call(documentCommentListProcessor, request, DocumentCommentListResponse.class);
+    }
+
+    @Override
+    public DocumentCommentTreeResponse treeComments(DocumentCommentTreeRequest request) {
+        return call(documentCommentTreeProcessor, request, DocumentCommentTreeResponse.class);
     }
 
     @Override

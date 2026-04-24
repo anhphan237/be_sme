@@ -70,6 +70,9 @@ public interface DocumentEditorFacade extends OperationFacadeProvider {
     @OperationType("com.sme.document.comment.list")
     DocumentCommentListResponse listComments(DocumentCommentListRequest request);
 
+    @OperationType("com.sme.document.comment.tree")
+    DocumentCommentTreeResponse treeComments(DocumentCommentTreeRequest request);
+
     @OperationType("com.sme.document.comment.delete")
     DocumentCommentDeleteResponse deleteComment(DocumentCommentDeleteRequest request);
 
