@@ -16,4 +16,8 @@ public interface DocumentFolderMapper {
     DocumentFolderEntity selectByPrimaryKey(@Param("folderId") String folderId);
 
     List<DocumentFolderEntity> selectByCompanyId(@Param("companyId") String companyId);
+
+    int countActiveChildrenByCompanyAndParentId(
+            @Param("companyId") String companyId,
+            @Param("parentFolderId") String parentFolderId);
 }

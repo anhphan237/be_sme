@@ -78,6 +78,7 @@ import java.util.stream.Collectors;
                     || "com.sme.document.read.list".equalsIgnoreCase(perm)
                     || "com.sme.document.folder.list".equalsIgnoreCase(perm)
                     || "com.sme.document.folder.tree".equalsIgnoreCase(perm)
+                    || "com.sme.document.folder.delete".equalsIgnoreCase(perm)
                     || "com.sme.document.comment.list".equalsIgnoreCase(perm)
                     || "com.sme.document.comment.add".equalsIgnoreCase(perm)
                     || "com.sme.document.comment.delete".equalsIgnoreCase(perm)
