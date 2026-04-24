@@ -9,6 +9,8 @@ import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAcknowledge
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentAcknowledgementEntity;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentEntity;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
+import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -28,6 +30,7 @@ public class DocumentReadListProcessor extends BaseBizProcessor<BizContext> {
     private final DocumentMapper documentMapper;
     private final DocumentAcknowledgementMapper documentAcknowledgementMapper;
     private final DocumentAccessEvaluator documentAccessEvaluator;
+    private final UserMapperExt userMapperExt;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -60,6 +63,11 @@ public class DocumentReadListProcessor extends BaseBizProcessor<BizContext> {
             for (DocumentAcknowledgementEntity r : rows) {
                 DocumentReadListResponse.ReadRow item = new DocumentReadListResponse.ReadRow();
                 item.setUserId(r.getUserId());
+                UserEntity user = userMapperExt.selectByCompanyIdAndUserId(companyId, r.getUserId());
+                if (user != null) {
+                    item.setFullName(user.getFullName());
+                    item.setEmail(user.getEmail());
+                }
                 item.setStatus(r.getStatus());
                 item.setReadAt(r.getReadAt());
                 item.setAckedAt(r.getAckedAt());

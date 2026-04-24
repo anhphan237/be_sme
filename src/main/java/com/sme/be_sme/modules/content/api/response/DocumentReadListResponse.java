@@ -16,6 +16,8 @@ public class DocumentReadListResponse {
     @Setter
     public static class ReadRow {
         private String userId;
+        private String fullName;
+        private String email;
         private String status;
         private Date readAt;
         private Date ackedAt;
