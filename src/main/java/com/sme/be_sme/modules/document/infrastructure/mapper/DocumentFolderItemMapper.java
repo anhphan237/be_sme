@@ -21,6 +21,8 @@ public interface DocumentFolderItemMapper {
             @Param("companyId") String companyId,
             @Param("folderId") String folderId);
 
+    List<DocumentFolderItemEntity> selectByCompanyId(@Param("companyId") String companyId);
+
     int countByCompanyIdAndFolderId(
             @Param("companyId") String companyId,
             @Param("folderId") String folderId);

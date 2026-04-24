@@ -38,6 +38,13 @@
     order by created_at desc
   </select>
 
+  <select id="selectByCompanyId" resultMap="BaseResultMap">
+    select document_folder_item_id, company_id, folder_id, document_id, created_at
+    from document_folder_items
+    where company_id = #{companyId,jdbcType=VARCHAR}
+    order by created_at desc
+  </select>
+
   <select id="countByCompanyIdAndFolderId" resultType="int">
     select count(1)
     from document_folder_items

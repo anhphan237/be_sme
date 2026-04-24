@@ -55,6 +55,9 @@ public interface DocumentEditorFacade extends OperationFacadeProvider {
     @OperationType("com.sme.document.folder.tree")
     DocumentFolderTreeResponse folderTree(DocumentFolderTreeRequest request);
 
+    @OperationType("com.sme.document.folder.treeWithDocuments")
+    DocumentFolderTreeWithDocumentsResponse folderTreeWithDocuments(DocumentFolderTreeWithDocumentsRequest request);
+
     @OperationType("com.sme.document.folder.delete")
     DocumentFolderDeleteResponse deleteFolder(DocumentFolderDeleteRequest request);
 
