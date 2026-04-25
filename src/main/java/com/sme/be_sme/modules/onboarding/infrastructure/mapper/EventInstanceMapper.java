@@ -11,6 +11,11 @@ import java.util.List;
 public interface EventInstanceMapper {
     int insert(EventInstanceEntity row);
 
+    EventInstanceEntity selectByCompanyIdAndEventInstanceId(
+            @Param("companyId") String companyId,
+            @Param("eventInstanceId") String eventInstanceId
+    );
+
     List<EventInstanceEntity> selectReadyToNotify(
             @Param("windowStart") Date windowStart,
             @Param("windowEnd") Date windowEnd,
