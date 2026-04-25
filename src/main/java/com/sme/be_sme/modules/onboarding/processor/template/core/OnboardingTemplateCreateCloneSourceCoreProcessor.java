@@ -118,6 +118,9 @@ public class OnboardingTemplateCreateCloneSourceCoreProcessor extends BaseCorePr
         item.setDescription(row.getDescription());
         item.setOwnerType(row.getOwnerType());
         item.setOwnerRefId(row.getOwnerRefId());
+        if (StringUtils.hasText(row.getOwnerType()) && "DEPARTMENT".equalsIgnoreCase(row.getOwnerType().trim())) {
+            item.setResponsibleDepartmentId(row.getOwnerRefId());
+        }
         item.setDueDaysOffset(row.getDueDaysOffset());
         item.setRequireAck(row.getRequireAck());
         item.setRequireDoc(row.getRequireDoc());

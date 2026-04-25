@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.onboarding.infrastructure.persistence.model.Checkl
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.model.TaskTemplateRow;
 import com.sme.be_sme.shared.gateway.core.BaseCoreProcessor;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -74,6 +75,10 @@ public class OnboardingTemplateGetBuildResponseCoreProcessor extends BaseCorePro
         x.setDescription(r.getDescription());
         x.setOwnerType(r.getOwnerType());
         x.setOwnerRefId(r.getOwnerRefId());
+        if (StringUtils.hasText(r.getOwnerType())
+                && "DEPARTMENT".equalsIgnoreCase(r.getOwnerType().trim())) {
+            x.setResponsibleDepartmentId(r.getOwnerRefId());
+        }
         x.setDueDaysOffset(r.getDueDaysOffset());
         x.setRequireAck(r.getRequireAck());
         x.setRequireDoc(r.getRequireDoc());

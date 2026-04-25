@@ -47,7 +47,10 @@ public class OnboardingInstanceCreateLoadTemplateCoreProcessor
         List<String> invalidTasks = baselineTaskRows == null
                 ? List.of()
                 : baselineTaskRows.stream()
-                        .filter(task -> task != null && !StringUtils.hasText(task.getOwnerType()))
+                        .filter(task -> task != null
+                                && (!StringUtils.hasText(task.getOwnerType())
+                                || ("DEPARTMENT".equalsIgnoreCase(task.getOwnerType().trim())
+                                && !StringUtils.hasText(task.getOwnerRefId()))))
                         .map(task -> {
                             String taskId = StringUtils.hasText(task.getTaskTemplateId())
                                     ? task.getTaskTemplateId().trim()

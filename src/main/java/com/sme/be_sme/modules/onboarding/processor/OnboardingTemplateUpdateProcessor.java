@@ -26,6 +26,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -313,8 +314,8 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
             if (taskItem.getOwnerType() != null) {
                 taskEntity.setOwnerType(trimToNull(taskItem.getOwnerType()));
             }
-            if (taskItem.getOwnerRefId() != null) {
-                taskEntity.setOwnerRefId(trimToNull(taskItem.getOwnerRefId()));
+            if (taskItem.getOwnerRefId() != null || taskItem.getResponsibleDepartmentId() != null) {
+                taskEntity.setOwnerRefId(resolveOwnerRefId(taskItem));
             }
             if (taskItem.getDueDaysOffset() != null) {
                 taskEntity.setDueDaysOffset(taskItem.getDueDaysOffset());
@@ -336,6 +337,10 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
             }
             if (taskItem.getApproverUserId() != null) {
                 taskEntity.setApproverUserId(trimToNull(taskItem.getApproverUserId()));
+            }
+            if ("DEPARTMENT".equalsIgnoreCase(trimToNull(taskEntity.getOwnerType()))
+                    && !StringUtils.hasText(taskEntity.getOwnerRefId())) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "responsibleDepartmentId is required when ownerType=DEPARTMENT");
             }
             taskEntity.setSortOrder(
                     taskItem.getSortOrder() != null
@@ -460,5 +465,18 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
 
     private static String trimToNull(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    private static String resolveOwnerRefId(TaskTemplateUpdateItem taskItem) {
+        String ownerType = StringUtils.hasText(taskItem.getOwnerType())
+                ? taskItem.getOwnerType().trim().toUpperCase(Locale.US)
+                : null;
+        if ("DEPARTMENT".equals(ownerType) && StringUtils.hasText(taskItem.getResponsibleDepartmentId())) {
+            return taskItem.getResponsibleDepartmentId().trim();
+        }
+        if ("DEPARTMENT".equals(ownerType) && !StringUtils.hasText(taskItem.getOwnerRefId())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "responsibleDepartmentId is required when ownerType=DEPARTMENT");
+        }
+        return trimToNull(taskItem.getOwnerRefId());
     }
 }
