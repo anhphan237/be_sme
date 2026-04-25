@@ -59,6 +59,14 @@
     limit 1
   </select>
 
+  <select id="selectByCompanyIdOrderByEventAtDesc" resultMap="BaseResultMap">
+    select event_instance_id, company_id, event_template_id, event_at, source_type, source_department_ids, source_user_ids,
+           participant_user_ids, status, notified_at, created_by, created_at, updated_at
+    from event_instances
+    where company_id = #{companyId,jdbcType=VARCHAR}
+    order by event_at desc nulls last, created_at desc
+  </select>
+
   <select id="selectReadyToNotify" resultMap="BaseResultMap">
     select event_instance_id, company_id, event_template_id, event_at, source_type, source_department_ids, source_user_ids,
            participant_user_ids, status, notified_at, created_by, created_at, updated_at

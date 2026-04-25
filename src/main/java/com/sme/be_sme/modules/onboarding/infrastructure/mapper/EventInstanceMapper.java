@@ -16,6 +16,10 @@ public interface EventInstanceMapper {
             @Param("eventInstanceId") String eventInstanceId
     );
 
+    List<EventInstanceEntity> selectByCompanyIdOrderByEventAtDesc(
+            @Param("companyId") String companyId
+    );
+
     List<EventInstanceEntity> selectReadyToNotify(
             @Param("windowStart") Date windowStart,
             @Param("windowEnd") Date windowEnd,
