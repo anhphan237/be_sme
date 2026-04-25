@@ -44,4 +44,14 @@
     where company_id = #{companyId,jdbcType=VARCHAR}
       and event_template_id = #{eventTemplateId,jdbcType=VARCHAR}
   </select>
+
+  <select id="selectByCompanyIdAndTemplateIds" resultMap="BaseResultMap">
+    select event_template_id, company_id, name, content, description, status, created_by, created_at, updated_at
+    from event_templates
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and event_template_id in
+      <foreach collection="eventTemplateIds" item="id" open="(" separator="," close=")">
+        #{id,jdbcType=VARCHAR}
+      </foreach>
+  </select>
 </mapper>
