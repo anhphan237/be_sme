@@ -41,6 +41,7 @@ public class OnboardingTemplateGetResponse {
         private String description;
         private String ownerType;
         private String ownerRefId;
+        private String responsibleDepartmentId;
         private Integer dueDaysOffset;
         private Boolean requireAck;
         private Boolean requireDoc;
