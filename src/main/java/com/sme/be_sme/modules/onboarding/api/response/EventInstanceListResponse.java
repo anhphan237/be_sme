@@ -17,6 +17,10 @@ public class EventInstanceListResponse {
     public static class Item {
         private String eventInstanceId;
         private String eventTemplateId;
+        private String eventName;
+        private String eventDescription;
+        private String eventContent;
+        private String eventTemplateStatus;
         private Date eventAt;
         private String sourceType;
         private String status;
