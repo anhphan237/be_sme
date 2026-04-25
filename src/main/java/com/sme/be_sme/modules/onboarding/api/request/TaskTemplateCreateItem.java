@@ -11,6 +11,11 @@ public class TaskTemplateCreateItem {
     private String description;
     private String ownerType;
     private String ownerRefId;
+    /**
+     * Preferred alias for department ownership.
+     * Used when {@code ownerType=DEPARTMENT}; maps to {@code ownerRefId}.
+     */
+    private String responsibleDepartmentId;
     private Integer dueDaysOffset;
     private Boolean requireAck;
     private Boolean requireDoc;

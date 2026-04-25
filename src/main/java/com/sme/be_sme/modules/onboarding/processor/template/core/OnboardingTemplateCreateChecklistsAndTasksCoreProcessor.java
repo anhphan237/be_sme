@@ -17,6 +17,7 @@ import com.sme.be_sme.shared.gateway.core.BaseCoreProcessor;
 import com.sme.be_sme.shared.util.UuidGenerator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -73,7 +74,7 @@ public class OnboardingTemplateCreateChecklistsAndTasksCoreProcessor extends Bas
                     taskEntity.setTitle(taskItem.getTitle().trim());
                     taskEntity.setDescription(taskItem.getDescription());
                     taskEntity.setOwnerType(taskItem.getOwnerType());
-                    taskEntity.setOwnerRefId(taskItem.getOwnerRefId());
+                    taskEntity.setOwnerRefId(resolveOwnerRefId(taskItem));
                     taskEntity.setDueDaysOffset(taskItem.getDueDaysOffset());
                     boolean requireAck = Boolean.TRUE.equals(taskItem.getRequireAck());
                     List<String> requiredDocumentIds = normalizeRequiredDocumentIds(taskItem.getRequiredDocumentIds());
@@ -141,5 +142,21 @@ public class OnboardingTemplateCreateChecklistsAndTasksCoreProcessor extends Bas
             }
         }
         return List.copyOf(normalized);
+    }
+
+    private static String resolveOwnerRefId(TaskTemplateCreateItem taskItem) {
+        if (taskItem == null) {
+            return null;
+        }
+        String ownerType = StringUtils.hasText(taskItem.getOwnerType())
+                ? taskItem.getOwnerType().trim().toUpperCase(Locale.US)
+                : null;
+        if ("DEPARTMENT".equals(ownerType) && StringUtils.hasText(taskItem.getResponsibleDepartmentId())) {
+            return taskItem.getResponsibleDepartmentId().trim();
+        }
+        if ("DEPARTMENT".equals(ownerType) && !StringUtils.hasText(taskItem.getOwnerRefId())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "responsibleDepartmentId is required when ownerType=DEPARTMENT");
+        }
+        return StringUtils.hasText(taskItem.getOwnerRefId()) ? taskItem.getOwnerRefId().trim() : null;
     }
 }

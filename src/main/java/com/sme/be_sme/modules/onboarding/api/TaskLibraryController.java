@@ -234,6 +234,7 @@ public class TaskLibraryController {
             updateItem.setDescription(task.getDescription());
             updateItem.setOwnerType(task.getOwnerType());
             updateItem.setOwnerRefId(task.getOwnerRefId());
+            updateItem.setResponsibleDepartmentId(task.getResponsibleDepartmentId());
             updateItem.setDueDaysOffset(task.getDueDaysOffset());
             updateItem.setRequireAck(task.getRequireAck());
             updateItem.setRequireDoc(task.getRequireDoc());
