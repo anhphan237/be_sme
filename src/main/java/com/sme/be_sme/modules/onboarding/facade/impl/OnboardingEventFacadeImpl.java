@@ -1,14 +1,17 @@
 package com.sme.be_sme.modules.onboarding.facade.impl;
 
+import com.sme.be_sme.modules.onboarding.api.request.EventAttendanceSummaryRequest;
 import com.sme.be_sme.modules.onboarding.api.request.EventDetailRequest;
 import com.sme.be_sme.modules.onboarding.api.request.EventInstanceListRequest;
 import com.sme.be_sme.modules.onboarding.api.request.EventPublishRequest;
 import com.sme.be_sme.modules.onboarding.api.request.EventTemplateCreateRequest;
+import com.sme.be_sme.modules.onboarding.api.response.EventAttendanceSummaryResponse;
 import com.sme.be_sme.modules.onboarding.api.response.EventDetailResponse;
 import com.sme.be_sme.modules.onboarding.api.response.EventInstanceListResponse;
 import com.sme.be_sme.modules.onboarding.api.response.EventPublishResponse;
 import com.sme.be_sme.modules.onboarding.api.response.EventTemplateCreateResponse;
 import com.sme.be_sme.modules.onboarding.facade.OnboardingEventFacade;
+import com.sme.be_sme.modules.onboarding.processor.EventAttendanceSummaryProcessor;
 import com.sme.be_sme.modules.onboarding.processor.EventDetailProcessor;
 import com.sme.be_sme.modules.onboarding.processor.EventInstanceListProcessor;
 import com.sme.be_sme.modules.onboarding.processor.EventPublishProcessor;
@@ -25,6 +28,7 @@ public class OnboardingEventFacadeImpl extends BaseOperationFacade implements On
     private final EventPublishProcessor eventPublishProcessor;
     private final EventDetailProcessor eventDetailProcessor;
     private final EventInstanceListProcessor eventInstanceListProcessor;
+    private final EventAttendanceSummaryProcessor eventAttendanceSummaryProcessor;
 
     @Override
     public EventTemplateCreateResponse createEventTemplate(EventTemplateCreateRequest request) {
@@ -44,5 +48,10 @@ public class OnboardingEventFacadeImpl extends BaseOperationFacade implements On
     @Override
     public EventInstanceListResponse listEventInstances(EventInstanceListRequest request) {
         return call(eventInstanceListProcessor, request, EventInstanceListResponse.class);
+    }
+
+    @Override
+    public EventAttendanceSummaryResponse summarizeEventAttendance(EventAttendanceSummaryRequest request) {
+        return call(eventAttendanceSummaryProcessor, request, EventAttendanceSummaryResponse.class);
     }
 }
