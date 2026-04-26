@@ -66,6 +66,7 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
         int existingTaskCount = existingTasks == null ? 0 : existingTasks.size();
 
         if (existingChecklists != null && !existingChecklists.isEmpty() && existingTaskCount > 0) {
+            activateIfDraft(instance, context.getOperatorId());
             OnboardingTaskGenerationResponse skip = new OnboardingTaskGenerationResponse();
             skip.setInstanceId(instance.getOnboardingId());
             skip.setTotalTasks(existingTaskCount);
@@ -217,10 +218,31 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
         }
 
         OnboardingTaskGenerationResponse response = new OnboardingTaskGenerationResponse();
+        activateIfDraft(instance, context.getOperatorId());
         response.setInstanceId(request.getInstanceId());
         response.setTotalTasks(totalTasks);
         response.setAlreadyGenerated(false);
         return response;
+    }
+
+    private void activateIfDraft(OnboardingInstanceEntity instance, String operatorId) {
+        if (instance == null || !StringUtils.hasText(instance.getStatus())) {
+            return;
+        }
+        if (!"DRAFT".equalsIgnoreCase(instance.getStatus())) {
+            return;
+        }
+
+        instance.setStatus("ACTIVE");
+        instance.setUpdatedAt(new Date());
+        if (StringUtils.hasText(operatorId)) {
+            instance.setUpdatedBy(operatorId.trim());
+        }
+
+        int updated = onboardingInstanceMapper.updateByPrimaryKey(instance);
+        if (updated != 1) {
+            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "activate onboarding instance failed");
+        }
     }
 
     private void removeFailedGenerationShells(String companyId, List<ChecklistInstanceEntity> checklists) {
