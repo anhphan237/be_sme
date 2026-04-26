@@ -4,8 +4,10 @@ import com.sme.be_sme.modules.onboarding.api.request.ChecklistTemplateCreateItem
 import com.sme.be_sme.modules.onboarding.api.request.TaskTemplateCreateItem;
 import com.sme.be_sme.modules.onboarding.context.OnboardingTemplateCreateContext;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingTemplateMapperExt;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskTemplateDepartmentCheckpointMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskTemplateRequiredDocumentMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingTemplateEntity;
+import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateDepartmentCheckpointEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateRequiredDocumentEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.model.ChecklistTemplateRow;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.model.TaskTemplateRow;
@@ -28,6 +30,7 @@ public class OnboardingTemplateCreateCloneSourceCoreProcessor extends BaseCorePr
 
     private final OnboardingTemplateMapperExt onboardingTemplateMapperExt;
     private final TaskTemplateRequiredDocumentMapper taskTemplateRequiredDocumentMapper;
+    private final TaskTemplateDepartmentCheckpointMapper taskTemplateDepartmentCheckpointMapper;
 
     @Override
     protected Object process(OnboardingTemplateCreateContext ctx) {
@@ -61,6 +64,8 @@ public class OnboardingTemplateCreateCloneSourceCoreProcessor extends BaseCorePr
                 source.getCompanyId(), source.getOnboardingTemplateId());
 
         Map<String, List<String>> requiredDocumentIdsByTaskTemplateId = loadRequiredDocumentsByTaskTemplateId(source, taskRows);
+        Map<String, List<String>> responsibleDepartmentIdsByTaskTemplateId =
+                loadResponsibleDepartmentsByTaskTemplateId(source, taskRows);
         Map<String, List<TaskTemplateRow>> tasksByChecklist = taskRows.stream()
                 .collect(Collectors.groupingBy(
                         TaskTemplateRow::getChecklistTemplateId,
@@ -69,7 +74,7 @@ public class OnboardingTemplateCreateCloneSourceCoreProcessor extends BaseCorePr
 
         List<ChecklistTemplateCreateItem> clonedChecklists = checklistRows.stream()
                 .map(row -> toChecklistItem(row, tasksByChecklist.getOrDefault(row.getChecklistTemplateId(), List.of()),
-                        requiredDocumentIdsByTaskTemplateId))
+                        requiredDocumentIdsByTaskTemplateId, responsibleDepartmentIdsByTaskTemplateId))
                 .toList();
         ctx.getRequest().setChecklists(clonedChecklists);
         return null;
@@ -97,7 +102,8 @@ public class OnboardingTemplateCreateCloneSourceCoreProcessor extends BaseCorePr
     private ChecklistTemplateCreateItem toChecklistItem(
             ChecklistTemplateRow row,
             List<TaskTemplateRow> taskRows,
-            Map<String, List<String>> requiredDocumentIdsByTaskTemplateId) {
+            Map<String, List<String>> requiredDocumentIdsByTaskTemplateId,
+            Map<String, List<String>> responsibleDepartmentIdsByTaskTemplateId) {
         ChecklistTemplateCreateItem item = new ChecklistTemplateCreateItem();
         item.setName(row.getName());
         item.setStage(row.getStage());
@@ -105,14 +111,15 @@ public class OnboardingTemplateCreateCloneSourceCoreProcessor extends BaseCorePr
         item.setSortOrder(row.getOrderNo());
         item.setStatus(row.getStatus());
         item.setTasks(taskRows.stream()
-                .map(taskRow -> toTaskItem(taskRow, requiredDocumentIdsByTaskTemplateId))
+                .map(taskRow -> toTaskItem(taskRow, requiredDocumentIdsByTaskTemplateId, responsibleDepartmentIdsByTaskTemplateId))
                 .toList());
         return item;
     }
 
     private TaskTemplateCreateItem toTaskItem(
             TaskTemplateRow row,
-            Map<String, List<String>> requiredDocumentIdsByTaskTemplateId) {
+            Map<String, List<String>> requiredDocumentIdsByTaskTemplateId,
+            Map<String, List<String>> responsibleDepartmentIdsByTaskTemplateId) {
         TaskTemplateCreateItem item = new TaskTemplateCreateItem();
         item.setTitle(row.getName());
         item.setDescription(row.getDescription());
@@ -127,8 +134,29 @@ public class OnboardingTemplateCreateCloneSourceCoreProcessor extends BaseCorePr
         item.setRequiresManagerApproval(row.getRequiresManagerApproval());
         item.setApproverUserId(row.getApproverUserId());
         item.setRequiredDocumentIds(requiredDocumentIdsByTaskTemplateId.getOrDefault(row.getTaskTemplateId(), List.of()));
+        item.setResponsibleDepartmentIds(
+                responsibleDepartmentIdsByTaskTemplateId.getOrDefault(row.getTaskTemplateId(), List.of()));
         item.setSortOrder(row.getOrderNo());
         item.setStatus(row.getStatus());
         return item;
+    }
+
+    private Map<String, List<String>> loadResponsibleDepartmentsByTaskTemplateId(
+            OnboardingTemplateEntity source,
+            List<TaskTemplateRow> taskRows) {
+        List<String> taskTemplateIds = taskRows.stream()
+                .map(TaskTemplateRow::getTaskTemplateId)
+                .filter(StringUtils::hasText)
+                .toList();
+        if (taskTemplateIds.isEmpty()) {
+            return Map.of();
+        }
+        return taskTemplateDepartmentCheckpointMapper
+                .selectByCompanyIdAndTaskTemplateIds(source.getCompanyId(), taskTemplateIds)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        TaskTemplateDepartmentCheckpointEntity::getTaskTemplateId,
+                        LinkedHashMap::new,
+                        Collectors.mapping(TaskTemplateDepartmentCheckpointEntity::getDepartmentId, Collectors.toList())));
     }
 }

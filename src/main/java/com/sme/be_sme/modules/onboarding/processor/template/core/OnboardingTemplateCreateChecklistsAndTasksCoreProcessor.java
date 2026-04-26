@@ -3,10 +3,14 @@ package com.sme.be_sme.modules.onboarding.processor.template.core;
 import com.sme.be_sme.modules.onboarding.api.request.ChecklistTemplateCreateItem;
 import com.sme.be_sme.modules.onboarding.api.request.TaskTemplateCreateItem;
 import com.sme.be_sme.modules.onboarding.context.OnboardingTemplateCreateContext;
+import com.sme.be_sme.modules.company.infrastructure.mapper.DepartmentMapper;
+import com.sme.be_sme.modules.company.infrastructure.persistence.entity.DepartmentEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistTemplateMapper;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskTemplateDepartmentCheckpointMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskTemplateRequiredDocumentMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskTemplateMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.ChecklistTemplateEntity;
+import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateDepartmentCheckpointEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateRequiredDocumentEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateEntity;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper;
@@ -29,8 +33,10 @@ public class OnboardingTemplateCreateChecklistsAndTasksCoreProcessor extends Bas
 
     private final ChecklistTemplateMapper checklistTemplateMapper;
     private final TaskTemplateMapper taskTemplateMapper;
+    private final TaskTemplateDepartmentCheckpointMapper taskTemplateDepartmentCheckpointMapper;
     private final TaskTemplateRequiredDocumentMapper taskTemplateRequiredDocumentMapper;
     private final DocumentMapper documentMapper;
+    private final DepartmentMapper departmentMapper;
 
     @Override
     protected Object process(OnboardingTemplateCreateContext ctx) {
@@ -91,6 +97,27 @@ public class OnboardingTemplateCreateChecklistsAndTasksCoreProcessor extends Bas
                     if (taskTemplateMapper.insert(taskEntity) != 1) {
                         throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create task template failed");
                     }
+                    List<String> responsibleDepartmentIds =
+                            normalizeResponsibleDepartmentIds(taskItem.getResponsibleDepartmentIds());
+                    assertResponsibleDepartments(companyId, responsibleDepartmentIds);
+                    int checkpointSort = 0;
+                    for (String departmentId : responsibleDepartmentIds) {
+                        TaskTemplateDepartmentCheckpointEntity checkpoint = new TaskTemplateDepartmentCheckpointEntity();
+                        checkpoint.setTaskTemplateDepartmentCheckpointId(UuidGenerator.generate());
+                        checkpoint.setCompanyId(companyId);
+                        checkpoint.setTaskTemplateId(taskTemplateId);
+                        checkpoint.setDepartmentId(departmentId);
+                        checkpoint.setRequireEvidence(Boolean.TRUE);
+                        checkpoint.setSortOrder(checkpointSort++);
+                        checkpoint.setStatus("ACTIVE");
+                        checkpoint.setCreatedAt(now);
+                        checkpoint.setUpdatedAt(now);
+                        if (taskTemplateDepartmentCheckpointMapper.insert(checkpoint) != 1) {
+                            throw AppException.of(
+                                    ErrorCodes.INTERNAL_ERROR,
+                                    "attach responsible department to task template failed");
+                        }
+                    }
                     for (String documentId : requiredDocumentIds) {
                         TaskTemplateRequiredDocumentEntity link = new TaskTemplateRequiredDocumentEntity();
                         link.setTaskTemplateRequiredDocumentId(UuidGenerator.generate());
@@ -142,6 +169,33 @@ public class OnboardingTemplateCreateChecklistsAndTasksCoreProcessor extends Bas
             }
         }
         return List.copyOf(normalized);
+    }
+
+    private static List<String> normalizeResponsibleDepartmentIds(List<String> responsibleDepartmentIds) {
+        if (CollectionUtils.isEmpty(responsibleDepartmentIds)) {
+            return List.of();
+        }
+        LinkedHashSet<String> normalized = new LinkedHashSet<>();
+        for (String departmentId : responsibleDepartmentIds) {
+            if (StringUtils.hasText(departmentId)) {
+                normalized.add(departmentId.trim());
+            }
+        }
+        return List.copyOf(normalized);
+    }
+
+    private void assertResponsibleDepartments(String companyId, List<String> departmentIds) {
+        for (String departmentId : departmentIds) {
+            DepartmentEntity department = departmentMapper.selectByPrimaryKey(departmentId);
+            if (department == null || !companyId.equals(department.getCompanyId())) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid responsibleDepartmentId: " + departmentId);
+            }
+            if (!StringUtils.hasText(department.getManagerUserId())) {
+                throw AppException.of(
+                        ErrorCodes.BAD_REQUEST,
+                        "department must have manager before using as responsibleDepartmentId: " + departmentId);
+            }
+        }
     }
 
     private static String resolveOwnerRefId(TaskTemplateCreateItem taskItem) {

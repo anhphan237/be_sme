@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskTemplateDepartmentCheckpointMapper">
+
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateDepartmentCheckpointEntity">
+    <id column="task_template_department_checkpoint_id" jdbcType="VARCHAR" property="taskTemplateDepartmentCheckpointId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="task_template_id" jdbcType="VARCHAR" property="taskTemplateId" />
+    <result column="department_id" jdbcType="VARCHAR" property="departmentId" />
+    <result column="require_evidence" jdbcType="BIT" property="requireEvidence" />
+    <result column="sort_order" jdbcType="INTEGER" property="sortOrder" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateDepartmentCheckpointEntity">
+    insert into task_template_department_checkpoints (
+      task_template_department_checkpoint_id,
+      company_id,
+      task_template_id,
+      department_id,
+      require_evidence,
+      sort_order,
+      status,
+      created_at,
+      updated_at
+    ) values (
+      #{taskTemplateDepartmentCheckpointId,jdbcType=VARCHAR},
+      #{companyId,jdbcType=VARCHAR},
+      #{taskTemplateId,jdbcType=VARCHAR},
+      #{departmentId,jdbcType=VARCHAR},
+      #{requireEvidence,jdbcType=BIT},
+      #{sortOrder,jdbcType=INTEGER},
+      #{status,jdbcType=VARCHAR},
+      #{createdAt,jdbcType=TIMESTAMP},
+      #{updatedAt,jdbcType=TIMESTAMP}
+    )
+  </insert>
+
+  <delete id="deleteByCompanyIdAndTaskTemplateId">
+    delete from task_template_department_checkpoints
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and task_template_id = #{taskTemplateId,jdbcType=VARCHAR}
+  </delete>
+
+  <select id="selectByCompanyIdAndTaskTemplateIds" resultMap="BaseResultMap">
+    select task_template_department_checkpoint_id, company_id, task_template_id, department_id,
+           require_evidence, sort_order, status, created_at, updated_at
+    from task_template_department_checkpoints
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      <if test="taskTemplateIds != null and taskTemplateIds.size() > 0">
+        and task_template_id in
+        <foreach item="id" collection="taskTemplateIds" open="(" separator="," close=")">
+          #{id,jdbcType=VARCHAR}
+        </foreach>
+      </if>
+      <if test="taskTemplateIds == null or taskTemplateIds.size() == 0">
+        and 1 = 0
+      </if>
+    order by sort_order asc, created_at asc
+  </select>
+</mapper>

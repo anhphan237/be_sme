@@ -27,6 +27,7 @@ public class OnboardingTaskActivityLogService {
     public static final String ACTION_SCHEDULE_RESCHEDULED = "SCHEDULE_RESCHEDULED";
     public static final String ACTION_SCHEDULE_CANCELLED = "SCHEDULE_CANCELLED";
     public static final String ACTION_SCHEDULE_NO_SHOW = "SCHEDULE_NO_SHOW";
+    public static final String ACTION_DEPARTMENT_CONFIRMED = "DEPARTMENT_CONFIRMED";
 
     private final TaskActivityLogMapper taskActivityLogMapper;
     private final ObjectMapper objectMapper;
@@ -166,6 +167,27 @@ public class OnboardingTaskActivityLogService {
         newValue.put("reason", safe(after != null ? after.getScheduleNoShowReason() : null));
 
         insert(after, actorUserId, ACTION_SCHEDULE_NO_SHOW, toJson(oldValue), toJson(newValue));
+    }
+
+    public void logDepartmentConfirmed(
+            TaskInstanceEntity task,
+            String actorUserId,
+            String departmentId,
+            String oldStatus,
+            String newStatus,
+            String evidenceNote,
+            String evidenceRef) {
+        Map<String, Object> oldValue = new LinkedHashMap<>();
+        oldValue.put("departmentId", safe(departmentId));
+        oldValue.put("status", safe(oldStatus));
+
+        Map<String, Object> newValue = new LinkedHashMap<>();
+        newValue.put("departmentId", safe(departmentId));
+        newValue.put("status", safe(newStatus));
+        newValue.put("evidenceNote", safe(evidenceNote));
+        newValue.put("evidenceRef", safe(evidenceRef));
+
+        insert(task, actorUserId, ACTION_DEPARTMENT_CONFIRMED, toJson(oldValue), toJson(newValue));
     }
 
     private void insert(TaskInstanceEntity task, String actorUserId, String action, String oldValue, String newValue) {

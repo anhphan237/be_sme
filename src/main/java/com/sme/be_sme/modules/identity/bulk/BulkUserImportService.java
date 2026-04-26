@@ -184,11 +184,18 @@ public class BulkUserImportService {
         if (!StringUtils.hasText(request.getManagerUserId())) {
             return;
         }
-        userService.findByUserId(request.getManagerUserId())
-                .orElseGet(() -> {
-                    row.addError("managerUserId does not exist");
-                    return null;
-                });
+        String managerRef = request.getManagerUserId().trim();
+        if (managerRef.contains("@")) {
+            userService.findByLowerEmail(managerRef)
+                    .ifPresentOrElse(
+                            manager -> request.setManagerUserId(manager.getUserId()),
+                            () -> row.addError("managerEmail does not exist"));
+            return;
+        }
+        userService.findByUserId(managerRef)
+                .ifPresentOrElse(
+                        manager -> request.setManagerUserId(manager.getUserId()),
+                        () -> row.addError("managerUserId does not exist"));
     }
 
     private String safeErrorMessage(Exception ex) {

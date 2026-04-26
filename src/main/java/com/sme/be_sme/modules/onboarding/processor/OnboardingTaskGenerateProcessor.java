@@ -32,8 +32,10 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
     private final ChecklistTemplateMapper checklistTemplateMapper;
     private final ChecklistInstanceMapper checklistInstanceMapper;
     private final TaskTemplateMapper taskTemplateMapper;
+    private final TaskTemplateDepartmentCheckpointMapper taskTemplateDepartmentCheckpointMapper;
     private final TaskTemplateRequiredDocumentMapper taskTemplateRequiredDocumentMapper;
     private final TaskInstanceMapper taskInstanceMapper;
+    private final TaskDepartmentCheckpointMapper taskDepartmentCheckpointMapper;
     private final TaskRequiredDocumentMapper taskRequiredDocumentMapper;
     private final TaskInstanceMapperExt taskInstanceMapperExt;
     private final EmployeeProfileMapperExt employeeProfileMapperExt;
@@ -88,6 +90,8 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
         List<TaskTemplateEntity> taskTemplates = filterTaskTemplates(companyId);
         Map<String, List<String>> requiredDocumentIdsByTaskTemplateId =
                 loadRequiredDocumentIdsByTaskTemplate(companyId, taskTemplates);
+        Map<String, List<String>> responsibleDepartmentIdsByTaskTemplateId =
+                loadResponsibleDepartmentIdsByTaskTemplate(companyId, taskTemplates);
 
         String lineManagerResolved = approvalAuthority.resolveLineManagerUserId(companyId, instance);
 
@@ -171,6 +175,8 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
                 }
                 List<String> requiredDocumentIds = requiredDocumentIdsByTaskTemplateId
                         .getOrDefault(taskTemplate.getTaskTemplateId(), List.of());
+                List<String> responsibleDepartmentIds = responsibleDepartmentIdsByTaskTemplateId
+                        .getOrDefault(taskTemplate.getTaskTemplateId(), List.of());
                 for (String documentId : requiredDocumentIds) {
                     TaskRequiredDocumentEntity requiredDocument = new TaskRequiredDocumentEntity();
                     requiredDocument.setTaskRequiredDocumentId(UuidGenerator.generate());
@@ -180,6 +186,22 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
                     requiredDocument.setCreatedAt(now);
                     if (taskRequiredDocumentMapper.insert(requiredDocument) != 1) {
                         throw AppException.of(ErrorCodes.INTERNAL_ERROR, "attach required document to task failed");
+                    }
+                }
+                for (String departmentId : responsibleDepartmentIds) {
+                    TaskDepartmentCheckpointEntity checkpoint = new TaskDepartmentCheckpointEntity();
+                    checkpoint.setTaskDepartmentCheckpointId(UuidGenerator.generate());
+                    checkpoint.setCompanyId(companyId);
+                    checkpoint.setTaskId(taskInstance.getTaskId());
+                    checkpoint.setDepartmentId(departmentId);
+                    checkpoint.setStatus("PENDING");
+                    checkpoint.setRequireEvidence(Boolean.TRUE);
+                    checkpoint.setCreatedAt(now);
+                    checkpoint.setUpdatedAt(now);
+                    if (taskDepartmentCheckpointMapper.insert(checkpoint) != 1) {
+                        throw AppException.of(
+                                ErrorCodes.INTERNAL_ERROR,
+                                "attach responsible department checkpoint to task failed");
                     }
                 }
                 totalTasks++;
@@ -285,6 +307,28 @@ public class OnboardingTaskGenerateProcessor extends BaseBizProcessor<BizContext
                                 java.util.stream.Collectors.mapping(
                                         TaskTemplateRequiredDocumentEntity::getDocumentId,
                                         java.util.stream.Collectors.toList())));
+    }
+
+    private Map<String, List<String>> loadResponsibleDepartmentIdsByTaskTemplate(
+            String companyId,
+            List<TaskTemplateEntity> taskTemplates) {
+        if (taskTemplates == null || taskTemplates.isEmpty()) {
+            return Map.of();
+        }
+        List<String> taskTemplateIds = taskTemplates.stream()
+                .map(TaskTemplateEntity::getTaskTemplateId)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .toList();
+        if (taskTemplateIds.isEmpty()) {
+            return Map.of();
+        }
+        return taskTemplateDepartmentCheckpointMapper
+                .selectByCompanyIdAndTaskTemplateIds(companyId, taskTemplateIds)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        TaskTemplateDepartmentCheckpointEntity::getTaskTemplateId,
+                        Collectors.mapping(TaskTemplateDepartmentCheckpointEntity::getDepartmentId, Collectors.toList())));
     }
 
     private static Date calculateDueDate(Date start, Integer daysOffset) {

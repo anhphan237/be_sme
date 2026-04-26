@@ -11,6 +11,7 @@ import com.sme.be_sme.modules.document.infrastructure.persistence.entity.Documen
 import com.sme.be_sme.modules.onboarding.api.request.TaskDetailRequest;
 import com.sme.be_sme.modules.onboarding.api.response.TaskDetailResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstanceMapper;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskDepartmentCheckpointMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskRequiredDocumentMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskActivityLogMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskAttachmentMapperExt;
@@ -20,6 +21,7 @@ import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.Check
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskActivityLogEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskAttachmentEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskCommentEntity;
+import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskDepartmentCheckpointEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskRequiredDocumentEntity;
 import com.sme.be_sme.modules.onboarding.service.OnboardingTaskSlaService;
@@ -46,6 +48,7 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
     private final TaskAttachmentMapperExt taskAttachmentMapperExt;
     private final TaskActivityLogMapperExt taskActivityLogMapperExt;
     private final TaskRequiredDocumentMapper taskRequiredDocumentMapper;
+    private final TaskDepartmentCheckpointMapper taskDepartmentCheckpointMapper;
     private final UserMapper userMapper;
     private final DocumentMapper documentMapper;
     private final DepartmentMapper departmentMapper;
@@ -99,10 +102,13 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
             : Collections.emptyList();
         List<TaskRequiredDocumentEntity> requiredDocumentLinks =
                 taskRequiredDocumentMapper.selectByCompanyIdAndTaskId(tenantId, task.getTaskId());
+        List<TaskDepartmentCheckpointEntity> departmentCheckpoints =
+                taskDepartmentCheckpointMapper.selectByCompanyIdAndTaskId(tenantId, task.getTaskId());
         Map<String, DocumentEntity> requiredDocumentMap = loadRequiredDocuments(requiredDocumentLinks);
+        Map<String, DepartmentEntity> departmentMap = loadDepartments(departmentCheckpoints);
 
         // 7. Enrich users for task + comments/attachments/logs in one batch
-        Map<String, UserEntity> userMap = loadUsers(task, comments, attachments, activityLogs);
+        Map<String, UserEntity> userMap = loadUsers(task, comments, attachments, activityLogs, departmentCheckpoints);
         UserEntity assignedUser = userMap.get(task.getAssignedUserId());
         UserEntity createdByUser = userMap.get(task.getCreatedBy());
         Map<String, String> userNameMap = userMap.entrySet().stream()
@@ -110,7 +116,8 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
 
         // 8. Build Response
         return buildResponse(task, checklist, assignedUser, createdByUser, department,
-            comments, attachments, activityLogs, userNameMap, requiredDocumentLinks, requiredDocumentMap);
+            comments, attachments, activityLogs, userNameMap, requiredDocumentLinks, requiredDocumentMap,
+                departmentCheckpoints, departmentMap);
     }
 
     private void validate(TaskDetailRequest request) {
@@ -152,7 +159,8 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
         TaskInstanceEntity task,
         List<TaskCommentEntity> comments,
         List<TaskAttachmentEntity> attachments,
-        List<TaskActivityLogEntity> activityLogs
+        List<TaskActivityLogEntity> activityLogs,
+        List<TaskDepartmentCheckpointEntity> departmentCheckpoints
     ) {
         // Collect all unique user IDs
         Set<String> userIds = new HashSet<>();
@@ -182,6 +190,11 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
                 userIds.add(l.getActorUserId());
             }
         });
+        departmentCheckpoints.forEach(c -> {
+            if (StringUtils.hasText(c.getConfirmedBy())) {
+                userIds.add(c.getConfirmedBy());
+            }
+        });
 
         if (userIds.isEmpty()) {
             return Collections.emptyMap();
@@ -207,7 +220,9 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
         List<TaskActivityLogEntity> activityLogs,
         Map<String, String> userNameMap,
         List<TaskRequiredDocumentEntity> requiredDocumentLinks,
-        Map<String, DocumentEntity> requiredDocumentMap
+        Map<String, DocumentEntity> requiredDocumentMap,
+        List<TaskDepartmentCheckpointEntity> departmentCheckpoints,
+        Map<String, DepartmentEntity> departmentMap
     ) {
         TaskDetailResponse response = new TaskDetailResponse();
 
@@ -327,6 +342,26 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
                 })
                 .collect(Collectors.toList());
         response.setRequiredDocuments(requiredDocuments);
+        List<TaskDetailResponse.DepartmentCheckpointItem> checkpointItems = departmentCheckpoints.stream()
+                .map(checkpoint -> {
+                    TaskDetailResponse.DepartmentCheckpointItem item = new TaskDetailResponse.DepartmentCheckpointItem();
+                    item.setDepartmentId(checkpoint.getDepartmentId());
+                    DepartmentEntity checkpointDepartment = departmentMap.get(checkpoint.getDepartmentId());
+                    item.setDepartmentName(checkpointDepartment != null ? checkpointDepartment.getName() : null);
+                    item.setStatus(checkpoint.getStatus());
+                    item.setRequireEvidence(checkpoint.getRequireEvidence());
+                    item.setEvidenceNote(checkpoint.getEvidenceNote());
+                    item.setEvidenceRef(checkpoint.getEvidenceRef());
+                    item.setConfirmedBy(checkpoint.getConfirmedBy());
+                    item.setConfirmedByName(userNameMap.get(checkpoint.getConfirmedBy()));
+                    item.setConfirmedAt(checkpoint.getConfirmedAt());
+                    return item;
+                })
+                .collect(Collectors.toList());
+        response.setDepartmentCheckpoints(checkpointItems);
+        boolean allConfirmed = checkpointItems.isEmpty() || checkpointItems.stream()
+                .allMatch(i -> "CONFIRMED".equalsIgnoreCase(i.getStatus()));
+        response.setAllDepartmentCheckpointsConfirmed(allConfirmed);
 
         // Activity logs
         List<TaskDetailResponse.ActivityLogItem> logItems = activityLogs.stream()
@@ -400,6 +435,27 @@ public class TaskDetailProcessor extends BaseBizProcessor<BizContext> {
             DocumentEntity document = documentMapper.selectByPrimaryKey(documentId);
             if (document != null) {
                 result.put(documentId, document);
+            }
+        }
+        return result;
+    }
+
+    private Map<String, DepartmentEntity> loadDepartments(List<TaskDepartmentCheckpointEntity> checkpoints) {
+        if (checkpoints == null || checkpoints.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, DepartmentEntity> result = new HashMap<>();
+        for (TaskDepartmentCheckpointEntity checkpoint : checkpoints) {
+            if (checkpoint == null || !StringUtils.hasText(checkpoint.getDepartmentId())) {
+                continue;
+            }
+            String departmentId = checkpoint.getDepartmentId().trim();
+            if (result.containsKey(departmentId)) {
+                continue;
+            }
+            DepartmentEntity department = departmentMapper.selectByPrimaryKey(departmentId);
+            if (department != null) {
+                result.put(departmentId, department);
             }
         }
         return result;

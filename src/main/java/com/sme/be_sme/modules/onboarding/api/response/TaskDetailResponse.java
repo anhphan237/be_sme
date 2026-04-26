@@ -58,6 +58,8 @@ public class TaskDetailResponse {
     private List<AttachmentItem> attachments;
     private List<ActivityLogItem> activityLogs;
     private List<AllLogItem> allLogs;
+    private List<DepartmentCheckpointItem> departmentCheckpoints;
+    private Boolean allDepartmentCheckpointsConfirmed;
 
     // Nested classes
     @Getter
@@ -113,6 +115,20 @@ public class TaskDetailResponse {
     public static class RequiredDocumentItem {
         private String documentId;
         private String title;
+    }
+
+    @Getter
+    @Setter
+    public static class DepartmentCheckpointItem {
+        private String departmentId;
+        private String departmentName;
+        private String status;
+        private Boolean requireEvidence;
+        private String evidenceNote;
+        private String evidenceRef;
+        private String confirmedBy;
+        private String confirmedByName;
+        private Date confirmedAt;
     }
 
     @Getter
