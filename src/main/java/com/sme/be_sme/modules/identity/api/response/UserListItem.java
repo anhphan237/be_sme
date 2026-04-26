@@ -3,6 +3,7 @@ package com.sme.be_sme.modules.identity.api.response;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Date;
 import java.util.List;
 
 @Getter
@@ -13,6 +14,7 @@ public class UserListItem {
     private String fullName;
     private String phone;
     private String status;
+    private Date createdAt;
     /** Role codes (e.g. ADMIN, HR, EMPLOYEE) */
     private List<String> roles;
     private String departmentId;

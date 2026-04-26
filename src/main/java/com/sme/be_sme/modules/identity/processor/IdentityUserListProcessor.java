@@ -68,6 +68,7 @@ public class IdentityUserListProcessor extends BaseBizProcessor<BizContext> {
             item.setFullName(u.getFullName());
             item.setPhone(u.getPhone());
             item.setStatus(u.getStatus());
+            item.setCreatedAt(u.getCreatedAt());
             item.setRoles(roles);
 
             EmployeeProfileEntity profile = employeeProfileMapperExt.selectByCompanyIdAndUserId(companyId, u.getUserId());
