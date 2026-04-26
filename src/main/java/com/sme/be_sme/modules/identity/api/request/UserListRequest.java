@@ -12,4 +12,5 @@ import lombok.Setter;
 public class UserListRequest {
     private Integer limit;
     private Integer offset;
+    private String role;
 }

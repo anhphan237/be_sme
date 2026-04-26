@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -46,8 +47,15 @@ public class IdentityUserListProcessor extends BaseBizProcessor<BizContext> {
         if (companyId == null || companyId.isBlank()) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
         }
+        String roleFilter = normalizeRoleOrNull(request.getRole());
 
         List<UserEntity> users = userService.listByCompanyId(companyId);
+        if (roleFilter != null) {
+            Set<String> allowedUserIds = new HashSet<>(userRoleRepository.findUserIdsByRole(companyId, roleFilter));
+            users = users.stream()
+                    .filter(u -> allowedUserIds.contains(u.getUserId()))
+                    .toList();
+        }
         List<UserListItem> items = new ArrayList<>(users.size());
 
         for (UserEntity u : users) {
@@ -87,5 +95,16 @@ public class IdentityUserListProcessor extends BaseBizProcessor<BizContext> {
         UserListResponse response = new UserListResponse();
         response.setUsers(items);
         return response;
+    }
+
+    private static String normalizeRoleOrNull(String role) {
+        if (role == null || role.isBlank()) {
+            return null;
+        }
+        String normalized = role.trim().toUpperCase();
+        if (!Set.of("ADMIN", "HR", "MANAGER", "IT", "EMPLOYEE").contains(normalized)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid role value");
+        }
+        return normalized;
     }
 }
