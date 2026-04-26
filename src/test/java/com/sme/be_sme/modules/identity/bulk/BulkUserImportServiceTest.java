@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.identity.bulk.api.response.BulkUserImportCommitRes
 import com.sme.be_sme.modules.identity.bulk.api.response.BulkUserImportValidateResponse;
 import com.sme.be_sme.modules.identity.processor.IdentityUserCreateProcessor;
 import com.sme.be_sme.modules.identity.service.UserService;
+import com.sme.be_sme.modules.company.infrastructure.mapper.DepartmentMapper;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BizContext;
@@ -31,6 +32,8 @@ class BulkUserImportServiceTest {
     @Mock
     private UserService userService;
     @Mock
+    private DepartmentMapper departmentMapper;
+    @Mock
     private IdentityUserCreateProcessor identityUserCreateProcessor;
     @Mock
     private MultipartFile file;
@@ -42,7 +45,13 @@ class BulkUserImportServiceTest {
     void setUp() {
         properties = new IdentityBulkUserImportProperties();
         properties.setEnabled(true);
-        service = new BulkUserImportService(properties, excelService, userService, identityUserCreateProcessor);
+        service = new BulkUserImportService(
+                properties,
+                excelService,
+                userService,
+                departmentMapper,
+                identityUserCreateProcessor
+        );
     }
 
     @Test
