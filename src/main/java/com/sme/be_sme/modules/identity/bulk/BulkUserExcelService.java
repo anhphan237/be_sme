@@ -42,7 +42,7 @@ public class BulkUserExcelService {
     private static final int COL_DEPARTMENT_ID = 3;
     private static final int COL_EMPLOYEE_CODE = 4;
     private static final int COL_JOB_TITLE = 5;
-    private static final int COL_MANAGER_USER_ID = 6;
+    private static final int COL_MANAGER_EMAIL = 6;
     private static final int COL_START_DATE = 7;
     private static final int COL_WORK_LOCATION = 8;
     private static final int COL_PHONE = 9;
@@ -57,7 +57,7 @@ public class BulkUserExcelService {
             header.createCell(COL_DEPARTMENT_ID).setCellValue("Department ID (required for MANAGER/EMPLOYEE)");
             header.createCell(COL_EMPLOYEE_CODE).setCellValue("Employee Code");
             header.createCell(COL_JOB_TITLE).setCellValue("Job Title");
-            header.createCell(COL_MANAGER_USER_ID).setCellValue("Manager User ID");
+            header.createCell(COL_MANAGER_EMAIL).setCellValue("Manager Email");
             header.createCell(COL_START_DATE).setCellValue("Start Date (yyyy-MM-dd or dd/MM/yyyy)");
             header.createCell(COL_WORK_LOCATION).setCellValue("Work Location");
             header.createCell(COL_PHONE).setCellValue("Phone");
@@ -69,7 +69,7 @@ public class BulkUserExcelService {
             sample.createCell(COL_DEPARTMENT_ID).setCellValue("department-id");
             sample.createCell(COL_EMPLOYEE_CODE).setCellValue("EMP-2026-001");
             sample.createCell(COL_JOB_TITLE).setCellValue("Software Engineer");
-            sample.createCell(COL_MANAGER_USER_ID).setCellValue("manager-user-id");
+            sample.createCell(COL_MANAGER_EMAIL).setCellValue("manager@company.com");
             sample.createCell(COL_START_DATE).setCellValue("2026-04-20");
             sample.createCell(COL_WORK_LOCATION).setCellValue("HCM");
             sample.createCell(COL_PHONE).setCellValue("0900000000");
@@ -132,7 +132,7 @@ public class BulkUserExcelService {
                 request.setDepartmentId(normalizeBlankToNull(readText(row, COL_DEPARTMENT_ID)));
                 request.setEmployeeCode(normalizeBlankToNull(readText(row, COL_EMPLOYEE_CODE)));
                 request.setJobTitle(normalizeBlankToNull(readText(row, COL_JOB_TITLE)));
-                request.setManagerUserId(normalizeBlankToNull(readText(row, COL_MANAGER_USER_ID)));
+                request.setManagerUserId(normalizeBlankToNull(readText(row, COL_MANAGER_EMAIL)));
                 request.setStartDate(parseDate(row, COL_START_DATE, parsed));
                 request.setWorkLocation(normalizeBlankToNull(readText(row, COL_WORK_LOCATION)));
                 request.setPhone(normalizeBlankToNull(readText(row, COL_PHONE)));

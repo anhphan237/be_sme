@@ -3,6 +3,7 @@ package com.sme.be_sme.modules.onboarding.facade.impl;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskAcknowledgeRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskApproveRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskAssignRequest;
+import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskDepartmentConfirmRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskGenerateRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskRejectRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskUpdateStatusRequest;
@@ -21,6 +22,7 @@ import com.sme.be_sme.modules.onboarding.api.request.TaskListByAssigneeRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskListByOnboardingRequest;
 import com.sme.be_sme.modules.onboarding.api.request.TaskTimelineByOnboardingRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskGenerationResponse;
+import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskDepartmentConfirmResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskAttachmentAddResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskCommentAddResponse;
@@ -36,6 +38,7 @@ import com.sme.be_sme.modules.onboarding.facade.OnboardingTaskFacade;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskAcknowledgeProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskApproveProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskAssignProcessor;
+import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskDepartmentConfirmProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskGenerateProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskRejectProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskUpdateStatusProcessor;
@@ -64,6 +67,7 @@ public class OnboardingTaskFacadeImpl extends BaseOperationFacade implements Onb
     private final OnboardingTaskGenerateProcessor onboardingTaskGenerateProcessor;
     private final OnboardingTaskAssignProcessor onboardingTaskAssignProcessor;
     private final OnboardingTaskUpdateStatusProcessor onboardingTaskUpdateStatusProcessor;
+    private final OnboardingTaskDepartmentConfirmProcessor onboardingTaskDepartmentConfirmProcessor;
     private final OnboardingTaskAcknowledgeProcessor onboardingTaskAcknowledgeProcessor;
     private final OnboardingTaskApproveProcessor onboardingTaskApproveProcessor;
     private final OnboardingTaskRejectProcessor onboardingTaskRejectProcessor;
@@ -95,6 +99,11 @@ public class OnboardingTaskFacadeImpl extends BaseOperationFacade implements Onb
     @Override
     public OnboardingTaskResponse updateTaskStatus(OnboardingTaskUpdateStatusRequest request) {
         return call(onboardingTaskUpdateStatusProcessor, request, OnboardingTaskResponse.class);
+    }
+
+    @Override
+    public OnboardingTaskDepartmentConfirmResponse confirmTaskDepartment(OnboardingTaskDepartmentConfirmRequest request) {
+        return call(onboardingTaskDepartmentConfirmProcessor, request, OnboardingTaskDepartmentConfirmResponse.class);
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskUpdateStatusRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskAttachmentMapperExt;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskDepartmentCheckpointMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskRequiredDocumentMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
@@ -38,6 +39,7 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
     private final ObjectMapper objectMapper;
     private final TaskInstanceMapper taskInstanceMapper;
     private final TaskAttachmentMapperExt taskAttachmentMapperExt;
+    private final TaskDepartmentCheckpointMapper taskDepartmentCheckpointMapper;
     private final TaskRequiredDocumentMapper taskRequiredDocumentMapper;
     private final ChecklistInstanceMapper checklistInstanceMapper;
     private final DocumentAcknowledgementMapper documentAcknowledgementMapper;
@@ -88,6 +90,7 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
             task.setApprovedAt(null);
             task.setRejectionReason(null);
         } else if (OnboardingTaskWorkflow.STATUS_DONE.equalsIgnoreCase(newStatus)) {
+            assertDepartmentCheckpointsCompleted(companyId, task, newStatus);
             if (isScheduleRequired(task)
                     && !OnboardingTaskWorkflow.SCHEDULE_CONFIRMED.equalsIgnoreCase(task.getScheduleStatus())) {
                 throw AppException.of(
@@ -113,6 +116,9 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
             task.setStatus(OnboardingTaskWorkflow.STATUS_DONE);
             task.setCompletedAt(now);
         } else {
+            if (OnboardingTaskWorkflow.STATUS_PENDING_APPROVAL.equalsIgnoreCase(newStatus)) {
+                assertDepartmentCheckpointsCompleted(companyId, task, newStatus);
+            }
             task.setStatus(newStatus);
             if (!OnboardingTaskWorkflow.STATUS_DONE.equalsIgnoreCase(newStatus)) {
                 task.setCompletedAt(null);
@@ -258,6 +264,15 @@ public class OnboardingTaskUpdateStatusProcessor extends BaseBizProcessor<BizCon
             throw AppException.of(
                     ErrorCodes.BAD_REQUEST,
                     "acknowledge all required documents before marking done");
+        }
+    }
+
+    private void assertDepartmentCheckpointsCompleted(String companyId, TaskInstanceEntity task, String targetStatus) {
+        int pendingCount = taskDepartmentCheckpointMapper.countPendingByCompanyIdAndTaskId(companyId, task.getTaskId());
+        if (pendingCount > 0) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "all responsible departments must confirm before moving task to " + targetStatus);
         }
     }
 }

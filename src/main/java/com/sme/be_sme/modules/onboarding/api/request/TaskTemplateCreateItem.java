@@ -16,6 +16,8 @@ public class TaskTemplateCreateItem {
      * Used when {@code ownerType=DEPARTMENT}; maps to {@code ownerRefId}.
      */
     private String responsibleDepartmentId;
+    /** Departments that must confirm this task with evidence before completion. */
+    private List<String> responsibleDepartmentIds;
     private Integer dueDaysOffset;
     private Boolean requireAck;
     private Boolean requireDoc;

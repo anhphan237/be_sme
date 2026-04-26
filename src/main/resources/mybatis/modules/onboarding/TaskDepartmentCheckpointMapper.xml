@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskDepartmentCheckpointMapper">
+
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskDepartmentCheckpointEntity">
+    <id column="task_department_checkpoint_id" jdbcType="VARCHAR" property="taskDepartmentCheckpointId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="task_id" jdbcType="VARCHAR" property="taskId" />
+    <result column="department_id" jdbcType="VARCHAR" property="departmentId" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="require_evidence" jdbcType="BIT" property="requireEvidence" />
+    <result column="evidence_note" jdbcType="VARCHAR" property="evidenceNote" />
+    <result column="evidence_ref" jdbcType="VARCHAR" property="evidenceRef" />
+    <result column="confirmed_by" jdbcType="VARCHAR" property="confirmedBy" />
+    <result column="confirmed_at" jdbcType="TIMESTAMP" property="confirmedAt" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskDepartmentCheckpointEntity">
+    insert into task_department_checkpoints (
+      task_department_checkpoint_id,
+      company_id,
+      task_id,
+      department_id,
+      status,
+      require_evidence,
+      evidence_note,
+      evidence_ref,
+      confirmed_by,
+      confirmed_at,
+      created_at,
+      updated_at
+    ) values (
+      #{taskDepartmentCheckpointId,jdbcType=VARCHAR},
+      #{companyId,jdbcType=VARCHAR},
+      #{taskId,jdbcType=VARCHAR},
+      #{departmentId,jdbcType=VARCHAR},
+      #{status,jdbcType=VARCHAR},
+      #{requireEvidence,jdbcType=BIT},
+      #{evidenceNote,jdbcType=VARCHAR},
+      #{evidenceRef,jdbcType=VARCHAR},
+      #{confirmedBy,jdbcType=VARCHAR},
+      #{confirmedAt,jdbcType=TIMESTAMP},
+      #{createdAt,jdbcType=TIMESTAMP},
+      #{updatedAt,jdbcType=TIMESTAMP}
+    )
+  </insert>
+
+  <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskDepartmentCheckpointEntity">
+    update task_department_checkpoints
+    set company_id = #{companyId,jdbcType=VARCHAR},
+        task_id = #{taskId,jdbcType=VARCHAR},
+        department_id = #{departmentId,jdbcType=VARCHAR},
+        status = #{status,jdbcType=VARCHAR},
+        require_evidence = #{requireEvidence,jdbcType=BIT},
+        evidence_note = #{evidenceNote,jdbcType=VARCHAR},
+        evidence_ref = #{evidenceRef,jdbcType=VARCHAR},
+        confirmed_by = #{confirmedBy,jdbcType=VARCHAR},
+        confirmed_at = #{confirmedAt,jdbcType=TIMESTAMP},
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where task_department_checkpoint_id = #{taskDepartmentCheckpointId,jdbcType=VARCHAR}
+  </update>
+
+  <select id="selectByCompanyIdAndTaskId" resultMap="BaseResultMap">
+    select task_department_checkpoint_id, company_id, task_id, department_id, status, require_evidence,
+           evidence_note, evidence_ref, confirmed_by, confirmed_at, created_at, updated_at
+    from task_department_checkpoints
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and task_id = #{taskId,jdbcType=VARCHAR}
+    order by created_at asc
+  </select>
+
+  <select id="selectByCompanyIdAndTaskIdAndDepartmentId" resultMap="BaseResultMap">
+    select task_department_checkpoint_id, company_id, task_id, department_id, status, require_evidence,
+           evidence_note, evidence_ref, confirmed_by, confirmed_at, created_at, updated_at
+    from task_department_checkpoints
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and task_id = #{taskId,jdbcType=VARCHAR}
+      and department_id = #{departmentId,jdbcType=VARCHAR}
+    limit 1
+  </select>
+
+  <select id="countPendingByCompanyIdAndTaskId" resultType="int">
+    select count(1)
+    from task_department_checkpoints
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and task_id = #{taskId,jdbcType=VARCHAR}
+      and upper(coalesce(trim(status), 'PENDING')) != 'CONFIRMED'
+  </select>
+</mapper>

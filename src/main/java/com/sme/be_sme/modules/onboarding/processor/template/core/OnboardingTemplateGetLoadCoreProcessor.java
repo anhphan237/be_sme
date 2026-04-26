@@ -2,7 +2,9 @@ package com.sme.be_sme.modules.onboarding.processor.template.core;
 
 import com.sme.be_sme.modules.onboarding.context.OnboardingTemplateGetContext;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingTemplateMapperExt;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskTemplateDepartmentCheckpointMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskTemplateRequiredDocumentMapper;
+import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateDepartmentCheckpointEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingTemplateEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateRequiredDocumentEntity;
 import com.sme.be_sme.shared.exception.AppException;
@@ -20,6 +22,7 @@ public class OnboardingTemplateGetLoadCoreProcessor extends BaseCoreProcessor<On
 
     private final OnboardingTemplateMapperExt onboardingTemplateMapperExt;
     private final TaskTemplateRequiredDocumentMapper taskTemplateRequiredDocumentMapper;
+    private final TaskTemplateDepartmentCheckpointMapper taskTemplateDepartmentCheckpointMapper;
 
     @Override
     protected Object process(OnboardingTemplateGetContext ctx) {
@@ -42,6 +45,7 @@ public class OnboardingTemplateGetLoadCoreProcessor extends BaseCoreProcessor<On
                 .toList();
         if (taskTemplateIds.isEmpty()) {
             ctx.setRequiredDocumentIdsByTaskTemplateId(Collections.emptyMap());
+            ctx.setResponsibleDepartmentIdsByTaskTemplateId(Collections.emptyMap());
         } else {
             Map<String, List<String>> requiredDocsByTaskTemplateId =
                     taskTemplateRequiredDocumentMapper
@@ -52,6 +56,15 @@ public class OnboardingTemplateGetLoadCoreProcessor extends BaseCoreProcessor<On
                                     Collectors.mapping(TaskTemplateRequiredDocumentEntity::getDocumentId, Collectors.toList())
                             ));
             ctx.setRequiredDocumentIdsByTaskTemplateId(requiredDocsByTaskTemplateId);
+            Map<String, List<String>> responsibleDepartmentIdsByTaskTemplateId =
+                    taskTemplateDepartmentCheckpointMapper
+                            .selectByCompanyIdAndTaskTemplateIds(templateCompanyId, taskTemplateIds)
+                            .stream()
+                            .collect(Collectors.groupingBy(
+                                    TaskTemplateDepartmentCheckpointEntity::getTaskTemplateId,
+                                    Collectors.mapping(TaskTemplateDepartmentCheckpointEntity::getDepartmentId, Collectors.toList())
+                            ));
+            ctx.setResponsibleDepartmentIdsByTaskTemplateId(responsibleDepartmentIdsByTaskTemplateId);
         }
         return null;
     }

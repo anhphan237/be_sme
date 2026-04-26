@@ -23,4 +23,5 @@ public class OnboardingTemplateGetContext {
     private List<ChecklistTemplateRow> checklistRows;
     private List<TaskTemplateRow> baselineTaskRows;
     private Map<String, List<String>> requiredDocumentIdsByTaskTemplateId;
+    private Map<String, List<String>> responsibleDepartmentIdsByTaskTemplateId;
 }

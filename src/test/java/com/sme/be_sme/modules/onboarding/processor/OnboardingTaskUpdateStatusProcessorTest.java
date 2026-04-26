@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskAttachmentMapperExt;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskRequiredDocumentMapper;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskDepartmentCheckpointMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAcknowledgementMapper;
@@ -38,6 +39,8 @@ class OnboardingTaskUpdateStatusProcessorTest {
     @Mock
     private TaskRequiredDocumentMapper taskRequiredDocumentMapper;
     @Mock
+    private TaskDepartmentCheckpointMapper taskDepartmentCheckpointMapper;
+    @Mock
     private ChecklistInstanceMapper checklistInstanceMapper;
     @Mock
     private DocumentAcknowledgementMapper documentAcknowledgementMapper;
@@ -56,6 +59,7 @@ class OnboardingTaskUpdateStatusProcessorTest {
                 new ObjectMapper(),
                 taskInstanceMapper,
                 taskAttachmentMapperExt,
+                taskDepartmentCheckpointMapper,
                 taskRequiredDocumentMapper,
                 checklistInstanceMapper,
                 documentAcknowledgementMapper,
@@ -95,6 +99,7 @@ class OnboardingTaskUpdateStatusProcessorTest {
                 new ObjectMapper(),
                 taskInstanceMapper,
                 taskAttachmentMapperExt,
+                taskDepartmentCheckpointMapper,
                 taskRequiredDocumentMapper,
                 checklistInstanceMapper,
                 documentAcknowledgementMapper,
@@ -128,6 +133,7 @@ class OnboardingTaskUpdateStatusProcessorTest {
                 new ObjectMapper(),
                 taskInstanceMapper,
                 taskAttachmentMapperExt,
+                taskDepartmentCheckpointMapper,
                 taskRequiredDocumentMapper,
                 checklistInstanceMapper,
                 documentAcknowledgementMapper,
@@ -154,6 +160,40 @@ class OnboardingTaskUpdateStatusProcessorTest {
 
         when(taskInstanceMapper.selectByPrimaryKey("t1")).thenReturn(task);
         when(taskAttachmentMapperExt.selectByTaskId(eq("c1"), eq("t1"))).thenReturn(java.util.List.of());
+
+        assertThrows(AppException.class, () -> processor.execute(context));
+    }
+
+    @Test
+    void done_rejectedWhenDepartmentCheckpointPending() {
+        OnboardingTaskUpdateStatusProcessor processor = new OnboardingTaskUpdateStatusProcessor(
+                new ObjectMapper(),
+                taskInstanceMapper,
+                taskAttachmentMapperExt,
+                taskDepartmentCheckpointMapper,
+                taskRequiredDocumentMapper,
+                checklistInstanceMapper,
+                documentAcknowledgementMapper,
+                progressService,
+                approvalAuthority,
+                activityLogService,
+                workflowNotificationService
+        );
+        BizContext context = new BizContext();
+        context.setTenantId("c1");
+        context.setOperatorId("u1");
+        context.setRoles(Set.of("EMPLOYEE"));
+        context.setPayload(new ObjectMapper().createObjectNode()
+                .put("taskId", "t1")
+                .put("status", "DONE"));
+
+        TaskInstanceEntity task = new TaskInstanceEntity();
+        task.setTaskId("t1");
+        task.setCompanyId("c1");
+        task.setAssignedUserId("u1");
+        task.setStatus(OnboardingTaskWorkflow.STATUS_TODO);
+        when(taskInstanceMapper.selectByPrimaryKey("t1")).thenReturn(task);
+        when(taskDepartmentCheckpointMapper.countPendingByCompanyIdAndTaskId("c1", "t1")).thenReturn(1);
 
         assertThrows(AppException.class, () -> processor.execute(context));
     }

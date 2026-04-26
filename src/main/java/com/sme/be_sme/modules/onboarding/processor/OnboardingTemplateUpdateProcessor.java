@@ -2,6 +2,8 @@ package com.sme.be_sme.modules.onboarding.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.company.infrastructure.mapper.DepartmentMapper;
+import com.sme.be_sme.modules.company.infrastructure.persistence.entity.DepartmentEntity;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentEntity;
 import com.sme.be_sme.modules.onboarding.api.request.ChecklistTemplateUpdateItem;
@@ -11,11 +13,13 @@ import com.sme.be_sme.modules.onboarding.api.response.OnboardingTemplateResponse
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistTemplateMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingTemplateMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingTemplateMapperExt;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskTemplateDepartmentCheckpointMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskTemplateRequiredDocumentMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskTemplateMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.ChecklistTemplateEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingTemplateEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateEntity;
+import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateDepartmentCheckpointEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskTemplateRequiredDocumentEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -46,8 +50,10 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
     private final OnboardingTemplateMapperExt onboardingTemplateMapperExt;
     private final ChecklistTemplateMapper checklistTemplateMapper;
     private final TaskTemplateMapper taskTemplateMapper;
+    private final TaskTemplateDepartmentCheckpointMapper taskTemplateDepartmentCheckpointMapper;
     private final TaskTemplateRequiredDocumentMapper taskTemplateRequiredDocumentMapper;
     private final DocumentMapper documentMapper;
+    private final DepartmentMapper departmentMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -165,6 +171,15 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
                         TaskTemplateRequiredDocumentEntity::getTaskTemplateId,
                         LinkedHashMap::new,
                         Collectors.mapping(TaskTemplateRequiredDocumentEntity::getDocumentId, Collectors.toList())));
+        Map<String, List<String>> existingResponsibleDepartmentIdsByTaskId = taskTemplateDepartmentCheckpointMapper
+                .selectByCompanyIdAndTaskTemplateIds(
+                        companyId,
+                        existingTasks.stream().map(TaskTemplateEntity::getTaskTemplateId).toList())
+                .stream()
+                .collect(Collectors.groupingBy(
+                        TaskTemplateDepartmentCheckpointEntity::getTaskTemplateId,
+                        LinkedHashMap::new,
+                        Collectors.mapping(TaskTemplateDepartmentCheckpointEntity::getDepartmentId, Collectors.toList())));
 
         Set<String> retainedChecklistIds = new LinkedHashSet<>();
         List<ChecklistTemplateUpdateItem> normalizedChecklists = checklists == null ? List.of() : checklists;
@@ -237,6 +252,7 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
                     tasksByChecklistId.getOrDefault(checklistId, List.of()),
                     taskById,
                     existingDocIdsByTaskId,
+                    existingResponsibleDepartmentIdsByTaskId,
                     now);
             checklistSort++;
         }
@@ -258,6 +274,7 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
             List<TaskTemplateEntity> existingTasks,
             Map<String, TaskTemplateEntity> taskById,
             Map<String, List<String>> existingDocIdsByTaskId,
+            Map<String, List<String>> existingResponsibleDepartmentIdsByTaskId,
             Date now) {
         Map<String, TaskTemplateEntity> existingTaskById = existingTasks.stream()
                 .collect(Collectors.toMap(
@@ -359,11 +376,14 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
 
             List<String> requiredDocumentIds =
                     resolveRequiredDocumentIds(taskItem, taskTemplateId, existingDocIdsByTaskId);
+            List<String> responsibleDepartmentIds = resolveResponsibleDepartmentIds(
+                    taskItem, taskTemplateId, existingResponsibleDepartmentIdsByTaskId);
             assertRequiredDocumentConfig(
                     companyId,
                     taskEntity.getTitle(),
                     Boolean.TRUE.equals(taskEntity.getRequireAck()),
                     requiredDocumentIds);
+            assertResponsibleDepartments(companyId, responsibleDepartmentIds);
 
             if (creatingTask) {
                 if (taskTemplateMapper.insert(taskEntity) != 1) {
@@ -385,6 +405,25 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
                 link.setCreatedAt(now);
                 if (taskTemplateRequiredDocumentMapper.insert(link) != 1) {
                     throw AppException.of(ErrorCodes.INTERNAL_ERROR, "attach required document to task template failed");
+                }
+            }
+            taskTemplateDepartmentCheckpointMapper.deleteByCompanyIdAndTaskTemplateId(companyId, taskTemplateId);
+            int checkpointSort = 0;
+            for (String departmentId : responsibleDepartmentIds) {
+                TaskTemplateDepartmentCheckpointEntity checkpoint = new TaskTemplateDepartmentCheckpointEntity();
+                checkpoint.setTaskTemplateDepartmentCheckpointId(UuidGenerator.generate());
+                checkpoint.setCompanyId(companyId);
+                checkpoint.setTaskTemplateId(taskTemplateId);
+                checkpoint.setDepartmentId(departmentId);
+                checkpoint.setRequireEvidence(Boolean.TRUE);
+                checkpoint.setSortOrder(checkpointSort++);
+                checkpoint.setStatus("ACTIVE");
+                checkpoint.setCreatedAt(now);
+                checkpoint.setUpdatedAt(now);
+                if (taskTemplateDepartmentCheckpointMapper.insert(checkpoint) != 1) {
+                    throw AppException.of(
+                            ErrorCodes.INTERNAL_ERROR,
+                            "attach responsible department to task template failed");
                 }
             }
 
@@ -412,6 +451,7 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
     }
 
     private void deleteTask(String companyId, String taskTemplateId) {
+        taskTemplateDepartmentCheckpointMapper.deleteByCompanyIdAndTaskTemplateId(companyId, taskTemplateId);
         taskTemplateRequiredDocumentMapper.deleteByCompanyIdAndTaskTemplateId(companyId, taskTemplateId);
         if (taskTemplateMapper.deleteByPrimaryKey(taskTemplateId) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "delete task template failed");
@@ -426,6 +466,16 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
             return normalizeRequiredDocumentIds(taskItem.getRequiredDocumentIds());
         }
         return List.copyOf(existingDocIdsByTaskId.getOrDefault(taskTemplateId, List.of()));
+    }
+
+    private List<String> resolveResponsibleDepartmentIds(
+            TaskTemplateUpdateItem taskItem,
+            String taskTemplateId,
+            Map<String, List<String>> existingResponsibleDepartmentIdsByTaskId) {
+        if (taskItem.getResponsibleDepartmentIds() != null) {
+            return normalizeResponsibleDepartmentIds(taskItem.getResponsibleDepartmentIds());
+        }
+        return List.copyOf(existingResponsibleDepartmentIdsByTaskId.getOrDefault(taskTemplateId, List.of()));
     }
 
     private void assertRequiredDocumentConfig(
@@ -461,6 +511,33 @@ public class OnboardingTemplateUpdateProcessor extends BaseBizProcessor<BizConte
             }
         }
         return List.copyOf(normalized);
+    }
+
+    private static List<String> normalizeResponsibleDepartmentIds(List<String> responsibleDepartmentIds) {
+        if (CollectionUtils.isEmpty(responsibleDepartmentIds)) {
+            return List.of();
+        }
+        Set<String> normalized = new LinkedHashSet<>();
+        for (String departmentId : responsibleDepartmentIds) {
+            if (StringUtils.hasText(departmentId)) {
+                normalized.add(departmentId.trim());
+            }
+        }
+        return List.copyOf(normalized);
+    }
+
+    private void assertResponsibleDepartments(String companyId, List<String> departmentIds) {
+        for (String departmentId : departmentIds) {
+            DepartmentEntity department = departmentMapper.selectByPrimaryKey(departmentId);
+            if (department == null || !companyId.equals(department.getCompanyId())) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid responsibleDepartmentId: " + departmentId);
+            }
+            if (!StringUtils.hasText(department.getManagerUserId())) {
+                throw AppException.of(
+                        ErrorCodes.BAD_REQUEST,
+                        "department must have manager before using as responsibleDepartmentId: " + departmentId);
+            }
+        }
     }
 
     private static String trimToNull(String value) {
