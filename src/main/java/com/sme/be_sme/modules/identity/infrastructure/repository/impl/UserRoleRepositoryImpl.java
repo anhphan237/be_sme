@@ -25,4 +25,15 @@ public class UserRoleRepositoryImpl implements UserRoleRepository {
                 .filter(code -> code != null && !code.isBlank())
                 .collect(Collectors.toSet());
     }
+
+    @Override
+    public Set<String> findUserIdsByRole(String companyId, String roleCode) {
+        List<String> userIds = userRoleMapperExt.selectUserIdsByCompanyAndRoleCode(companyId, roleCode);
+        if (userIds == null) {
+            return Set.of();
+        }
+        return userIds.stream()
+                .filter(userId -> userId != null && !userId.isBlank())
+                .collect(Collectors.toSet());
+    }
 }

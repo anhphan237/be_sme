@@ -4,4 +4,5 @@ import java.util.Set;
 
 public interface UserRoleRepository {
     Set<String> findRoles(String companyId, String userId);
+    Set<String> findUserIdsByRole(String companyId, String roleCode);
 }
