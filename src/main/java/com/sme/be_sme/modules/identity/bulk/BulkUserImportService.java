@@ -6,6 +6,8 @@ import com.sme.be_sme.modules.identity.bulk.api.response.BulkUserImportCommitRes
 import com.sme.be_sme.modules.identity.bulk.api.response.BulkUserImportValidateResponse;
 import com.sme.be_sme.modules.identity.processor.IdentityUserCreateProcessor;
 import com.sme.be_sme.modules.identity.service.UserService;
+import com.sme.be_sme.modules.company.infrastructure.mapper.DepartmentMapper;
+import com.sme.be_sme.modules.company.infrastructure.persistence.entity.DepartmentEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BizContext;
@@ -13,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,7 @@ public class BulkUserImportService {
     private final IdentityBulkUserImportProperties properties;
     private final BulkUserExcelService excelService;
     private final UserService userService;
+    private final DepartmentMapper departmentMapper;
     private final IdentityUserCreateProcessor identityUserCreateProcessor;
 
     public byte[] buildTemplateWorkbook() {
@@ -89,6 +93,8 @@ public class BulkUserImportService {
         }
 
         List<BulkUserExcelService.ParsedUserRow> rows = excelService.parseImportFile(file, properties);
+        Map<String, DepartmentEntity> departmentsById = loadDepartmentsById(companyId);
+        Map<String, DepartmentEntity> departmentsByName = loadDepartmentsByName(companyId);
         Map<String, Integer> firstSeenRowByEmail = new HashMap<>();
 
         for (BulkUserExcelService.ParsedUserRow row : rows) {
@@ -99,6 +105,7 @@ public class BulkUserImportService {
             }
 
             validateRequiredFields(row, request);
+            resolveDepartmentIfPresent(row, request, departmentsById, departmentsByName);
             validateRoleAndDepartment(row, request);
             validateEmailDuplicateInFile(row, request, firstSeenRowByEmail);
             validateManagerIfPresent(row, request);
@@ -196,6 +203,67 @@ public class BulkUserImportService {
                 .ifPresentOrElse(
                         manager -> request.setManagerUserId(manager.getUserId()),
                         () -> row.addError("managerUserId does not exist"));
+    }
+
+    private static Map<String, DepartmentEntity> loadDepartmentsById(String companyId, DepartmentMapper departmentMapper) {
+        List<DepartmentEntity> departments = departmentMapper.selectByCompany(companyId);
+        if (departments == null || departments.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, DepartmentEntity> byId = new LinkedHashMap<>();
+        for (DepartmentEntity department : departments) {
+            if (department == null || !StringUtils.hasText(department.getDepartmentId())) {
+                continue;
+            }
+            byId.put(department.getDepartmentId().trim(), department);
+        }
+        return byId;
+    }
+
+    private static Map<String, DepartmentEntity> loadDepartmentsByName(String companyId, DepartmentMapper departmentMapper) {
+        List<DepartmentEntity> departments = departmentMapper.selectByCompany(companyId);
+        if (departments == null || departments.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, DepartmentEntity> byName = new LinkedHashMap<>();
+        for (DepartmentEntity department : departments) {
+            if (department == null || !StringUtils.hasText(department.getName())) {
+                continue;
+            }
+            String key = department.getName().trim().toLowerCase(Locale.US);
+            byName.putIfAbsent(key, department);
+        }
+        return byName;
+    }
+
+    private static void resolveDepartmentIfPresent(
+            BulkUserExcelService.ParsedUserRow row,
+            CreateUserRequest request,
+            Map<String, DepartmentEntity> departmentsById,
+            Map<String, DepartmentEntity> departmentsByName) {
+        if (!StringUtils.hasText(request.getDepartmentId())) {
+            return;
+        }
+        String raw = request.getDepartmentId().trim();
+        DepartmentEntity byId = departmentsById.get(raw);
+        if (byId != null) {
+            request.setDepartmentId(byId.getDepartmentId());
+            return;
+        }
+        DepartmentEntity byName = departmentsByName.get(raw.toLowerCase(Locale.US));
+        if (byName != null) {
+            request.setDepartmentId(byName.getDepartmentId());
+            return;
+        }
+        row.addError("department not found: " + raw);
+    }
+
+    private Map<String, DepartmentEntity> loadDepartmentsById(String companyId) {
+        return loadDepartmentsById(companyId, departmentMapper);
+    }
+
+    private Map<String, DepartmentEntity> loadDepartmentsByName(String companyId) {
+        return loadDepartmentsByName(companyId, departmentMapper);
     }
 
     private String safeErrorMessage(Exception ex) {

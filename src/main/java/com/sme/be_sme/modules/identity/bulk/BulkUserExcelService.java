@@ -39,7 +39,7 @@ public class BulkUserExcelService {
     private static final int COL_EMAIL = 0;
     private static final int COL_FULL_NAME = 1;
     private static final int COL_ROLE_CODE = 2;
-    private static final int COL_DEPARTMENT_ID = 3;
+    private static final int COL_DEPARTMENT_NAME = 3;
     private static final int COL_EMPLOYEE_CODE = 4;
     private static final int COL_JOB_TITLE = 5;
     private static final int COL_MANAGER_EMAIL = 6;
@@ -54,7 +54,7 @@ public class BulkUserExcelService {
             header.createCell(COL_EMAIL).setCellValue("Email*");
             header.createCell(COL_FULL_NAME).setCellValue("Full Name*");
             header.createCell(COL_ROLE_CODE).setCellValue("Role Code* (ADMIN|HR|MANAGER|IT|EMPLOYEE)");
-            header.createCell(COL_DEPARTMENT_ID).setCellValue("Department ID (required for MANAGER/EMPLOYEE)");
+            header.createCell(COL_DEPARTMENT_NAME).setCellValue("Department Name (required for MANAGER/EMPLOYEE)");
             header.createCell(COL_EMPLOYEE_CODE).setCellValue("Employee Code");
             header.createCell(COL_JOB_TITLE).setCellValue("Job Title");
             header.createCell(COL_MANAGER_EMAIL).setCellValue("Manager Email");
@@ -66,7 +66,7 @@ public class BulkUserExcelService {
             sample.createCell(COL_EMAIL).setCellValue("new.employee@company.com");
             sample.createCell(COL_FULL_NAME).setCellValue("Nguyen Van A");
             sample.createCell(COL_ROLE_CODE).setCellValue("EMPLOYEE");
-            sample.createCell(COL_DEPARTMENT_ID).setCellValue("department-id");
+            sample.createCell(COL_DEPARTMENT_NAME).setCellValue("Engineering");
             sample.createCell(COL_EMPLOYEE_CODE).setCellValue("EMP-2026-001");
             sample.createCell(COL_JOB_TITLE).setCellValue("Software Engineer");
             sample.createCell(COL_MANAGER_EMAIL).setCellValue("manager@company.com");
@@ -129,7 +129,7 @@ public class BulkUserExcelService {
                 request.setEmail(normalizeLowerEmail(readText(row, COL_EMAIL)));
                 request.setFullName(normalizeBlankToNull(readText(row, COL_FULL_NAME)));
                 request.setRoleCode(normalizeUpperCode(readText(row, COL_ROLE_CODE)));
-                request.setDepartmentId(normalizeBlankToNull(readText(row, COL_DEPARTMENT_ID)));
+                request.setDepartmentId(normalizeBlankToNull(readText(row, COL_DEPARTMENT_NAME)));
                 request.setEmployeeCode(normalizeBlankToNull(readText(row, COL_EMPLOYEE_CODE)));
                 request.setJobTitle(normalizeBlankToNull(readText(row, COL_JOB_TITLE)));
                 request.setManagerUserId(normalizeBlankToNull(readText(row, COL_MANAGER_EMAIL)));
