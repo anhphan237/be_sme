@@ -2,6 +2,8 @@ package com.sme.be_sme.modules.employee.processor;
 
 import com.sme.be_sme.modules.employee.api.request.UpsertEmployeeProfileRequest;
 import com.sme.be_sme.modules.employee.api.response.UpsertEmployeeProfileResponse;
+import com.sme.be_sme.modules.company.infrastructure.mapper.DepartmentMapper;
+import com.sme.be_sme.modules.company.infrastructure.persistence.entity.DepartmentEntity;
 import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
 import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.employee.service.EmployeeCodeGeneratorService;
@@ -10,6 +12,7 @@ import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.Date;
 
@@ -19,6 +22,7 @@ public class UpsertEmployeeProfileProcessor {
 
     private final EmployeeProfileMapperExt employeeProfileMapperExt;
     private final EmployeeCodeGeneratorService employeeCodeGeneratorService;
+    private final DepartmentMapper departmentMapper;
 
     public UpsertEmployeeProfileResponse process(BizContext ctx, UpsertEmployeeProfileRequest req) {
         if (ctx == null || ctx.getTenantId() == null || ctx.getTenantId().isBlank()) {
@@ -52,7 +56,7 @@ public class UpsertEmployeeProfileProcessor {
             e.setEmployeePhone(req.getEmployeePhone());
 
             e.setJobTitle(req.getJobTitle());
-            e.setManagerUserId(req.getManagerUserId());
+            e.setManagerUserId(resolveManagerUserId(companyId, req.getManagerUserId(), req.getDepartmentId(), null));
             e.setStartDate(req.getStartDate());
             e.setWorkLocation(req.getWorkLocation());
 
@@ -73,7 +77,11 @@ public class UpsertEmployeeProfileProcessor {
         existing.setEmployeePhone(req.getEmployeePhone());
 
         existing.setJobTitle(req.getJobTitle());
-        existing.setManagerUserId(req.getManagerUserId());
+        existing.setManagerUserId(resolveManagerUserId(
+                companyId,
+                req.getManagerUserId(),
+                req.getDepartmentId(),
+                existing.getDepartmentId()));
         existing.setStartDate(req.getStartDate());
         existing.setWorkLocation(req.getWorkLocation());
 
@@ -85,5 +93,26 @@ public class UpsertEmployeeProfileProcessor {
         employeeProfileMapperExt.updateSelectiveByEmployeeId(existing);
 
         return new UpsertEmployeeProfileResponse(existing.getEmployeeId(), false);
+    }
+
+    private String resolveManagerUserId(
+            String companyId,
+            String requestedManagerUserId,
+            String requestedDepartmentId,
+            String existingDepartmentId) {
+        if (StringUtils.hasText(requestedManagerUserId)) {
+            return requestedManagerUserId.trim();
+        }
+        String departmentId = StringUtils.hasText(requestedDepartmentId)
+                ? requestedDepartmentId.trim()
+                : (StringUtils.hasText(existingDepartmentId) ? existingDepartmentId.trim() : null);
+        if (!StringUtils.hasText(departmentId)) {
+            return null;
+        }
+        DepartmentEntity department = departmentMapper.selectByPrimaryKey(departmentId);
+        if (department == null || !companyId.equals(department.getCompanyId())) {
+            return null;
+        }
+        return StringUtils.hasText(department.getManagerUserId()) ? department.getManagerUserId().trim() : null;
     }
 }
