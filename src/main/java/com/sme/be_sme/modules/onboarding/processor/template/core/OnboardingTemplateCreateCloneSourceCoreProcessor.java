@@ -27,6 +27,7 @@ import org.springframework.util.StringUtils;
 public class OnboardingTemplateCreateCloneSourceCoreProcessor extends BaseCoreProcessor<OnboardingTemplateCreateContext> {
 
     private static final String LEVEL_PLATFORM = "PLATFORM";
+    private static final String LEVEL_TENANT = "TENANT";
 
     private final OnboardingTemplateMapperExt onboardingTemplateMapperExt;
     private final TaskTemplateRequiredDocumentMapper taskTemplateRequiredDocumentMapper;
@@ -45,8 +46,18 @@ public class OnboardingTemplateCreateCloneSourceCoreProcessor extends BaseCorePr
         if (source == null) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "source template not found");
         }
-        if (!LEVEL_PLATFORM.equalsIgnoreCase(source.getLevel())) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "only PLATFORM template can be cloned by sourceTemplateId");
+        String sourceTemplateLevel = ctx.getRequest().getSourceTemplateLevel();
+        if (!StringUtils.hasText(sourceTemplateLevel)) {
+            sourceTemplateLevel = LEVEL_PLATFORM;
+        }
+        sourceTemplateLevel = sourceTemplateLevel.trim().toUpperCase();
+        if (!LEVEL_PLATFORM.equals(sourceTemplateLevel) && !LEVEL_TENANT.equals(sourceTemplateLevel)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "sourceTemplateLevel must be PLATFORM or TENANT");
+        }
+        if (!sourceTemplateLevel.equalsIgnoreCase(source.getLevel())) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "source template level does not match requested level: " + sourceTemplateLevel);
         }
         if (!StringUtils.hasText(ctx.getRequest().getDescription())) {
             ctx.getRequest().setDescription(source.getDescription());

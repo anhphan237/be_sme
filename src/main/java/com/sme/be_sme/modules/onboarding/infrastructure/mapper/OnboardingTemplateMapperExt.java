@@ -13,7 +13,8 @@ public interface OnboardingTemplateMapperExt {
 
     List<OnboardingTemplateEntity> selectByCompanyIdAndStatus(
             @Param("companyId") String companyId,
-            @Param("status") String status
+            @Param("status") String status,
+            @Param("level") String level
     );
 
     List<OnboardingTemplateEntity> selectTaskLibrariesByCompanyIdAndStatus(
@@ -34,6 +35,11 @@ public interface OnboardingTemplateMapperExt {
     OnboardingTemplateEntity selectTaskLibraryByDepartmentTypeCode(
             @Param("companyId") String companyId,
             @Param("departmentTypeCode") String departmentTypeCode
+    );
+
+    boolean existsTenantOnboardingTemplateByName(
+            @Param("companyId") String companyId,
+            @Param("name") String name
     );
 
     List<ChecklistTemplateRow> selectChecklistRows(

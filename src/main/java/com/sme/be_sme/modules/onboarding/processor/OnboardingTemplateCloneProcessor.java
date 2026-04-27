@@ -25,6 +25,9 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class OnboardingTemplateCloneProcessor extends BaseCoreProcessor<OnboardingTemplateCreateContext> {
 
+    private static final String LEVEL_PLATFORM = "PLATFORM";
+    private static final String LEVEL_TENANT = "TENANT";
+
     private final ObjectMapper objectMapper;
     private final OnboardingTemplateCreateValidateCoreProcessor validate;
     private final OnboardingTemplateCreateCloneSourceCoreProcessor cloneSource;
@@ -39,6 +42,7 @@ public class OnboardingTemplateCloneProcessor extends BaseCoreProcessor<Onboardi
 
         OnboardingTemplateCreateRequest createRequest = new OnboardingTemplateCreateRequest();
         createRequest.setSourceTemplateId(request.getSourceTemplateId().trim());
+        createRequest.setSourceTemplateLevel(request.getLevel().trim().toUpperCase());
         createRequest.setName(request.getName().trim());
         createRequest.setDescription(request.getDescription());
         createRequest.setStatus(request.getStatus());
@@ -73,6 +77,13 @@ public class OnboardingTemplateCloneProcessor extends BaseCoreProcessor<Onboardi
         }
         if (!StringUtils.hasText(request.getName())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "name is required");
+        }
+        if (!StringUtils.hasText(request.getLevel())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "level is required");
+        }
+        String level = request.getLevel().trim();
+        if (!LEVEL_PLATFORM.equalsIgnoreCase(level) && !LEVEL_TENANT.equalsIgnoreCase(level)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "level must be PLATFORM or TENANT");
         }
     }
 }

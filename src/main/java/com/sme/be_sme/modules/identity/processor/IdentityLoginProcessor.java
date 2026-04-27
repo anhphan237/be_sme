@@ -2,6 +2,8 @@ package com.sme.be_sme.modules.identity.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
+import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.identity.api.request.LoginRequest;
 import com.sme.be_sme.modules.identity.api.response.LoginResponse;
 import com.sme.be_sme.modules.identity.api.response.LoginUserInfo;
@@ -29,6 +31,7 @@ public class IdentityLoginProcessor extends BaseBizProcessor<BizContext> {
     private final ObjectMapper objectMapper;
     private final UserService userService;
     private final UserRoleRepository userRoleRepository;
+    private final EmployeeProfileMapperExt employeeProfileMapperExt;
     private final PasswordHasher passwordHasher;
     private final JwtService jwtService;
     private final JwtProperties jwtProperties;
@@ -67,6 +70,7 @@ public class IdentityLoginProcessor extends BaseBizProcessor<BizContext> {
 
         Set<String> roles = userRoleRepository.findRoles(companyId, user.getUserId());
         String token = jwtService.issueAccessToken(user.getUserId(), companyId, roles);
+        EmployeeProfileEntity profile = employeeProfileMapperExt.selectByCompanyIdAndUserId(companyId, user.getUserId());
 
         user.setLastLoginAt(new Date());
         user.setUpdatedAt(new Date());
@@ -76,6 +80,7 @@ public class IdentityLoginProcessor extends BaseBizProcessor<BizContext> {
         userInfo.setId(user.getUserId());
         userInfo.setFullName(user.getFullName());
         userInfo.setEmail(user.getEmail());
+        userInfo.setDepartmentId(profile != null ? profile.getDepartmentId() : null);
         userInfo.setRoleCode(roles.isEmpty() ? null : roles.iterator().next());
         userInfo.setTenantId(companyId);
 

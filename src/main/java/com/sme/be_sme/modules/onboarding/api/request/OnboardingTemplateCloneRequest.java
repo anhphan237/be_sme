@@ -7,6 +7,7 @@ import lombok.Setter;
 @Setter
 public class OnboardingTemplateCloneRequest {
     private String sourceTemplateId;
+    private String level;
     private String name;
     private String description;
     private String status;

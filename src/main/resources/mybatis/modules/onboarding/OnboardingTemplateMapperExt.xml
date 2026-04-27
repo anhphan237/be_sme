@@ -8,8 +8,19 @@
         select onboarding_template_id, company_id, name, description, status, created_by, template_kind, department_type_code, level,
                created_at, updated_at
         from onboarding_templates
-        where ((company_id = #{companyId,jdbcType=VARCHAR} and level = 'TENANT') or level = 'PLATFORM')
-          and template_kind = 'ONBOARDING'
+        where template_kind = 'ONBOARDING'
+        <choose>
+            <when test="level != null and level != '' and level == 'TENANT'">
+                and company_id = #{companyId,jdbcType=VARCHAR}
+                and level = 'TENANT'
+            </when>
+            <when test="level != null and level != '' and level == 'PLATFORM'">
+                and level = 'PLATFORM'
+            </when>
+            <otherwise>
+                and ((company_id = #{companyId,jdbcType=VARCHAR} and level = 'TENANT') or level = 'PLATFORM')
+            </otherwise>
+        </choose>
         <if test="status != null and status != ''">
             and status = #{status,jdbcType=VARCHAR}
         </if>
@@ -55,6 +66,17 @@
           and department_type_code = #{departmentTypeCode,jdbcType=VARCHAR}
         order by updated_at desc
         limit 1
+    </select>
+
+    <select id="existsTenantOnboardingTemplateByName" resultType="boolean">
+        select exists(
+            select 1
+            from onboarding_templates
+            where company_id = #{companyId,jdbcType=VARCHAR}
+              and level = 'TENANT'
+              and template_kind = 'ONBOARDING'
+              and upper(trim(name)) = upper(trim(#{name,jdbcType=VARCHAR}))
+        )
     </select>
 
     <!-- Checklist templates under a onboarding_template -->
