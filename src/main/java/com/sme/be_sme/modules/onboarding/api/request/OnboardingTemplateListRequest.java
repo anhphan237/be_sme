@@ -6,4 +6,6 @@ import lombok.Data;
 public class OnboardingTemplateListRequest {
     // optional, default ACTIVE
     private String status;
+    // optional: TENANT or PLATFORM
+    private String level;
 }

@@ -21,9 +21,10 @@ public class OnboardingTemplateListCoreProcessor extends BaseCoreProcessor<Onboa
     protected Object process(OnboardingTemplateListContext ctx) {
         String companyId = ctx.getBiz().getTenantId(); // tenantId = companyId
         String status = ctx.getRequest().getStatus();
+        String level = ctx.getRequest().getLevel();
 
         List<OnboardingTemplateEntity> rows =
-                onboardingTemplateMapperExt.selectByCompanyIdAndStatus(companyId, status);
+                onboardingTemplateMapperExt.selectByCompanyIdAndStatus(companyId, status, level);
 
         ctx.setTemplates(rows);
 

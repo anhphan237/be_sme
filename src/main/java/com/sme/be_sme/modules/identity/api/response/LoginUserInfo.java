@@ -9,6 +9,7 @@ public class LoginUserInfo {
     private String id;
     private String fullName;
     private String email;
+    private String departmentId;
     private String roleCode;
     private String tenantId;
 }

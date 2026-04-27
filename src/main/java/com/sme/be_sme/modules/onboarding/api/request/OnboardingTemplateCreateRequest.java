@@ -10,6 +10,8 @@ import java.util.List;
 public class OnboardingTemplateCreateRequest {
     /** Optional: clone from an existing template (usually PLATFORM level). */
     private String sourceTemplateId;
+    /** Optional: source template level when cloning. */
+    private String sourceTemplateLevel;
     private String name;
     private String description;
     private String status;
