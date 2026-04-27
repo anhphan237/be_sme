@@ -27,6 +27,7 @@ import com.sme.be_sme.modules.platform.processor.subscription.PlatformSubscripti
 import com.sme.be_sme.modules.platform.processor.subscription.PlatformSubscriptionListProcessor;
 import com.sme.be_sme.modules.platform.processor.template.PlatformActivateTemplateProcessor;
 import com.sme.be_sme.modules.platform.processor.template.PlatformCreateTemplateProcessor;
+import com.sme.be_sme.modules.platform.processor.template.PlatformListTemplateProcessor;
 import com.sme.be_sme.shared.gateway.core.BaseOperationFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -78,6 +79,7 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     private final PlatformCreateTemplateProcessor platformCreateTemplateProcessor;
     private final PlatformActivateTemplateProcessor platformActivateTemplateProcessor;
     private final PlatformErrorLogListProcessor platformErrorLogListProcessor;
+    private final PlatformListTemplateProcessor platformListTemplateProcessor;
 
     @Override
     public PlatformCompanyListResponse listCompanies(PlatformCompanyListRequest request) {
@@ -292,5 +294,10 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     @Override
     public PlatformErrorLogListResponse listPlatformErrorLogs(PlatformErrorLogListRequest request) {
         return call(platformErrorLogListProcessor, request, PlatformErrorLogListResponse.class);
+    }
+
+    @Override
+    public ListPlatformTemplateResponse listPlatformTemplate(ListPlatformTemplateRequest request) {
+        return call(platformListTemplateProcessor, request, ListPlatformTemplateResponse.class);
     }
 }
