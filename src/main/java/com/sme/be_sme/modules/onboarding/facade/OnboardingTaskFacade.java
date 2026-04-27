@@ -4,6 +4,7 @@ import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskAcknowledgeRe
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskApproveRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskAssignRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskDepartmentConfirmRequest;
+import com.sme.be_sme.modules.onboarding.api.request.TaskDepartmentDependentListRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskGenerateRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskRejectRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskUpdateStatusRequest;
@@ -23,6 +24,7 @@ import com.sme.be_sme.modules.onboarding.api.request.TaskListByOnboardingRequest
 import com.sme.be_sme.modules.onboarding.api.request.TaskTimelineByOnboardingRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskGenerationResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskDepartmentConfirmResponse;
+import com.sme.be_sme.modules.onboarding.api.response.TaskDepartmentDependentListResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskAttachmentAddResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskCommentAddResponse;
@@ -50,6 +52,9 @@ public interface OnboardingTaskFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.onboarding.task.department.confirm")
     OnboardingTaskDepartmentConfirmResponse confirmTaskDepartment(OnboardingTaskDepartmentConfirmRequest request);
+
+    @OperationType("com.sme.onboarding.task.department.dependent.list")
+    TaskDepartmentDependentListResponse listDepartmentDependentTasks(TaskDepartmentDependentListRequest request);
 
     @OperationType("com.sme.onboarding.task.acknowledge")
     OnboardingTaskResponse acknowledgeTask(OnboardingTaskAcknowledgeRequest request);

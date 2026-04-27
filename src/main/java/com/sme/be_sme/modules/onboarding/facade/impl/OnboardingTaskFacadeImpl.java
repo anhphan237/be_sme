@@ -4,6 +4,7 @@ import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskAcknowledgeRe
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskApproveRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskAssignRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskDepartmentConfirmRequest;
+import com.sme.be_sme.modules.onboarding.api.request.TaskDepartmentDependentListRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskGenerateRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskRejectRequest;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTaskUpdateStatusRequest;
@@ -23,6 +24,7 @@ import com.sme.be_sme.modules.onboarding.api.request.TaskListByOnboardingRequest
 import com.sme.be_sme.modules.onboarding.api.request.TaskTimelineByOnboardingRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskGenerationResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskDepartmentConfirmResponse;
+import com.sme.be_sme.modules.onboarding.api.response.TaskDepartmentDependentListResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingTaskResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskAttachmentAddResponse;
 import com.sme.be_sme.modules.onboarding.api.response.TaskCommentAddResponse;
@@ -39,6 +41,7 @@ import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskAcknowledgeProc
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskApproveProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskAssignProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskDepartmentConfirmProcessor;
+import com.sme.be_sme.modules.onboarding.processor.TaskDepartmentDependentListProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskGenerateProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskRejectProcessor;
 import com.sme.be_sme.modules.onboarding.processor.OnboardingTaskUpdateStatusProcessor;
@@ -68,6 +71,7 @@ public class OnboardingTaskFacadeImpl extends BaseOperationFacade implements Onb
     private final OnboardingTaskAssignProcessor onboardingTaskAssignProcessor;
     private final OnboardingTaskUpdateStatusProcessor onboardingTaskUpdateStatusProcessor;
     private final OnboardingTaskDepartmentConfirmProcessor onboardingTaskDepartmentConfirmProcessor;
+    private final TaskDepartmentDependentListProcessor taskDepartmentDependentListProcessor;
     private final OnboardingTaskAcknowledgeProcessor onboardingTaskAcknowledgeProcessor;
     private final OnboardingTaskApproveProcessor onboardingTaskApproveProcessor;
     private final OnboardingTaskRejectProcessor onboardingTaskRejectProcessor;
@@ -104,6 +108,11 @@ public class OnboardingTaskFacadeImpl extends BaseOperationFacade implements Onb
     @Override
     public OnboardingTaskDepartmentConfirmResponse confirmTaskDepartment(OnboardingTaskDepartmentConfirmRequest request) {
         return call(onboardingTaskDepartmentConfirmProcessor, request, OnboardingTaskDepartmentConfirmResponse.class);
+    }
+
+    @Override
+    public TaskDepartmentDependentListResponse listDepartmentDependentTasks(TaskDepartmentDependentListRequest request) {
+        return call(taskDepartmentDependentListProcessor, request, TaskDepartmentDependentListResponse.class);
     }
 
     @Override
