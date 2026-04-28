@@ -35,25 +35,22 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
 
     private static final String SYSTEM_BLOCK = """
 [SYSTEM]
-You are a company knowledge assistant.
+Ban la tro ly tra loi dua tren tai lieu.
 
-You will receive multiple document excerpts.
+Yeu cau:
+- Tra loi ro rang, day du y
+- Phai noi ro noi dung chinh la gi
+- Khong dung tu mo ho nhu "lien quan", "xoay quanh"
+- Neu thong tin roi rac -> phai tu ghep lai thanh cau hoan chinh
+- LUON ket thuc cau day du, khong duoc bo do
 
-Your task:
-- Combine all relevant information
-- Explain the main topic clearly and concretely
-- Provide a complete answer
+Neu cau tra loi chua hoan chinh -> phai viet tiep cho day du.
 
-Rules:
-- Always explain what the document is about
-- Avoid vague phrases like "liên quan", "xoay quanh"
-- If information is scattered, combine it into a full explanation
-- Prefer clarity over brevity
-
-Respond in the same language as the user.
+Tra loi dung ngon ngu cua nguoi hoi.
+Always complete the sentence before ending the response.
 """;
 
-    private static final int DEMO_CONTEXT_CHUNK_LIMIT = 15;
+    private static final int DEMO_CONTEXT_CHUNK_LIMIT = 8;
     private static final int FINAL_CONTEXT_K = DEMO_CONTEXT_CHUNK_LIMIT;
     private static final int MIN_TOKEN_LENGTH = 3;
     private static final int MAX_HISTORY_MESSAGES = 5;
@@ -65,7 +62,7 @@ Respond in the same language as the user.
     private static final int RESERVED_OUTPUT_TOKENS = 700;
     private static final int MAX_AI_RETRIES = 1;
     private static final long RETRY_BASE_MS = 1000L;
-    private static final int MAX_DB_CHUNKS = 2000;
+    private static final int MAX_DB_CHUNKS = 8;
     private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(10);
     private static final double REQUESTS_PER_SECOND_PER_USER = 2.0d;
     private static final Set<String> FOLLOW_UP_KEYWORDS = Set.of(
@@ -170,6 +167,7 @@ Respond in the same language as the user.
             getLimiter(operatorId).acquire();
             String rawAnswer = callGeminiWithRetry(prompt, companyId, operatorId, questionHash);
             String answer = ensureAnswerCompleteness(rawAnswer, question, followUp, previousAnswer);
+            answer = ensureSentenceEnding(answer);
             boolean answerExpanded = !normalizeWhitespace(rawAnswer).equals(normalizeWhitespace(answer));
             List<ChunkView> selectedChunks = trimChunks(chunkViews, FINAL_CONTEXT_K, MAX_CHUNK_TOKENS);
             List<String> sourceDocumentNames = selectedChunks.stream()
@@ -589,6 +587,15 @@ Respond in the same language as the user.
     private static String ensureAnswerCompleteness(String answer, String question, boolean followUp, String previousAnswer) {
         String safe = StringUtils.hasText(answer) ? answer.trim() : "";
         return safe;
+    }
+
+    private static String ensureSentenceEnding(String answer) {
+        if (!StringUtils.hasText(answer)) return answer;
+        String trimmed = answer.trim();
+        if (trimmed.endsWith(".") || trimmed.endsWith("!") || trimmed.endsWith("?")) {
+            return trimmed;
+        }
+        return trimmed + ".";
     }
 
     private static String buildConversationKey(String companyId, String operatorId, String chatSessionId) {

@@ -18,7 +18,7 @@ public class GeminiConfig {
                 .apiKey(apiKey)
                 .modelName("gemini-2.5-flash")
                 .temperature(0.3)
-                .maxOutputTokens(640)
+                .maxOutputTokens(1200)
                 .build();
     }
 }
