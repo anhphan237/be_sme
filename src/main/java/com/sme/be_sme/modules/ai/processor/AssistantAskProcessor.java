@@ -50,7 +50,7 @@ Keep answers concise and factual.
     private static final int MAX_HISTORY_MESSAGE_TOKENS = 120;
     private static final int MAX_PROMPT_TOKENS = 4000;
     private static final int RESERVED_OUTPUT_TOKENS = 700;
-    private static final int MAX_AI_RETRIES = 2;
+    private static final int MAX_AI_RETRIES = 1;
     private static final long RETRY_BASE_MS = 1000L;
     private static final int MAX_DB_CHUNKS = 2000;
     private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(10);
@@ -62,6 +62,8 @@ Keep answers concise and factual.
     private final ChatMessageMapper chatMessageMapper;
     private final ChatSessionMapper chatSessionMapper;
     private final ChatLanguageModel chatModel;
+    private final RateLimiter globalLimiter = RateLimiter.create(1.0d);
+    private volatile long globalCooldownUntil = 0L;
     private final ConcurrentHashMap<String, RateLimiter> operatorRateLimiters = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, CacheEntry> answerCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, CompletableFuture<AnswerBundle>> inFlightRequests = new ConcurrentHashMap<>();
@@ -115,6 +117,12 @@ Keep answers concise and factual.
                     .collect(Collectors.toList());
             List<MessageView> history = loadConversationHistory(chatSessionId);
             String prompt = buildPrompt(chunkViews, history, question);
+            if (System.currentTimeMillis() < globalCooldownUntil) {
+                throw AppException.of(ErrorCodes.LIMIT_EXCEEDED,
+                        "AI assistant is cooling down due to high traffic. Please try again shortly.");
+            }
+            globalLimiter.acquire();
+            log.debug("Global limiter acquired before Gemini call");
             getLimiter(operatorId).acquire();
             String answer = callGeminiWithRetry(prompt, companyId, operatorId, questionHash);
             List<String> sourceDocumentNames = trimChunks(chunkViews, TOP_K_CHUNKS, MAX_CHUNK_TOKENS).stream()
@@ -252,6 +260,8 @@ Keep answers concise and factual.
                 if (!isRateLimited(e)) {
                     throw AppException.of(ErrorCodes.INTERNAL_ERROR, "AI assistant failed: " + e.getMessage());
                 }
+                globalCooldownUntil = System.currentTimeMillis() + 3000L;
+                log.warn("Global cooldown activated due to 429");
                 if (attempt >= MAX_AI_RETRIES) {
                     throw AppException.of(ErrorCodes.LIMIT_EXCEEDED,
                             "AI assistant is busy (rate limit reached). Please try again shortly.");
