@@ -25,11 +25,15 @@ public class PlatformCreateTemplateProcessor extends BaseCoreProcessor<PlatformC
 
     @Override
     protected PlatformCreateTemplateContext buildContext(BizContext context, JsonNode payload) {
-        CreatePlatformTemplateRequest request = objectMapper.convertValue(payload, CreatePlatformTemplateRequest.class);
+        PlatformTemplateBizHelper.assertPlatformAdmin(context, "create");
+
+        CreatePlatformTemplateRequest request =
+                objectMapper.convertValue(payload, CreatePlatformTemplateRequest.class);
+
         PlatformCreateTemplateContext ctx = new PlatformCreateTemplateContext();
         ctx.setBiz(context);
         ctx.setRequest(request);
-        ctx.setCompanyId(context.getTenantId());
+        ctx.setCompanyId(PlatformTemplateBizHelper.PLATFORM_COMPANY_ID);
         ctx.setTemplateId(UuidGenerator.generate());
         ctx.setNow(new Date());
         return ctx;
