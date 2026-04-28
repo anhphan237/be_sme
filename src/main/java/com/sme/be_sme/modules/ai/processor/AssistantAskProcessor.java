@@ -37,70 +37,40 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
 [SYSTEM]
 You are a company knowledge assistant.
 
-Your goal is to explain clearly based on the provided context.
+You will receive multiple document excerpts.
 
-Language rule (VERY IMPORTANT):
-- Detect the language of the user's question
-- If the user writes in Vietnamese -> respond ONLY in Vietnamese
-- If the user writes in English -> respond ONLY in English
-- NEVER mix languages in a single response
+Your task:
+- Combine all relevant information
+- Explain the main topic clearly and concretely
+- Provide a complete answer
 
-Answering rules:
-- Always try to answer using the available context
-- If context is incomplete, infer and complete the meaning logically
-- Prefer a reasonable explanation over refusing to answer
-- Be clear, specific, and natural
+Rules:
+- Always explain what the document is about
+- Avoid vague phrases like "liên quan", "xoay quanh"
+- If information is scattered, combine it into a full explanation
+- Prefer clarity over brevity
 
-Avoid:
-- Saying "I couldn't find exact matching content"
-- Giving generic template answers
-- Being overly defensive
-- Mixing Vietnamese and English
-
-Always produce a complete and natural answer.
-Always answer in the same language as the user's question.
+Respond in the same language as the user.
 """;
 
-    private static final int INITIAL_CANDIDATE_K = 15;
-    private static final int OVERVIEW_CANDIDATE_K = 15;
-    private static final int FINAL_CONTEXT_K = 6;
+    private static final int DEMO_CONTEXT_CHUNK_LIMIT = 15;
+    private static final int FINAL_CONTEXT_K = DEMO_CONTEXT_CHUNK_LIMIT;
     private static final int MIN_TOKEN_LENGTH = 3;
     private static final int MAX_HISTORY_MESSAGES = 5;
     private static final int MAX_CHUNK_TOKENS = 420;
     private static final int MIN_CHUNK_TOKENS = 140;
     private static final int CHUNK_TRIM_STEP_TOKENS = 60;
     private static final int MAX_HISTORY_MESSAGE_TOKENS = 120;
-    private static final int MAX_PROMPT_TOKENS = 4000;
+    private static final int MAX_PROMPT_TOKENS = 8000;
     private static final int RESERVED_OUTPUT_TOKENS = 700;
     private static final int MAX_AI_RETRIES = 1;
     private static final long RETRY_BASE_MS = 1000L;
     private static final int MAX_DB_CHUNKS = 2000;
     private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(10);
     private static final double REQUESTS_PER_SECOND_PER_USER = 2.0d;
-    private static final int FOLLOWUP_FALLBACK_K = 5;
-    private static final int MERGED_CHUNKS_LIMIT = 8;
     private static final Set<String> FOLLOW_UP_KEYWORDS = Set.of(
             "gì", "nào", "đó", "về", "cái gì", "nền gì", "gi", "nao", "do", "ve",
             "what", "which", "that", "it", "about", "more"
-    );
-    private static final Set<String> OVERVIEW_KEYWORDS = Set.of(
-            "tổng quan", "tong quan", "khái quát", "khai quat", "giới thiệu", "gioi thieu",
-            "overview", "summary", "introduce", "introduction", "policy", "guideline"
-    );
-    private static final Set<String> SPECIFIC_HINT_KEYWORDS = Set.of(
-            "là gì", "bao nhiêu", "khi nào", "ở đâu", "như thế nào",
-            "what", "where", "when", "how", "which", "who"
-    );
-    private static final Map<String, List<String>> SYNONYM_MAP = Map.of(
-            "tổng quan", List.of("overview", "summary", "policy", "guideline", "process"),
-            "tong quan", List.of("overview", "summary", "policy", "guideline", "process"),
-            "quy định", List.of("rule", "policy", "regulation"),
-            "quy dinh", List.of("rule", "policy", "regulation"),
-            "hướng dẫn", List.of("guide", "instruction", "manual"),
-            "huong dan", List.of("guide", "instruction", "manual"),
-            "chính sách", List.of("policy", "rule", "guideline"),
-            "chinh sach", List.of("policy", "rule", "guideline"),
-            "onboarding", List.of("orientation", "new hire", "welcome process")
     );
 
     private final ObjectMapper objectMapper;
@@ -128,14 +98,8 @@ Always answer in the same language as the user's question.
         String cacheKey = buildCacheKey(companyId, normalizedQuestion);
         String questionHash = Integer.toHexString(normalizedQuestion.hashCode());
         boolean followUp = isFollowUp(question);
-        QuestionIntent intent = detectIntent(question);
-        String rewrittenQuery = rewriteQuery(question);
-        log.info("Assistant intent: companyId={}, operatorId={}, questionHash={}, intent={}",
-                companyId, operatorId, questionHash, intent);
         log.info("Assistant follow-up detection: companyId={}, operatorId={}, questionHash={}, isFollowUp={}",
                 companyId, operatorId, questionHash, followUp);
-        log.debug("Assistant rewritten query metadata: companyId={}, questionHash={}, originalLen={}, rewrittenLen={}",
-                companyId, questionHash, question.length(), rewrittenQuery.length());
 
         String chatSessionId = StringUtils.hasText(request.getChatSessionId()) ? request.getChatSessionId().trim() : null;
         if (chatSessionId != null) {
@@ -166,23 +130,8 @@ Always answer in the same language as the user's question.
                         ? previousState.lastChunks()
                         : new ArrayList<>();
                 chunkViews = new ArrayList<>(previousChunks);
-                boolean contextWeak = isContextWeak(previousAnswer, chunkViews);
-                boolean fallbackRetrievalTriggered = false;
-                if (contextWeak) {
-                    List<DocumentChunkEntity> allChunks = loadChunksWithLimit(companyId, MAX_DB_CHUNKS);
-                    Map<String, String> documentIdToTitle = loadDocumentTitles(companyId, allChunks);
-                    List<DocumentChunkEntity> freshChunks = selectTopChunksByLexicalScore(allChunks, rewrittenQuery, FOLLOWUP_FALLBACK_K);
-                    List<ChunkView> freshChunkViews = freshChunks.stream()
-                            .map(c -> new ChunkView(
-                                    documentIdToTitle.getOrDefault(c.getDocumentId(), "(no title)"),
-                                    c.getChunkText()
-                            ))
-                            .collect(Collectors.toList());
-                    chunkViews = mergeChunks(chunkViews, freshChunkViews, MERGED_CHUNKS_LIMIT);
-                    fallbackRetrievalTriggered = !freshChunkViews.isEmpty();
-                }
-                log.info("Assistant follow-up context reuse: companyId={}, questionHash={}, contextWeak={}, fallbackRetrievalTriggered={}, finalChunkCount={}",
-                        companyId, questionHash, contextWeak, fallbackRetrievalTriggered, chunkViews.size());
+                log.info("Assistant follow-up context reuse: companyId={}, questionHash={}, finalChunkCount={}",
+                        companyId, questionHash, chunkViews.size());
                 if (chunkViews.isEmpty()) {
                     return buildFollowUpNoContextResponse(previousAnswer);
                 }
@@ -190,27 +139,27 @@ Always answer in the same language as the user's question.
                 List<DocumentChunkEntity> allChunks = loadChunksWithLimit(companyId, MAX_DB_CHUNKS);
                 Map<String, String> documentIdToTitle = loadDocumentTitles(companyId, allChunks);
 
-                List<DocumentChunkEntity> topChunks = retrieveChunksByIntent(allChunks, rewrittenQuery, intent);
-                log.info("Assistant retrieval: companyId={}, questionHash={}, intent={}, chunksFound={}",
-                        companyId, questionHash, intent, topChunks.size());
-                if (topChunks.isEmpty()) {
+                if (allChunks.isEmpty()) {
                     log.info("Assistant fallback triggered: companyId={}, questionHash={}, reason=no_chunks", companyId, questionHash);
                     return buildFallbackResponse(question, allChunks, documentIdToTitle);
                 }
 
-                chunkViews = topChunks.stream()
+                chunkViews = allChunks.stream()
                         .map(c -> new ChunkView(
                                 documentIdToTitle.getOrDefault(c.getDocumentId(), "(no title)"),
-                                c.getChunkText()
+                                truncateByTokensSafely(c.getChunkText(), MAX_CHUNK_TOKENS)
                         ))
+                        .filter(c -> StringUtils.hasText(c.text()))
                         .collect(Collectors.toList());
+                if (chunkViews.size() > DEMO_CONTEXT_CHUNK_LIMIT) {
+                    chunkViews = new ArrayList<>(chunkViews.subList(0, DEMO_CONTEXT_CHUNK_LIMIT));
+                }
                 previousAnswer = extractLastAssistantAnswer(history);
-                log.info("Assistant retrieval path: companyId={}, questionHash={}, mode=new_chunks", companyId, questionHash);
+                log.info("Assistant retrieval path: companyId={}, questionHash={}, mode=load_all_chunks, finalChunkCount={}",
+                        companyId, questionHash, chunkViews.size());
             }
 
-            String promptQuestion = intent == QuestionIntent.OVERVIEW
-                    ? "Summarize the company's knowledge base based on the following documents.\nUser request: " + question
-                    : question;
+            String promptQuestion = question;
             String prompt = buildPrompt(chunkViews, history, promptQuestion, previousAnswer, followUp);
             if (System.currentTimeMillis() < globalCooldownUntil) {
                 throw AppException.of(ErrorCodes.LIMIT_EXCEEDED,
@@ -299,71 +248,6 @@ Always answer in the same language as the user's question.
                 .map(documentMapper::selectByPrimaryKey)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(DocumentEntity::getDocumentId, d -> d.getTitle() != null ? d.getTitle() : "(no title)", (a, b) -> a));
-    }
-
-    private List<DocumentChunkEntity> selectTopChunksByLexicalScore(List<DocumentChunkEntity> chunks, String question, int topK) {
-        if (chunks.isEmpty()) return new ArrayList<>();
-        List<String> queryTokens = tokenize(question);
-        if (queryTokens.isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        List<ScoredChunk> scored = chunks.stream()
-                .map(c -> new ScoredChunk(c, scoreChunk(c.getChunkText(), queryTokens)))
-                .filter(s -> s.score > 0)
-                .sorted(Comparator.comparingInt((ScoredChunk s) -> s.score).reversed())
-                .limit(topK)
-                .toList();
-
-        if (!scored.isEmpty()) {
-            return scored.stream().map(s -> s.chunk).toList();
-        }
-        return new ArrayList<>();
-    }
-
-    private List<DocumentChunkEntity> retrieveChunksByIntent(
-            List<DocumentChunkEntity> allChunks,
-            String rewrittenQuery,
-            QuestionIntent intent
-    ) {
-        if (allChunks == null || allChunks.isEmpty()) {
-            return new ArrayList<>();
-        }
-        if (intent == QuestionIntent.OVERVIEW) {
-            List<DocumentChunkEntity> overviewChunks = selectTopChunksByLexicalScore(allChunks, rewrittenQuery, OVERVIEW_CANDIDATE_K);
-            if (!overviewChunks.isEmpty()) {
-                return overviewChunks;
-            }
-            // For broad overview questions, use a representative sample instead of hard-empty.
-            int cap = Math.min(OVERVIEW_CANDIDATE_K, allChunks.size());
-            return new ArrayList<>(allChunks.subList(0, cap));
-        }
-        return selectTopChunksByLexicalScore(allChunks, rewrittenQuery, INITIAL_CANDIDATE_K);
-    }
-
-    private static List<String> tokenize(String text) {
-        if (text == null || text.isBlank()) return new ArrayList<>();
-        List<String> tokens = new ArrayList<>();
-        for (String s : text.toLowerCase(Locale.ROOT).split("\\W+")) {
-            if (s.length() >= MIN_TOKEN_LENGTH) {
-                tokens.add(s);
-            }
-        }
-        return tokens;
-    }
-
-    private static int scoreChunk(String chunkText, List<String> queryTokens) {
-        if (chunkText == null || queryTokens.isEmpty()) return 0;
-        String lower = chunkText.toLowerCase(Locale.ROOT);
-        int score = 0;
-        for (String token : queryTokens) {
-            int idx = 0;
-            while ((idx = lower.indexOf(token, idx)) >= 0) {
-                score++;
-                idx += token.length();
-            }
-        }
-        return score;
     }
 
     private RateLimiter getLimiter(String operatorId) {
@@ -601,21 +485,7 @@ Always answer in the same language as the user's question.
             List<DocumentChunkEntity> allChunks,
             Map<String, String> documentIdToTitle
     ) {
-        List<String> topics = deriveAvailableTopics(allChunks, documentIdToTitle);
-        String topicLines = topics.isEmpty()
-                ? "- Onboarding\n- HR Policy\n- Engineering Guidelines"
-                : topics.stream().map(t -> "- " + t).collect(Collectors.joining("\n"));
-        boolean vietnamese = isVietnameseQuestion(question);
-        String answer = vietnamese
-                ? "Hien tai minh chua thay thong tin hoan toan khop,\n"
-                + "nhung dua tren cac tai lieu hien co, noi dung chu yeu lien quan den:\n"
-                + topicLines
-                + "\n\nBan co the hoi cu the hon de minh tra loi chinh xac hon."
-                : "I couldn't find an exact match,\n"
-                + "but based on available documents, the content mainly relates to:\n"
-                + topicLines
-                + "\n\nYou can ask more specifically and I will provide a better answer.";
-        return new AnswerBundle(answer, topics);
+        return new AnswerBundle("Hiện tại chưa có dữ liệu phù hợp trong hệ thống.", new ArrayList<>());
     }
 
     private AnswerBundle buildFollowUpNoContextResponse(String previousAnswer) {
@@ -626,54 +496,6 @@ Always answer in the same language as the user's question.
                 : "I need a bit more context to continue this follow-up. "
                 + "Please mention the topic title or ask a slightly more specific question.";
         return new AnswerBundle(answer, new ArrayList<>());
-    }
-
-    private static boolean isContextWeak(String previousAnswer, List<ChunkView> chunks) {
-        boolean weakAnswer = !StringUtils.hasText(previousAnswer) || previousAnswer.trim().length() < 120;
-        boolean vagueAnswer = false;
-        if (StringUtils.hasText(previousAnswer)) {
-            String lower = previousAnswer.toLowerCase(Locale.ROOT);
-            vagueAnswer = lower.contains("xoay quanh")
-                    || lower.contains("liên quan")
-                    || lower.contains("generally")
-                    || lower.contains("somehow");
-        }
-        boolean weakChunks = chunks == null || chunks.size() < 2;
-        return weakAnswer || vagueAnswer || weakChunks;
-    }
-
-    private List<ChunkView> mergeChunks(List<ChunkView> previousChunks, List<ChunkView> newChunks, int limit) {
-        List<ChunkView> merged = new ArrayList<>();
-        if (previousChunks != null) {
-            for (ChunkView c : previousChunks) {
-                if (c == null || !StringUtils.hasText(c.text())) continue;
-                boolean duplicate = merged.stream().anyMatch(m -> similarity(m.text(), c.text()) >= 0.85d);
-                if (!duplicate) merged.add(c);
-                if (merged.size() >= limit) return merged;
-            }
-        }
-        if (newChunks != null) {
-            for (ChunkView c : newChunks) {
-                if (c == null || !StringUtils.hasText(c.text())) continue;
-                boolean duplicate = merged.stream().anyMatch(m -> similarity(m.text(), c.text()) >= 0.85d);
-                if (!duplicate) merged.add(c);
-                if (merged.size() >= limit) break;
-            }
-        }
-        return merged;
-    }
-
-    private List<String> deriveAvailableTopics(List<DocumentChunkEntity> chunks, Map<String, String> documentIdToTitle) {
-        if (chunks == null || chunks.isEmpty()) return new ArrayList<>();
-        LinkedHashSet<String> topics = new LinkedHashSet<>();
-        for (DocumentChunkEntity chunk : chunks) {
-            if (chunk == null) continue;
-            String title = documentIdToTitle.get(chunk.getDocumentId());
-            if (!StringUtils.hasText(title)) continue;
-            topics.add(title.trim());
-            if (topics.size() >= 6) break;
-        }
-        return new ArrayList<>(topics);
     }
 
     private AnswerBundle getOrComputeInFlight(String cacheKey, Computation computation) {
@@ -740,35 +562,6 @@ Always answer in the same language as the user's question.
         return question.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim();
     }
 
-    private static QuestionIntent detectIntent(String question) {
-        if (!StringUtils.hasText(question)) return QuestionIntent.UNKNOWN;
-        String normalized = normalizeForCache(question);
-        for (String keyword : OVERVIEW_KEYWORDS) {
-            if (normalized.contains(keyword)) {
-                return QuestionIntent.OVERVIEW;
-            }
-        }
-        for (String keyword : SPECIFIC_HINT_KEYWORDS) {
-            if (normalized.contains(keyword)) {
-                return QuestionIntent.SPECIFIC;
-            }
-        }
-        return QuestionIntent.UNKNOWN;
-    }
-
-    private static String rewriteQuery(String question) {
-        if (!StringUtils.hasText(question)) return "";
-        String normalized = normalizeForCache(question);
-        LinkedHashSet<String> terms = new LinkedHashSet<>();
-        terms.add(question.trim());
-        for (Map.Entry<String, List<String>> entry : SYNONYM_MAP.entrySet()) {
-            if (normalized.contains(entry.getKey())) {
-                terms.addAll(entry.getValue());
-            }
-        }
-        return String.join(" ", terms);
-    }
-
     private static boolean isFollowUp(String question) {
         if (!StringUtils.hasText(question)) return false;
         String normalized = normalizeForCache(question);
@@ -795,56 +588,12 @@ Always answer in the same language as the user's question.
 
     private static String ensureAnswerCompleteness(String answer, String question, boolean followUp, String previousAnswer) {
         String safe = StringUtils.hasText(answer) ? answer.trim() : "";
-        if (!StringUtils.hasText(safe)) {
-            return safe;
-        }
-        if (needsExpansion(safe)) {
-            boolean vietnamese = isVietnameseQuestion(question);
-            String extra = vietnamese
-                    ? " Minh co the giai thich sau hon neu ban cho biet phan nao ban muon tap trung."
-                    : " I can explain this in more detail if you share which part you want to focus on.";
-            return safe + extra;
-        }
         return safe;
-    }
-
-    private static boolean needsExpansion(String answer) {
-        String normalized = answer.trim();
-        int sentenceCount = normalized.split("[.!?]+").length;
-        boolean tooShort = sentenceCount < 2;
-        boolean abruptEnding = !(normalized.endsWith(".") || normalized.endsWith("!") || normalized.endsWith("?"));
-        String lower = normalized.toLowerCase(Locale.ROOT);
-        boolean abstractTone = lower.contains("xoay quanh")
-                || lower.contains("liên quan")
-                || lower.contains("somehow")
-                || lower.contains("generally");
-        return tooShort || abruptEnding || abstractTone;
-    }
-
-    private static boolean isVietnameseQuestion(String question) {
-        if (!StringUtils.hasText(question)) return false;
-        String lower = question.toLowerCase(Locale.ROOT);
-        return lower.matches(".*[\\u0102\\u0103\\u00e2\\u00ea\\u00f4\\u01a1\\u01b0\\u0111\\u00e1\\u00e0\\u1ea3\\u00e3\\u1ea1\\u1eaf\\u1eb1\\u1eb3\\u1eb5\\u1eb7\\u1ea5\\u1ea7\\u1ea9\\u1eab\\u1ead\\u1ebf\\u1ec1\\u1ec3\\u1ec5\\u1ec7\\u1ed1\\u1ed3\\u1ed5\\u1ed7\\u1ed9\\u1edb\\u1edd\\u1edf\\u1ee1\\u1ee3\\u1ee9\\u1eeb\\u1eed\\u1eef\\u1ef1].*")
-                || lower.contains("khong")
-                || lower.contains("gi")
-                || lower.contains("nao")
-                || lower.contains("tai lieu")
-                || lower.contains("cong ty");
     }
 
     private static String buildConversationKey(String companyId, String operatorId, String chatSessionId) {
         return companyId + "::" + (StringUtils.hasText(operatorId) ? operatorId : "anonymous")
                 + "::" + (StringUtils.hasText(chatSessionId) ? chatSessionId : "no-session");
-    }
-
-    private static final class ScoredChunk {
-        final DocumentChunkEntity chunk;
-        final int score;
-
-        ScoredChunk(DocumentChunkEntity chunk, int score) {
-            this.chunk = chunk;
-            this.score = score;
-        }
     }
 
     private record ChunkView(String documentName, String text) {}
@@ -860,12 +609,6 @@ Always answer in the same language as the user's question.
     @FunctionalInterface
     private interface Computation {
         AnswerBundle compute();
-    }
-
-    private enum QuestionIntent {
-        OVERVIEW,
-        SPECIFIC,
-        UNKNOWN
     }
 
     private static void validate(BizContext context, AssistantAskRequest request) {
