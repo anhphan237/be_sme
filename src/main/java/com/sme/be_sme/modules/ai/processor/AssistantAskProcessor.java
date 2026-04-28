@@ -167,6 +167,7 @@ Always complete the sentence before ending the response.
             getLimiter(operatorId).acquire();
             String rawAnswer = callGeminiWithRetry(prompt, companyId, operatorId, questionHash);
             String answer = ensureAnswerCompleteness(rawAnswer, question, followUp, previousAnswer);
+            answer = normalizeAnswerFormatting(answer);
             answer = ensureSentenceEnding(answer);
             boolean answerExpanded = !normalizeWhitespace(rawAnswer).equals(normalizeWhitespace(answer));
             List<ChunkView> selectedChunks = trimChunks(chunkViews, FINAL_CONTEXT_K, MAX_CHUNK_TOKENS);
@@ -596,6 +597,19 @@ Always complete the sentence before ending the response.
             return trimmed;
         }
         return trimmed + ".";
+    }
+
+    private static String normalizeAnswerFormatting(String answer) {
+        if (!StringUtils.hasText(answer)) return answer;
+        String normalized = answer;
+        // Remove bold/italic markdown markers.
+        normalized = normalized.replace("**", "");
+        normalized = normalized.replace("*", "");
+        // Normalize bullet prefix after marker removal.
+        normalized = normalized.replaceAll("(?m)^\\s*[-•]\\s*", "- ");
+        // Collapse excessive blank lines.
+        normalized = normalized.replaceAll("\\n{3,}", "\n\n");
+        return normalized.trim();
     }
 
     private static String buildConversationKey(String companyId, String operatorId, String chatSessionId) {
