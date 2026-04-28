@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sme.be_sme.modules.platform.infrastructure.mapper.PlatformTemplateMapperExt">
+
+    <resultMap id="PlatformTemplateListItemMap"
+               type="com.sme.be_sme.modules.platform.api.response.PlatformTemplateListItemResponse">
+        <result property="templateId" column="template_id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="status" column="status"/>
+        <result property="templateKind" column="template_kind"/>
+        <result property="departmentTypeCode" column="department_type_code"/>
+        <result property="level" column="level"/>
+        <result property="checklistCount" column="checklist_count"/>
+        <result property="taskCount" column="task_count"/>
+        <result property="usedByCompanyCount" column="used_by_company_count"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="BasePlatformTemplateWhere">
+        ot.level = 'PLATFORM'
+        AND ot.company_id = #{platformCompanyId}
+
+        <if test="status != null and status != ''">
+            AND UPPER(ot.status) = UPPER(#{status})
+        </if>
+
+        <if test="keyword != null and keyword != ''">
+            AND (
+            LOWER(ot.name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+            OR LOWER(COALESCE(ot.description, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+            OR LOWER(COALESCE(ot.department_type_code, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+            )
+        </if>
+    </sql>
+
+    <select id="selectPlatformTemplates" resultMap="PlatformTemplateListItemMap">
+        SELECT
+        ot.onboarding_template_id AS template_id,
+        ot.name,
+        ot.description,
+        ot.status,
+        ot.template_kind,
+        ot.department_type_code,
+        ot.level,
+        ot.created_at,
+        ot.updated_at,
+        COUNT(DISTINCT ct.checklist_template_id) AS checklist_count,
+        COUNT(DISTINCT tt.task_template_id) AS task_count,
+        COUNT(DISTINCT oi.company_id) AS used_by_company_count
+        FROM onboarding_templates ot
+        LEFT JOIN checklist_templates ct
+        ON ct.onboarding_template_id = ot.onboarding_template_id
+        AND COALESCE(ct.status, '') != 'DELETED'
+        LEFT JOIN task_templates tt
+        ON tt.checklist_template_id = ct.checklist_template_id
+        AND COALESCE(tt.status, '') != 'DELETED'
+        LEFT JOIN onboarding_instances oi
+        ON oi.onboarding_template_id = ot.onboarding_template_id
+        WHERE
+        <include refid="BasePlatformTemplateWhere"/>
+        GROUP BY
+        ot.onboarding_template_id,
+        ot.name,
+        ot.description,
+        ot.status,
+        ot.template_kind,
+        ot.department_type_code,
+        ot.level,
+        ot.created_at,
+        ot.updated_at
+        ORDER BY ot.updated_at DESC, ot.created_at DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="countPlatformTemplates" resultType="int">
+        SELECT COUNT(1)
+        FROM onboarding_templates ot
+        WHERE
+        <include refid="BasePlatformTemplateWhere"/>
+    </select>
+
+</mapper>

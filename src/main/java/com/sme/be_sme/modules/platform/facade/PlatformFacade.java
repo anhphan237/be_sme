@@ -137,4 +137,7 @@ public interface PlatformFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.platform.errorLog.list")
     PlatformErrorLogListResponse listPlatformErrorLogs(PlatformErrorLogListRequest request);
+
+    @OperationType("com.sme.platform.template.list")
+    ListPlatformTemplateResponse listPlatformTemplate(ListPlatformTemplateRequest request);
 }

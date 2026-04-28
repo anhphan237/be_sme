@@ -1,0 +1,11 @@
+package com.sme.be_sme.modules.platform.api.request;
+
+import lombok.Data;
+
+@Data
+public class ListPlatformTemplateRequest {
+    private String keyword;
+    private String status;
+    private Integer page;
+    private Integer size;
+}
