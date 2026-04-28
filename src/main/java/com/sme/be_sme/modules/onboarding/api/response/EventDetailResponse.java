@@ -11,6 +11,7 @@ import java.util.List;
 public class EventDetailResponse {
     private String eventInstanceId;
     private String eventTemplateId;
+    private String coverImageUrl;
     private Date eventAt;
     private String sourceType;
     private List<String> sourceDepartmentIds;

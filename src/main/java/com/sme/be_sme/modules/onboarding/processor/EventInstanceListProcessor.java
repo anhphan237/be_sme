@@ -59,6 +59,7 @@ public class EventInstanceListProcessor extends BaseBizProcessor<BizContext> {
         EventTemplateEntity template = templateMap.get(entity.getEventTemplateId());
         item.setEventInstanceId(entity.getEventInstanceId());
         item.setEventTemplateId(entity.getEventTemplateId());
+        item.setCoverImageUrl(entity.getCoverImageUrl());
         item.setEventName(template == null ? null : template.getName());
         item.setEventDescription(template == null ? null : template.getDescription());
         item.setEventContent(template == null ? null : template.getContent());
