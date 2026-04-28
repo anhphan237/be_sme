@@ -74,6 +74,9 @@ public class GlobalExceptionHandler {
         if (ErrorCodes.PAYMENT_REQUIRED.equals(code)) {
             return HttpStatus.PAYMENT_REQUIRED;
         }
+        if (ErrorCodes.LIMIT_EXCEEDED.equals(code)) {
+            return HttpStatus.TOO_MANY_REQUESTS;
+        }
         return HttpStatus.INTERNAL_SERVER_ERROR;
     }
 }

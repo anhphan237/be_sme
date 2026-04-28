@@ -38,6 +38,8 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
     private static final int TOP_K_CHUNKS = 6;
     private static final int MIN_TOKEN_LENGTH = 3;
     private static final int MAX_HISTORY_MESSAGES = 10;
+    private static final int MAX_AI_RETRIES = 2;
+    private static final long RETRY_BACKOFF_MS = 600L;
 
     private final ObjectMapper objectMapper;
     private final DocumentChunkMapper documentChunkMapper;
@@ -81,11 +83,7 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
                     + documentsExcerpts
                     + (conversationHistory.isEmpty() ? "" : "\n\n--- Conversation history ---\n" + conversationHistory + "--- End history ---\n\n")
                     + "Employee question: " + question;
-            try {
-                answer = chatModel.generate(userPrompt);
-            } catch (Exception e) {
-                throw AppException.of(ErrorCodes.INTERNAL_ERROR, "AI assistant failed: " + e.getMessage());
-            }
+            answer = generateWithRetry(userPrompt);
             sourceDocumentNames = topChunks.stream()
                     .map(c -> documentIdToTitle.getOrDefault(c.getDocumentId(), "(no title)"))
                     .collect(Collectors.toCollection(LinkedHashSet::new))
@@ -215,6 +213,44 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
                     .append(c.getChunkText()).append("\n\n");
         }
         return sb.toString();
+    }
+
+    private String generateWithRetry(String userPrompt) {
+        for (int attempt = 0; attempt <= MAX_AI_RETRIES; attempt++) {
+            try {
+                return chatModel.generate(userPrompt);
+            } catch (Exception e) {
+                if (isRateLimited(e)) {
+                    if (attempt < MAX_AI_RETRIES) {
+                        sleepQuietly(RETRY_BACKOFF_MS * (attempt + 1));
+                        continue;
+                    }
+                    throw AppException.of(ErrorCodes.LIMIT_EXCEEDED,
+                            "AI assistant is busy (rate limit reached). Please try again shortly.");
+                }
+                throw AppException.of(ErrorCodes.INTERNAL_ERROR, "AI assistant failed: " + e.getMessage());
+            }
+        }
+        throw AppException.of(ErrorCodes.INTERNAL_ERROR, "AI assistant failed: unknown retry state");
+    }
+
+    private static boolean isRateLimited(Exception e) {
+        String message = e.getMessage();
+        if (!StringUtils.hasText(message)) {
+            return false;
+        }
+        String normalized = message.toUpperCase(Locale.ROOT);
+        return normalized.contains("RESOURCE_EXHAUSTED")
+                || normalized.contains("CODE 429")
+                || normalized.contains("429");
+    }
+
+    private static void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static final class ScoredChunk {
