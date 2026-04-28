@@ -17,18 +17,20 @@ import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import com.sme.be_sme.shared.util.UuidGenerator;
+import com.google.common.util.concurrent.RateLimiter;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
 
     private static final String SYSTEM_BLOCK = """
@@ -48,7 +50,7 @@ Keep answers concise and factual.
     private static final int MAX_HISTORY_MESSAGE_TOKENS = 120;
     private static final int MAX_PROMPT_TOKENS = 4000;
     private static final int RESERVED_OUTPUT_TOKENS = 700;
-    private static final int MAX_AI_RETRIES = 3;
+    private static final int MAX_AI_RETRIES = 2;
     private static final long RETRY_BASE_MS = 1000L;
     private static final int MAX_DB_CHUNKS = 2000;
     private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(10);
@@ -60,7 +62,7 @@ Keep answers concise and factual.
     private final ChatMessageMapper chatMessageMapper;
     private final ChatSessionMapper chatSessionMapper;
     private final ChatLanguageModel chatModel;
-    private final ConcurrentHashMap<String, SimpleRateLimiter> operatorRateLimiters = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, RateLimiter> operatorRateLimiters = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, CacheEntry> answerCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, CompletableFuture<AnswerBundle>> inFlightRequests = new ConcurrentHashMap<>();
 
@@ -74,6 +76,7 @@ Keep answers concise and factual.
         String question = request.getQuestion().trim();
         String normalizedQuestion = normalizeForCache(question);
         String cacheKey = buildCacheKey(companyId, normalizedQuestion);
+        String questionHash = Integer.toHexString(normalizedQuestion.hashCode());
 
         String chatSessionId = StringUtils.hasText(request.getChatSessionId()) ? request.getChatSessionId().trim() : null;
         if (chatSessionId != null) {
@@ -112,7 +115,8 @@ Keep answers concise and factual.
                     .collect(Collectors.toList());
             List<MessageView> history = loadConversationHistory(chatSessionId);
             String prompt = buildPrompt(chunkViews, history, question);
-            String answer = callGeminiWithRetry(prompt, operatorId);
+            getLimiter(operatorId).acquire();
+            String answer = callGeminiWithRetry(prompt, companyId, operatorId, questionHash);
             List<String> sourceDocumentNames = trimChunks(chunkViews, TOP_K_CHUNKS, MAX_CHUNK_TOKENS).stream()
                     .map(ChunkView::documentName)
                     .collect(Collectors.toCollection(LinkedHashSet::new))
@@ -233,10 +237,16 @@ Keep answers concise and factual.
         return score;
     }
 
-    private String callGeminiWithRetry(String prompt, String operatorId) {
+    private RateLimiter getLimiter(String operatorId) {
+        String key = StringUtils.hasText(operatorId) ? operatorId.trim() : "anonymous";
+        return operatorRateLimiters.computeIfAbsent(key, k -> RateLimiter.create(REQUESTS_PER_SECOND_PER_USER));
+    }
+
+    private String callGeminiWithRetry(String prompt, String companyId, String operatorId, String questionHash) {
         for (int attempt = 0; attempt <= MAX_AI_RETRIES; attempt++) {
             try {
-                acquirePerUserPermit(operatorId);
+                log.info("Gemini call: companyId={}, operatorId={}, questionHash={}, attempt={}",
+                        companyId, operatorId, questionHash, attempt + 1);
                 return chatModel.generate(prompt);
             } catch (Exception e) {
                 if (!isRateLimited(e)) {
@@ -248,6 +258,8 @@ Keep answers concise and factual.
                 }
                 long baseDelay = RETRY_BASE_MS * (1L << attempt);
                 long jitterMs = ThreadLocalRandom.current().nextLong(0L, 1001L);
+                log.warn("Gemini 429 retry: companyId={}, operatorId={}, questionHash={}, retryInMs={}, attempt={}",
+                        companyId, operatorId, questionHash, (baseDelay + jitterMs), attempt + 1);
                 sleepQuietly(baseDelay + jitterMs);
             }
         }
@@ -416,15 +428,6 @@ Keep answers concise and factual.
         }
     }
 
-    private void acquirePerUserPermit(String operatorId) {
-        String key = StringUtils.hasText(operatorId) ? operatorId.trim() : "anonymous";
-        SimpleRateLimiter limiter = operatorRateLimiters.computeIfAbsent(
-                key,
-                k -> new SimpleRateLimiter(REQUESTS_PER_SECOND_PER_USER)
-        );
-        limiter.acquire();
-    }
-
     private List<DocumentChunkEntity> loadChunksWithLimit(String companyId, int limit) {
         List<DocumentChunkEntity> all = documentChunkMapper.selectByCompanyId(companyId);
         if (all == null || all.isEmpty()) return new ArrayList<>();
@@ -517,28 +520,6 @@ Keep answers concise and factual.
     @FunctionalInterface
     private interface Computation {
         AnswerBundle compute();
-    }
-
-    private static final class SimpleRateLimiter {
-        private final long intervalNanos;
-        private long nextFreeNanos;
-
-        private SimpleRateLimiter(double permitsPerSecond) {
-            this.intervalNanos = (long) (1_000_000_000d / permitsPerSecond);
-            this.nextFreeNanos = System.nanoTime();
-        }
-
-        synchronized void acquire() {
-            long now = System.nanoTime();
-            if (nextFreeNanos < now) {
-                nextFreeNanos = now;
-            }
-            long waitNanos = nextFreeNanos - now;
-            nextFreeNanos += intervalNanos;
-            if (waitNanos > 0) {
-                LockSupport.parkNanos(waitNanos);
-            }
-        }
     }
 
     private static void validate(BizContext context, AssistantAskRequest request) {
