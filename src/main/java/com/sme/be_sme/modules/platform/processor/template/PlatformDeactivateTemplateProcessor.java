@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingTemplateMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingTemplateEntity;
-import com.sme.be_sme.modules.platform.api.request.ActivatePlatformTemplateRequest;
+import com.sme.be_sme.modules.platform.api.request.DeactivatePlatformTemplateRequest;
 import com.sme.be_sme.modules.platform.api.response.CreatePlatformTemplateResponse;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
@@ -18,7 +18,7 @@ import java.util.Date;
 
 @Component
 @RequiredArgsConstructor
-public class PlatformActivateTemplateProcessor extends BaseBizProcessor<BizContext> {
+public class PlatformDeactivateTemplateProcessor extends BaseBizProcessor<BizContext> {
 
     private final ObjectMapper objectMapper;
     private final OnboardingTemplateMapper onboardingTemplateMapper;
@@ -26,10 +26,10 @@ public class PlatformActivateTemplateProcessor extends BaseBizProcessor<BizConte
     @Override
     @Transactional(rollbackFor = Exception.class)
     protected Object doProcess(BizContext context, JsonNode payload) {
-        PlatformTemplateBizHelper.assertPlatformAdmin(context, "activate");
+        PlatformTemplateBizHelper.assertPlatformAdmin(context, "deactivate");
 
-        ActivatePlatformTemplateRequest request =
-                objectMapper.convertValue(payload, ActivatePlatformTemplateRequest.class);
+        DeactivatePlatformTemplateRequest request =
+                objectMapper.convertValue(payload, DeactivatePlatformTemplateRequest.class);
 
         String templateId = PlatformTemplateBizHelper.requireTemplateId(
                 request == null ? null : request.getTemplateId());
@@ -37,23 +37,15 @@ public class PlatformActivateTemplateProcessor extends BaseBizProcessor<BizConte
         OnboardingTemplateEntity entity =
                 PlatformTemplateBizHelper.getPlatformTemplate(onboardingTemplateMapper, templateId);
 
-        if ("ACTIVE".equalsIgnoreCase(entity.getStatus())) {
+        if ("ARCHIVED".equalsIgnoreCase(entity.getStatus())) {
             return toResponse(entity);
         }
 
-        if (!"DRAFT".equalsIgnoreCase(entity.getStatus())
-                && !"ARCHIVED".equalsIgnoreCase(entity.getStatus())
-                && !"INACTIVE".equalsIgnoreCase(entity.getStatus())) {
-            throw AppException.of(
-                    ErrorCodes.BAD_REQUEST,
-                    "template cannot be activated from status: " + entity.getStatus());
-        }
-
-        entity.setStatus("ACTIVE");
+        entity.setStatus("ARCHIVED");
         entity.setUpdatedAt(new Date());
 
         if (onboardingTemplateMapper.updateByPrimaryKey(entity) != 1) {
-            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "activate platform template failed");
+            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "deactivate platform template failed");
         }
 
         return toResponse(entity);

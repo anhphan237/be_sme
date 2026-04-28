@@ -6,8 +6,6 @@ import com.sme.be_sme.modules.platform.api.request.ListPlatformTemplateRequest;
 import com.sme.be_sme.modules.platform.api.response.ListPlatformTemplateResponse;
 import com.sme.be_sme.modules.platform.api.response.PlatformTemplateListItemResponse;
 import com.sme.be_sme.modules.platform.infrastructure.mapper.PlatformTemplateMapperExt;
-import com.sme.be_sme.shared.constant.ErrorCodes;
-import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import lombok.RequiredArgsConstructor;
@@ -21,17 +19,12 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class PlatformListTemplateProcessor extends BaseBizProcessor<BizContext> {
 
-    private static final String PLATFORM_COMPANY_ID = "00000000-0000-0000-0000-000000000001";
-
     private final ObjectMapper objectMapper;
     private final PlatformTemplateMapperExt platformTemplateMapperExt;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
-        if (!StringUtils.hasText(context.getTenantId())
-                || !PLATFORM_COMPANY_ID.equals(context.getTenantId().trim())) {
-            throw AppException.of(ErrorCodes.FORBIDDEN, "platform template list requires platform admin");
-        }
+        PlatformTemplateBizHelper.assertPlatformAdmin(context, "list");
 
         ListPlatformTemplateRequest request =
                 payload == null || payload.isNull()
@@ -47,7 +40,7 @@ public class PlatformListTemplateProcessor extends BaseBizProcessor<BizContext> 
 
         List<PlatformTemplateListItemResponse> items =
                 platformTemplateMapperExt.selectPlatformTemplates(
-                        PLATFORM_COMPANY_ID,
+                        PlatformTemplateBizHelper.PLATFORM_COMPANY_ID,
                         keyword,
                         status,
                         size,
@@ -56,7 +49,7 @@ public class PlatformListTemplateProcessor extends BaseBizProcessor<BizContext> 
 
         int total =
                 platformTemplateMapperExt.countPlatformTemplates(
-                        PLATFORM_COMPANY_ID,
+                        PlatformTemplateBizHelper.PLATFORM_COMPANY_ID,
                         keyword,
                         status
                 );
@@ -70,10 +63,7 @@ public class PlatformListTemplateProcessor extends BaseBizProcessor<BizContext> 
     }
 
     private static int normalizePage(Integer page) {
-        if (page == null || page < 1) {
-            return 1;
-        }
-        return page;
+        return page == null || page < 1 ? 1 : page;
     }
 
     private static int normalizeSize(Integer size) {
@@ -84,10 +74,7 @@ public class PlatformListTemplateProcessor extends BaseBizProcessor<BizContext> 
     }
 
     private static String normalizeKeyword(String keyword) {
-        if (!StringUtils.hasText(keyword)) {
-            return null;
-        }
-        return keyword.trim();
+        return StringUtils.hasText(keyword) ? keyword.trim() : null;
     }
 
     private static String normalizeStatus(String status) {
@@ -96,10 +83,6 @@ public class PlatformListTemplateProcessor extends BaseBizProcessor<BizContext> 
         }
 
         String normalized = status.trim().toUpperCase(Locale.US);
-        if ("ALL".equals(normalized)) {
-            return null;
-        }
-
-        return normalized;
+        return "ALL".equals(normalized) ? null : normalized;
     }
 }

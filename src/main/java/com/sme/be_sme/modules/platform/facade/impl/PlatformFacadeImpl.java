@@ -25,9 +25,7 @@ import com.sme.be_sme.modules.platform.processor.subscription.PlatformInvoiceLis
 import com.sme.be_sme.modules.platform.processor.subscription.PlatformPaymentListProcessor;
 import com.sme.be_sme.modules.platform.processor.subscription.PlatformSubscriptionDetailProcessor;
 import com.sme.be_sme.modules.platform.processor.subscription.PlatformSubscriptionListProcessor;
-import com.sme.be_sme.modules.platform.processor.template.PlatformActivateTemplateProcessor;
-import com.sme.be_sme.modules.platform.processor.template.PlatformCreateTemplateProcessor;
-import com.sme.be_sme.modules.platform.processor.template.PlatformListTemplateProcessor;
+import com.sme.be_sme.modules.platform.processor.template.*;
 import com.sme.be_sme.shared.gateway.core.BaseOperationFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -54,6 +52,7 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     private final PlatformSystemHealthProcessor systemHealthProcessor;
     private final PlatformErrorLogListProcessor errorLogListProcessor;
     private final PlatformActivityLogListProcessor activityLogListProcessor;
+    private final PlatformMonitoringMetricsProcessor monitoringMetricsProcessor;
     private final PlatformFeedbackListProcessor feedbackListProcessor;
     private final PlatformFeedbackDetailProcessor feedbackDetailProcessor;
     private final PlatformFeedbackResolveProcessor feedbackResolveProcessor;
@@ -62,7 +61,6 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     private final PlatformSubscriptionAnalyticsProcessor subscriptionAnalyticsProcessor;
     private final PlatformCompanyAnalyticsProcessor companyAnalyticsProcessor;
     private final PlatformUsageAnalyticsProcessor usageAnalyticsProcessor;
-    private final PlatformMonitoringMetricsProcessor monitoringMetricsProcessor;
     private final PlatformCompanySuspendProcessor companySuspendProcessor;
     private final PlatformCompanyChangePlanProcessor companyChangePlanProcessor;
     private final PlatformAdminAuditLogProcessor adminAuditLogProcessor;
@@ -77,9 +75,12 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     private final PlatformOnboardingTrendProcessor platformOnboardingTrendProcessor;
     private final PlatformRiskDashboardProcessor platformRiskDashboardProcessor;
     private final PlatformCreateTemplateProcessor platformCreateTemplateProcessor;
-    private final PlatformActivateTemplateProcessor platformActivateTemplateProcessor;
-    private final PlatformErrorLogListProcessor platformErrorLogListProcessor;
     private final PlatformListTemplateProcessor platformListTemplateProcessor;
+    private final PlatformTemplateDetailProcessor platformTemplateDetailProcessor;
+    private final PlatformUpdateTemplateProcessor platformUpdateTemplateProcessor;
+    private final PlatformActivateTemplateProcessor platformActivateTemplateProcessor;
+    private final PlatformDeactivateTemplateProcessor platformDeactivateTemplateProcessor;
+    private final PlatformDeleteTemplateProcessor platformDeleteTemplateProcessor;
 
     @Override
     public PlatformCompanyListResponse listCompanies(PlatformCompanyListRequest request) {
@@ -287,17 +288,37 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     }
 
     @Override
+    public ListPlatformTemplateResponse listPlatformTemplate(ListPlatformTemplateRequest request) {
+        return call(platformListTemplateProcessor, request, ListPlatformTemplateResponse.class);
+    }
+
+    @Override
+    public PlatformTemplateDetailResponse getPlatformTemplateDetail(PlatformTemplateDetailRequest request) {
+        return call(platformTemplateDetailProcessor, request, PlatformTemplateDetailResponse.class);
+    }
+
+    @Override
+    public CreatePlatformTemplateResponse updatePlatformTemplate(UpdatePlatformTemplateRequest request) {
+        return call(platformUpdateTemplateProcessor, request, CreatePlatformTemplateResponse.class);
+    }
+
+    @Override
     public CreatePlatformTemplateResponse activatePlatformTemplate(ActivatePlatformTemplateRequest request) {
         return call(platformActivateTemplateProcessor, request, CreatePlatformTemplateResponse.class);
     }
 
     @Override
-    public PlatformErrorLogListResponse listPlatformErrorLogs(PlatformErrorLogListRequest request) {
-        return call(platformErrorLogListProcessor, request, PlatformErrorLogListResponse.class);
+    public CreatePlatformTemplateResponse deactivatePlatformTemplate(DeactivatePlatformTemplateRequest request) {
+        return call(platformDeactivateTemplateProcessor, request, CreatePlatformTemplateResponse.class);
     }
 
     @Override
-    public ListPlatformTemplateResponse listPlatformTemplate(ListPlatformTemplateRequest request) {
-        return call(platformListTemplateProcessor, request, ListPlatformTemplateResponse.class);
+    public DeletePlatformTemplateResponse deletePlatformTemplate(DeletePlatformTemplateRequest request) {
+        return call(platformDeleteTemplateProcessor, request, DeletePlatformTemplateResponse.class);
+    }
+
+    @Override
+    public PlatformErrorLogListResponse listPlatformErrorLogs(PlatformErrorLogListRequest request) {
+        return call(errorLogListProcessor, request, PlatformErrorLogListResponse.class);
     }
 }

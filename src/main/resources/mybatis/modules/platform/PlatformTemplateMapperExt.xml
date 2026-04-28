@@ -21,7 +21,59 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <sql id="BasePlatformTemplateWhere">
+    <resultMap id="PlatformTemplateDetailMap"
+               type="com.sme.be_sme.modules.platform.api.response.PlatformTemplateDetailResponse">
+        <result property="templateId" column="template_id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="status" column="status"/>
+        <result property="templateKind" column="template_kind"/>
+        <result property="departmentTypeCode" column="department_type_code"/>
+        <result property="level" column="level"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="checklistCount" column="checklist_count"/>
+        <result property="taskCount" column="task_count"/>
+        <result property="usedByCompanyCount" column="used_by_company_count"/>
+    </resultMap>
+
+    <resultMap id="PlatformTemplateChecklistMap"
+               type="com.sme.be_sme.modules.platform.api.response.PlatformTemplateDetailChecklistResponse">
+        <result property="checklistTemplateId" column="checklist_template_id"/>
+        <result property="name" column="name"/>
+        <result property="stage" column="stage"/>
+        <result property="deadlineDays" column="deadline_days"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="PlatformTemplateTaskMap"
+               type="com.sme.be_sme.modules.platform.api.response.PlatformTemplateDetailTaskResponse">
+        <result property="checklistTemplateId" column="checklist_template_id"/>
+        <result property="taskTemplateId" column="task_template_id"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="ownerType" column="owner_type"/>
+        <result property="ownerRefId" column="owner_ref_id"/>
+        <result property="dueDaysOffset" column="due_days_offset"/>
+        <result property="requireAck" column="require_ack"/>
+        <result property="requireDoc" column="require_doc"/>
+        <result property="requiresManagerApproval" column="requires_manager_approval"/>
+        <result property="approverUserId" column="approver_user_id"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <resultMap id="RequiredDocumentMap"
+               type="com.sme.be_sme.modules.platform.api.response.PlatformTemplateRequiredDocumentResponse">
+        <result property="taskTemplateId" column="task_template_id"/>
+        <result property="documentId" column="document_id"/>
+    </resultMap>
+
+    <sql id="PlatformTemplateWhere">
         ot.level = 'PLATFORM'
         AND ot.company_id = #{platformCompanyId}
 
@@ -49,9 +101,9 @@
         ot.level,
         ot.created_at,
         ot.updated_at,
-        COUNT(DISTINCT ct.checklist_template_id) AS checklist_count,
-        COUNT(DISTINCT tt.task_template_id) AS task_count,
-        COUNT(DISTINCT oi.company_id) AS used_by_company_count
+        CAST(COUNT(DISTINCT ct.checklist_template_id) AS INT) AS checklist_count,
+        CAST(COUNT(DISTINCT tt.task_template_id) AS INT) AS task_count,
+        CAST(COUNT(DISTINCT oi.company_id) AS INT) AS used_by_company_count
         FROM onboarding_templates ot
         LEFT JOIN checklist_templates ct
         ON ct.onboarding_template_id = ot.onboarding_template_id
@@ -62,7 +114,7 @@
         LEFT JOIN onboarding_instances oi
         ON oi.onboarding_template_id = ot.onboarding_template_id
         WHERE
-        <include refid="BasePlatformTemplateWhere"/>
+        <include refid="PlatformTemplateWhere"/>
         GROUP BY
         ot.onboarding_template_id,
         ot.name,
@@ -82,7 +134,144 @@
         SELECT COUNT(1)
         FROM onboarding_templates ot
         WHERE
-        <include refid="BasePlatformTemplateWhere"/>
+        <include refid="PlatformTemplateWhere"/>
     </select>
+
+    <select id="selectPlatformTemplateDetail" resultMap="PlatformTemplateDetailMap">
+        SELECT
+        ot.onboarding_template_id AS template_id,
+        ot.name,
+        ot.description,
+        ot.status,
+        ot.template_kind,
+        ot.department_type_code,
+        ot.level,
+        ot.created_by,
+        ot.created_at,
+        ot.updated_at,
+        CAST(COUNT(DISTINCT ct.checklist_template_id) AS INT) AS checklist_count,
+        CAST(COUNT(DISTINCT tt.task_template_id) AS INT) AS task_count,
+        CAST(COUNT(DISTINCT oi.company_id) AS INT) AS used_by_company_count
+        FROM onboarding_templates ot
+        LEFT JOIN checklist_templates ct
+        ON ct.onboarding_template_id = ot.onboarding_template_id
+        AND COALESCE(ct.status, '') != 'DELETED'
+        LEFT JOIN task_templates tt
+        ON tt.checklist_template_id = ct.checklist_template_id
+        AND COALESCE(tt.status, '') != 'DELETED'
+        LEFT JOIN onboarding_instances oi
+        ON oi.onboarding_template_id = ot.onboarding_template_id
+        WHERE ot.level = 'PLATFORM'
+        AND ot.company_id = #{platformCompanyId}
+        AND ot.onboarding_template_id = #{templateId}
+        GROUP BY
+        ot.onboarding_template_id,
+        ot.name,
+        ot.description,
+        ot.status,
+        ot.template_kind,
+        ot.department_type_code,
+        ot.level,
+        ot.created_by,
+        ot.created_at,
+        ot.updated_at
+    </select>
+
+    <select id="selectTemplateChecklists" resultMap="PlatformTemplateChecklistMap">
+        SELECT
+        ct.checklist_template_id,
+        ct.name,
+        ct.stage,
+        ct.deadline_days,
+        ct.sort_order,
+        ct.status,
+        ct.created_at,
+        ct.updated_at
+        FROM checklist_templates ct
+        WHERE ct.company_id = #{platformCompanyId}
+        AND ct.onboarding_template_id = #{templateId}
+        AND COALESCE(ct.status, '') != 'DELETED'
+        ORDER BY ct.sort_order ASC, ct.created_at ASC
+    </select>
+
+    <select id="selectTemplateTasks" resultMap="PlatformTemplateTaskMap">
+        SELECT
+        ct.checklist_template_id,
+        tt.task_template_id,
+        tt.title,
+        tt.description,
+        tt.owner_type,
+        tt.owner_ref_id,
+        tt.due_days_offset,
+        tt.require_ack,
+        tt.require_doc,
+        tt.requires_manager_approval,
+        tt.approver_user_id,
+        tt.sort_order,
+        tt.status
+        FROM task_templates tt
+        INNER JOIN checklist_templates ct
+        ON ct.checklist_template_id = tt.checklist_template_id
+        WHERE tt.company_id = #{platformCompanyId}
+        AND ct.company_id = #{platformCompanyId}
+        AND ct.onboarding_template_id = #{templateId}
+        AND COALESCE(tt.status, '') != 'DELETED'
+        AND COALESCE(ct.status, '') != 'DELETED'
+        ORDER BY ct.sort_order ASC, tt.sort_order ASC, tt.created_at ASC
+    </select>
+
+    <select id="selectRequiredDocumentsByTemplateId" resultMap="RequiredDocumentMap">
+        SELECT
+        trd.task_template_id,
+        trd.document_id
+        FROM task_template_required_documents trd
+        INNER JOIN task_templates tt
+        ON tt.task_template_id = trd.task_template_id
+        INNER JOIN checklist_templates ct
+        ON ct.checklist_template_id = tt.checklist_template_id
+        WHERE trd.company_id = #{platformCompanyId}
+        AND tt.company_id = #{platformCompanyId}
+        AND ct.company_id = #{platformCompanyId}
+        AND ct.onboarding_template_id = #{templateId}
+    </select>
+
+    <select id="countTemplateUsage" resultType="int">
+        SELECT COUNT(1)
+        FROM onboarding_instances
+        WHERE onboarding_template_id = #{templateId}
+    </select>
+
+    <delete id="deleteRequiredDocumentsByTemplateId">
+        DELETE FROM task_template_required_documents trd
+        USING task_templates tt, checklist_templates ct
+        WHERE trd.task_template_id = tt.task_template_id
+        AND tt.checklist_template_id = ct.checklist_template_id
+        AND trd.company_id = #{platformCompanyId}
+        AND tt.company_id = #{platformCompanyId}
+        AND ct.company_id = #{platformCompanyId}
+        AND ct.onboarding_template_id = #{templateId}
+    </delete>
+
+    <delete id="deleteTasksByTemplateId">
+        DELETE FROM task_templates tt
+        USING checklist_templates ct
+        WHERE tt.checklist_template_id = ct.checklist_template_id
+        AND tt.company_id = #{platformCompanyId}
+        AND ct.company_id = #{platformCompanyId}
+        AND ct.onboarding_template_id = #{templateId}
+    </delete>
+
+    <delete id="deleteChecklistsByTemplateId">
+        DELETE FROM checklist_templates
+        WHERE company_id = #{platformCompanyId}
+        AND onboarding_template_id = #{templateId}
+    </delete>
+
+    <delete id="deleteTemplateById">
+        DELETE FROM onboarding_templates
+        WHERE company_id = #{platformCompanyId}
+        AND level = 'PLATFORM'
+        AND onboarding_template_id = #{templateId}
+    </delete>
 
 </mapper>
