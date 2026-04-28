@@ -35,12 +35,30 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
 
     private static final String SYSTEM_BLOCK = """
 [SYSTEM]
-You are a knowledgeable company assistant.
-Answer based on the provided context.
-If context is incomplete, infer carefully from related information in the context.
-Provide a structured and concise answer.
-Suggest follow-up questions when more detail is needed.
-Do not immediately say "I don't know" if related context exists.
+You are a company knowledge assistant.
+
+Your goal is to explain clearly based on the provided context.
+
+Language rule (VERY IMPORTANT):
+- Detect the language of the user's question
+- If the user writes in Vietnamese -> respond ONLY in Vietnamese
+- If the user writes in English -> respond ONLY in English
+- NEVER mix languages in a single response
+
+Answering rules:
+- Always try to answer using the available context
+- If context is incomplete, infer and complete the meaning logically
+- Prefer a reasonable explanation over refusing to answer
+- Be clear, specific, and natural
+
+Avoid:
+- Saying "I couldn't find exact matching content"
+- Giving generic template answers
+- Being overly defensive
+- Mixing Vietnamese and English
+
+Always produce a complete and natural answer.
+Always answer in the same language as the user's question.
 """;
 
     private static final int INITIAL_CANDIDATE_K = 15;
@@ -389,12 +407,13 @@ Do not immediately say "I don't know" if related context exists.
         String historyBlock = formatHistory(selectedHistory);
         String followUpBlock = followUp && StringUtils.hasText(previousAnswer)
                 ? "Previous answer:\n" + previousAnswer
-                + "\n\nContinue answering the user's follow-up question."
+                + "\n\nContinue the explanation."
                 + "\n\nRules:"
-                + "\n- If the previous answer is incomplete, continue it logically"
-                + "\n- Infer missing meaning from context"
-                + "\n- Always complete unfinished thoughts"
-                + "\n- Do NOT say you cannot find information"
+                + "\n- Continue naturally from the previous answer"
+                + "\n- Do NOT restart from scratch"
+                + "\n- Do NOT refuse to answer"
+                + "\n- Fill in missing details logically"
+                + "\n- Keep the same language as the user's question"
                 : "";
         String prompt = formatPrompt(contextBlock, historyBlock, safeQuestion, followUpBlock);
 
@@ -584,15 +603,18 @@ Do not immediately say "I don't know" if related context exists.
     ) {
         List<String> topics = deriveAvailableTopics(allChunks, documentIdToTitle);
         String topicLines = topics.isEmpty()
-                ? "- Company policies\n- Onboarding process\n- Internal guidelines"
+                ? "- Onboarding\n- HR Policy\n- Engineering Guidelines"
                 : topics.stream().map(t -> "- " + t).collect(Collectors.joining("\n"));
-        String answer = "I couldn't find exact matching content for your question. "
-                + "Here are available topics you can ask about:\n"
+        boolean vietnamese = isVietnameseQuestion(question);
+        String answer = vietnamese
+                ? "Hien tai minh chua thay thong tin hoan toan khop,\n"
+                + "nhung dua tren cac tai lieu hien co, noi dung chu yeu lien quan den:\n"
                 + topicLines
-                + "\n\nTry asking one of these:\n"
-                + "- Give me an overview of onboarding policies\n"
-                + "- Summarize HR guidelines for new employees\n"
-                + "- What are the main engineering process documents?";
+                + "\n\nBan co the hoi cu the hon de minh tra loi chinh xac hon."
+                : "I couldn't find an exact match,\n"
+                + "but based on available documents, the content mainly relates to:\n"
+                + topicLines
+                + "\n\nYou can ask more specifically and I will provide a better answer.";
         return new AnswerBundle(answer, topics);
     }
 
@@ -774,21 +796,16 @@ Do not immediately say "I don't know" if related context exists.
     private static String ensureAnswerCompleteness(String answer, String question, boolean followUp, String previousAnswer) {
         String safe = StringUtils.hasText(answer) ? answer.trim() : "";
         if (!StringUtils.hasText(safe)) {
-            return "The topic mainly covers:\n"
-                    + "1. Core concept: more context is required to identify the exact topic.\n"
-                    + "2. Key idea: the available information is insufficient for a precise conclusion.\n"
-                    + "3. Implication: please specify the document or section to continue.";
-        }
-        if (!needsExpansion(safe)) {
             return safe;
         }
-        return "The topic mainly covers:\n"
-                + "1. Core concept: a clear explanation is needed for the main subject behind \"" + question + "\".\n"
-                + "2. Key idea: the answer should describe the central argument and supporting context.\n"
-                + "3. Implication: this means the topic should be applied in practice with concrete next steps."
-                + (followUp && StringUtils.hasText(previousAnswer)
-                ? "\nFollow-up context used: continuing from the prior discussion."
-                : "");
+        if (needsExpansion(safe)) {
+            boolean vietnamese = isVietnameseQuestion(question);
+            String extra = vietnamese
+                    ? " Minh co the giai thich sau hon neu ban cho biet phan nao ban muon tap trung."
+                    : " I can explain this in more detail if you share which part you want to focus on.";
+            return safe + extra;
+        }
+        return safe;
     }
 
     private static boolean needsExpansion(String answer) {
@@ -802,6 +819,17 @@ Do not immediately say "I don't know" if related context exists.
                 || lower.contains("somehow")
                 || lower.contains("generally");
         return tooShort || abruptEnding || abstractTone;
+    }
+
+    private static boolean isVietnameseQuestion(String question) {
+        if (!StringUtils.hasText(question)) return false;
+        String lower = question.toLowerCase(Locale.ROOT);
+        return lower.matches(".*[\\u0102\\u0103\\u00e2\\u00ea\\u00f4\\u01a1\\u01b0\\u0111\\u00e1\\u00e0\\u1ea3\\u00e3\\u1ea1\\u1eaf\\u1eb1\\u1eb3\\u1eb5\\u1eb7\\u1ea5\\u1ea7\\u1ea9\\u1eab\\u1ead\\u1ebf\\u1ec1\\u1ec3\\u1ec5\\u1ec7\\u1ed1\\u1ed3\\u1ed5\\u1ed7\\u1ed9\\u1edb\\u1edd\\u1edf\\u1ee1\\u1ee3\\u1ee9\\u1eeb\\u1eed\\u1eef\\u1ef1].*")
+                || lower.contains("khong")
+                || lower.contains("gi")
+                || lower.contains("nao")
+                || lower.contains("tai lieu")
+                || lower.contains("cong ty");
     }
 
     private static String buildConversationKey(String companyId, String operatorId, String chatSessionId) {
