@@ -43,8 +43,8 @@ Suggest follow-up questions when more detail is needed.
 Do not immediately say "I don't know" if related context exists.
 """;
 
-    private static final int INITIAL_CANDIDATE_K = 20;
-    private static final int OVERVIEW_CANDIDATE_K = 20;
+    private static final int INITIAL_CANDIDATE_K = 15;
+    private static final int OVERVIEW_CANDIDATE_K = 15;
     private static final int FINAL_CONTEXT_K = 6;
     private static final int MIN_TOKEN_LENGTH = 3;
     private static final int MAX_HISTORY_MESSAGES = 5;
@@ -59,6 +59,12 @@ Do not immediately say "I don't know" if related context exists.
     private static final int MAX_DB_CHUNKS = 2000;
     private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(10);
     private static final double REQUESTS_PER_SECOND_PER_USER = 2.0d;
+    private static final int FOLLOWUP_FALLBACK_K = 5;
+    private static final int MERGED_CHUNKS_LIMIT = 8;
+    private static final Set<String> FOLLOW_UP_KEYWORDS = Set.of(
+            "gì", "nào", "đó", "về", "cái gì", "nền gì", "gi", "nao", "do", "ve",
+            "what", "which", "that", "it", "about", "more"
+    );
     private static final Set<String> OVERVIEW_KEYWORDS = Set.of(
             "tổng quan", "tong quan", "khái quát", "khai quat", "giới thiệu", "gioi thieu",
             "overview", "summary", "introduce", "introduction", "policy", "guideline"
@@ -90,6 +96,7 @@ Do not immediately say "I don't know" if related context exists.
     private final ConcurrentHashMap<String, RateLimiter> operatorRateLimiters = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, CacheEntry> answerCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, CompletableFuture<AnswerBundle>> inFlightRequests = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ConversationState> conversationStateStore = new ConcurrentHashMap<>();
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -102,10 +109,13 @@ Do not immediately say "I don't know" if related context exists.
         String normalizedQuestion = normalizeForCache(question);
         String cacheKey = buildCacheKey(companyId, normalizedQuestion);
         String questionHash = Integer.toHexString(normalizedQuestion.hashCode());
+        boolean followUp = isFollowUp(question);
         QuestionIntent intent = detectIntent(question);
         String rewrittenQuery = rewriteQuery(question);
         log.info("Assistant intent: companyId={}, operatorId={}, questionHash={}, intent={}",
                 companyId, operatorId, questionHash, intent);
+        log.info("Assistant follow-up detection: companyId={}, operatorId={}, questionHash={}, isFollowUp={}",
+                companyId, operatorId, questionHash, followUp);
         log.debug("Assistant rewritten query metadata: companyId={}, questionHash={}, originalLen={}, rewrittenLen={}",
                 companyId, questionHash, question.length(), rewrittenQuery.length());
 
@@ -113,6 +123,7 @@ Do not immediately say "I don't know" if related context exists.
         if (chatSessionId != null) {
             validateSessionOwnership(companyId, operatorId, chatSessionId);
         }
+        String conversationKey = buildConversationKey(companyId, operatorId, chatSessionId);
 
         CacheEntry cached = getCache(cacheKey);
         if (cached != null) {
@@ -127,28 +138,62 @@ Do not immediately say "I don't know" if related context exists.
         }
 
         AnswerBundle bundle = getOrComputeInFlight(cacheKey, () -> {
-            List<DocumentChunkEntity> allChunks = loadChunksWithLimit(companyId, MAX_DB_CHUNKS);
-            Map<String, String> documentIdToTitle = loadDocumentTitles(companyId, allChunks);
+            List<MessageView> history = loadConversationHistory(chatSessionId);
+            ConversationState previousState = conversationStateStore.get(conversationKey);
+            List<ChunkView> chunkViews;
+            String previousAnswer = previousState != null ? previousState.lastAnswer() : extractLastAssistantAnswer(history);
 
-            List<DocumentChunkEntity> topChunks = retrieveChunksByIntent(allChunks, rewrittenQuery, intent);
-            log.info("Assistant retrieval: companyId={}, questionHash={}, intent={}, chunksFound={}",
-                    companyId, questionHash, intent, topChunks.size());
-            if (topChunks.isEmpty()) {
-                log.info("Assistant fallback triggered: companyId={}, questionHash={}, reason=no_chunks", companyId, questionHash);
-                return buildFallbackResponse(question, allChunks, documentIdToTitle);
+            if (followUp) {
+                List<ChunkView> previousChunks = previousState != null && previousState.lastChunks() != null
+                        ? previousState.lastChunks()
+                        : new ArrayList<>();
+                chunkViews = new ArrayList<>(previousChunks);
+                boolean contextWeak = isContextWeak(previousAnswer, chunkViews);
+                boolean fallbackRetrievalTriggered = false;
+                if (contextWeak) {
+                    List<DocumentChunkEntity> allChunks = loadChunksWithLimit(companyId, MAX_DB_CHUNKS);
+                    Map<String, String> documentIdToTitle = loadDocumentTitles(companyId, allChunks);
+                    List<DocumentChunkEntity> freshChunks = selectTopChunksByLexicalScore(allChunks, rewrittenQuery, FOLLOWUP_FALLBACK_K);
+                    List<ChunkView> freshChunkViews = freshChunks.stream()
+                            .map(c -> new ChunkView(
+                                    documentIdToTitle.getOrDefault(c.getDocumentId(), "(no title)"),
+                                    c.getChunkText()
+                            ))
+                            .collect(Collectors.toList());
+                    chunkViews = mergeChunks(chunkViews, freshChunkViews, MERGED_CHUNKS_LIMIT);
+                    fallbackRetrievalTriggered = !freshChunkViews.isEmpty();
+                }
+                log.info("Assistant follow-up context reuse: companyId={}, questionHash={}, contextWeak={}, fallbackRetrievalTriggered={}, finalChunkCount={}",
+                        companyId, questionHash, contextWeak, fallbackRetrievalTriggered, chunkViews.size());
+                if (chunkViews.isEmpty()) {
+                    return buildFollowUpNoContextResponse(previousAnswer);
+                }
+            } else {
+                List<DocumentChunkEntity> allChunks = loadChunksWithLimit(companyId, MAX_DB_CHUNKS);
+                Map<String, String> documentIdToTitle = loadDocumentTitles(companyId, allChunks);
+
+                List<DocumentChunkEntity> topChunks = retrieveChunksByIntent(allChunks, rewrittenQuery, intent);
+                log.info("Assistant retrieval: companyId={}, questionHash={}, intent={}, chunksFound={}",
+                        companyId, questionHash, intent, topChunks.size());
+                if (topChunks.isEmpty()) {
+                    log.info("Assistant fallback triggered: companyId={}, questionHash={}, reason=no_chunks", companyId, questionHash);
+                    return buildFallbackResponse(question, allChunks, documentIdToTitle);
+                }
+
+                chunkViews = topChunks.stream()
+                        .map(c -> new ChunkView(
+                                documentIdToTitle.getOrDefault(c.getDocumentId(), "(no title)"),
+                                c.getChunkText()
+                        ))
+                        .collect(Collectors.toList());
+                previousAnswer = extractLastAssistantAnswer(history);
+                log.info("Assistant retrieval path: companyId={}, questionHash={}, mode=new_chunks", companyId, questionHash);
             }
 
-            List<ChunkView> chunkViews = topChunks.stream()
-                    .map(c -> new ChunkView(
-                            documentIdToTitle.getOrDefault(c.getDocumentId(), "(no title)"),
-                            c.getChunkText()
-                    ))
-                    .collect(Collectors.toList());
-            List<MessageView> history = loadConversationHistory(chatSessionId);
             String promptQuestion = intent == QuestionIntent.OVERVIEW
                     ? "Summarize the company's knowledge base based on the following documents.\nUser request: " + question
                     : question;
-            String prompt = buildPrompt(chunkViews, history, promptQuestion);
+            String prompt = buildPrompt(chunkViews, history, promptQuestion, previousAnswer, followUp);
             if (System.currentTimeMillis() < globalCooldownUntil) {
                 throw AppException.of(ErrorCodes.LIMIT_EXCEEDED,
                         "AI assistant is cooling down due to high traffic. Please try again shortly.");
@@ -156,12 +201,18 @@ Do not immediately say "I don't know" if related context exists.
             globalLimiter.acquire();
             log.debug("Global limiter acquired before Gemini call");
             getLimiter(operatorId).acquire();
-            String answer = callGeminiWithRetry(prompt, companyId, operatorId, questionHash);
-            List<String> sourceDocumentNames = trimChunks(chunkViews, FINAL_CONTEXT_K, MAX_CHUNK_TOKENS).stream()
+            String rawAnswer = callGeminiWithRetry(prompt, companyId, operatorId, questionHash);
+            String answer = ensureAnswerCompleteness(rawAnswer, question, followUp, previousAnswer);
+            boolean answerExpanded = !normalizeWhitespace(rawAnswer).equals(normalizeWhitespace(answer));
+            List<ChunkView> selectedChunks = trimChunks(chunkViews, FINAL_CONTEXT_K, MAX_CHUNK_TOKENS);
+            List<String> sourceDocumentNames = selectedChunks.stream()
                     .map(ChunkView::documentName)
                     .collect(Collectors.toCollection(LinkedHashSet::new))
                     .stream()
                     .toList();
+            conversationStateStore.put(conversationKey, new ConversationState(answer, selectedChunks));
+            log.info("Assistant answer quality: companyId={}, questionHash={}, answerLength={}, followUp={}, answerExpanded={}",
+                    companyId, questionHash, answer.length(), followUp, answerExpanded);
             return new AnswerBundle(answer, sourceDocumentNames);
         });
 
@@ -328,7 +379,7 @@ Do not immediately say "I don't know" if related context exists.
         throw AppException.of(ErrorCodes.INTERNAL_ERROR, "AI assistant failed: unknown retry state");
     }
 
-    private String buildPrompt(List<ChunkView> chunks, List<MessageView> history, String question) {
+    private String buildPrompt(List<ChunkView> chunks, List<MessageView> history, String question, String previousAnswer, boolean followUp) {
         String safeQuestion = question == null ? "" : question.trim();
 
         List<ChunkView> selectedChunks = trimChunks(chunks, FINAL_CONTEXT_K, MAX_CHUNK_TOKENS);
@@ -336,7 +387,16 @@ Do not immediately say "I don't know" if related context exists.
 
         String contextBlock = formatContext(selectedChunks);
         String historyBlock = formatHistory(selectedHistory);
-        String prompt = formatPrompt(contextBlock, historyBlock, safeQuestion);
+        String followUpBlock = followUp && StringUtils.hasText(previousAnswer)
+                ? "Previous answer:\n" + previousAnswer
+                + "\n\nContinue answering the user's follow-up question."
+                + "\n\nRules:"
+                + "\n- If the previous answer is incomplete, continue it logically"
+                + "\n- Infer missing meaning from context"
+                + "\n- Always complete unfinished thoughts"
+                + "\n- Do NOT say you cannot find information"
+                : "";
+        String prompt = formatPrompt(contextBlock, historyBlock, safeQuestion, followUpBlock);
 
         int promptBudget = MAX_PROMPT_TOKENS - RESERVED_OUTPUT_TOKENS;
         if (estimateTokens(prompt) <= promptBudget) {
@@ -346,7 +406,7 @@ Do not immediately say "I don't know" if related context exists.
         List<MessageView> historyAdaptive = new ArrayList<>(selectedHistory);
         while (!historyAdaptive.isEmpty()) {
             historyAdaptive.remove(0); // drop oldest first
-            prompt = formatPrompt(contextBlock, formatHistory(historyAdaptive), safeQuestion);
+            prompt = formatPrompt(contextBlock, formatHistory(historyAdaptive), safeQuestion, followUpBlock);
             if (estimateTokens(prompt) <= promptBudget) {
                 return prompt;
             }
@@ -360,13 +420,13 @@ Do not immediately say "I don't know" if related context exists.
             chunkAdaptive = chunkAdaptive.stream()
                     .map(c -> new ChunkView(c.documentName(), truncateByTokens(c.text(), perChunkLimit)))
                     .toList();
-            prompt = formatPrompt(formatContext(chunkAdaptive), "", safeQuestion);
+            prompt = formatPrompt(formatContext(chunkAdaptive), "", safeQuestion, followUpBlock);
             if (estimateTokens(prompt) <= promptBudget) {
                 return prompt;
             }
         }
 
-        return formatPrompt("", "", safeQuestion);
+        return formatPrompt("", "", safeQuestion, followUpBlock);
     }
 
     private List<ChunkView> trimChunks(List<ChunkView> chunks, int topK, int maxChunkTokens) {
@@ -379,7 +439,7 @@ Do not immediately say "I don't know" if related context exists.
                         normalizeWhitespace(c.text())
                 ))
                 .filter(c -> StringUtils.hasText(c.text()))
-                .map(c -> new ChunkView(c.documentName(), truncateByTokens(c.text(), maxChunkTokens)))
+                .map(c -> new ChunkView(c.documentName(), truncateByTokensSafely(c.text(), maxChunkTokens)))
                 .toList();
 
         List<ChunkView> deduped = new ArrayList<>();
@@ -404,16 +464,17 @@ Do not immediately say "I don't know" if related context exists.
                 .filter(Objects::nonNull)
                 .map(m -> new MessageView(
                         "Assistant".equalsIgnoreCase(m.role()) ? "Assistant" : "User",
-                        truncateByTokens(normalizeWhitespace(m.content()), maxMsgTokens)
+                        truncateByTokensSafely(normalizeWhitespace(m.content()), maxMsgTokens)
                 ))
                 .filter(m -> StringUtils.hasText(m.content()))
                 .toList();
     }
 
-    private String formatPrompt(String contextBlock, String historyBlock, String question) {
+    private String formatPrompt(String contextBlock, String historyBlock, String question, String followUpBlock) {
         return SYSTEM_BLOCK.trim()
                 + "\n\n[CONTEXT]\n" + safeBlock(contextBlock)
                 + "\n\n[HISTORY]\n" + safeBlock(historyBlock)
+                + (StringUtils.hasText(followUpBlock) ? "\n\n[FOLLOW_UP_CONTEXT]\n" + followUpBlock.trim() : "")
                 + "\n\n[QUESTION]\n" + safeBlock(question)
                 + "\n\n[ANSWER]";
     }
@@ -455,6 +516,25 @@ Do not immediately say "I don't know" if related context exists.
         int charLimit = Math.max(1, (int) Math.ceil(tokenLimit * 3.5d));
         if (text.length() <= charLimit) return text;
         return text.substring(0, charLimit) + "...";
+    }
+
+    private static String truncateByTokensSafely(String text, int tokenLimit) {
+        if (!StringUtils.hasText(text)) return "";
+        int charLimit = Math.max(1, (int) Math.ceil(tokenLimit * 3.5d));
+        if (text.length() <= charLimit) return text;
+        String candidate = text.substring(0, charLimit);
+        int sentenceBoundary = Math.max(
+                Math.max(candidate.lastIndexOf('.'), candidate.lastIndexOf('!')),
+                Math.max(candidate.lastIndexOf('?'), candidate.lastIndexOf('\n'))
+        );
+        if (sentenceBoundary > candidate.length() / 2) {
+            return candidate.substring(0, sentenceBoundary + 1).trim();
+        }
+        int lastSpace = candidate.lastIndexOf(' ');
+        if (lastSpace > 0) {
+            return candidate.substring(0, lastSpace).trim() + "...";
+        }
+        return candidate.trim() + "...";
     }
 
     private static double similarity(String a, String b) {
@@ -514,6 +594,51 @@ Do not immediately say "I don't know" if related context exists.
                 + "- Summarize HR guidelines for new employees\n"
                 + "- What are the main engineering process documents?";
         return new AnswerBundle(answer, topics);
+    }
+
+    private AnswerBundle buildFollowUpNoContextResponse(String previousAnswer) {
+        String answer = StringUtils.hasText(previousAnswer)
+                ? "I can continue from our previous discussion. Based on the previous answer:\n"
+                + previousAnswer
+                + "\n\nCould you clarify what part you want to go deeper into?"
+                : "I need a bit more context to continue this follow-up. "
+                + "Please mention the topic title or ask a slightly more specific question.";
+        return new AnswerBundle(answer, new ArrayList<>());
+    }
+
+    private static boolean isContextWeak(String previousAnswer, List<ChunkView> chunks) {
+        boolean weakAnswer = !StringUtils.hasText(previousAnswer) || previousAnswer.trim().length() < 120;
+        boolean vagueAnswer = false;
+        if (StringUtils.hasText(previousAnswer)) {
+            String lower = previousAnswer.toLowerCase(Locale.ROOT);
+            vagueAnswer = lower.contains("xoay quanh")
+                    || lower.contains("liên quan")
+                    || lower.contains("generally")
+                    || lower.contains("somehow");
+        }
+        boolean weakChunks = chunks == null || chunks.size() < 2;
+        return weakAnswer || vagueAnswer || weakChunks;
+    }
+
+    private List<ChunkView> mergeChunks(List<ChunkView> previousChunks, List<ChunkView> newChunks, int limit) {
+        List<ChunkView> merged = new ArrayList<>();
+        if (previousChunks != null) {
+            for (ChunkView c : previousChunks) {
+                if (c == null || !StringUtils.hasText(c.text())) continue;
+                boolean duplicate = merged.stream().anyMatch(m -> similarity(m.text(), c.text()) >= 0.85d);
+                if (!duplicate) merged.add(c);
+                if (merged.size() >= limit) return merged;
+            }
+        }
+        if (newChunks != null) {
+            for (ChunkView c : newChunks) {
+                if (c == null || !StringUtils.hasText(c.text())) continue;
+                boolean duplicate = merged.stream().anyMatch(m -> similarity(m.text(), c.text()) >= 0.85d);
+                if (!duplicate) merged.add(c);
+                if (merged.size() >= limit) break;
+            }
+        }
+        return merged;
     }
 
     private List<String> deriveAvailableTopics(List<DocumentChunkEntity> chunks, Map<String, String> documentIdToTitle) {
@@ -622,6 +747,68 @@ Do not immediately say "I don't know" if related context exists.
         return String.join(" ", terms);
     }
 
+    private static boolean isFollowUp(String question) {
+        if (!StringUtils.hasText(question)) return false;
+        String normalized = normalizeForCache(question);
+        int wordCount = normalized.split("\\s+").length;
+        if (wordCount >= 4) return false;
+        for (String keyword : FOLLOW_UP_KEYWORDS) {
+            if (normalized.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String extractLastAssistantAnswer(List<MessageView> history) {
+        if (history == null || history.isEmpty()) return "";
+        for (int i = history.size() - 1; i >= 0; i--) {
+            MessageView m = history.get(i);
+            if (m != null && "Assistant".equalsIgnoreCase(m.role()) && StringUtils.hasText(m.content())) {
+                return m.content().trim();
+            }
+        }
+        return "";
+    }
+
+    private static String ensureAnswerCompleteness(String answer, String question, boolean followUp, String previousAnswer) {
+        String safe = StringUtils.hasText(answer) ? answer.trim() : "";
+        if (!StringUtils.hasText(safe)) {
+            return "The topic mainly covers:\n"
+                    + "1. Core concept: more context is required to identify the exact topic.\n"
+                    + "2. Key idea: the available information is insufficient for a precise conclusion.\n"
+                    + "3. Implication: please specify the document or section to continue.";
+        }
+        if (!needsExpansion(safe)) {
+            return safe;
+        }
+        return "The topic mainly covers:\n"
+                + "1. Core concept: a clear explanation is needed for the main subject behind \"" + question + "\".\n"
+                + "2. Key idea: the answer should describe the central argument and supporting context.\n"
+                + "3. Implication: this means the topic should be applied in practice with concrete next steps."
+                + (followUp && StringUtils.hasText(previousAnswer)
+                ? "\nFollow-up context used: continuing from the prior discussion."
+                : "");
+    }
+
+    private static boolean needsExpansion(String answer) {
+        String normalized = answer.trim();
+        int sentenceCount = normalized.split("[.!?]+").length;
+        boolean tooShort = sentenceCount < 2;
+        boolean abruptEnding = !(normalized.endsWith(".") || normalized.endsWith("!") || normalized.endsWith("?"));
+        String lower = normalized.toLowerCase(Locale.ROOT);
+        boolean abstractTone = lower.contains("xoay quanh")
+                || lower.contains("liên quan")
+                || lower.contains("somehow")
+                || lower.contains("generally");
+        return tooShort || abruptEnding || abstractTone;
+    }
+
+    private static String buildConversationKey(String companyId, String operatorId, String chatSessionId) {
+        return companyId + "::" + (StringUtils.hasText(operatorId) ? operatorId : "anonymous")
+                + "::" + (StringUtils.hasText(chatSessionId) ? chatSessionId : "no-session");
+    }
+
     private static final class ScoredChunk {
         final DocumentChunkEntity chunk;
         final int score;
@@ -639,6 +826,8 @@ Do not immediately say "I don't know" if related context exists.
     private record AnswerBundle(String answer, List<String> sourceDocumentNames) {}
 
     private record CacheEntry(String answer, List<String> sourceDocumentNames, long expiresAtMs) {}
+
+    private record ConversationState(String lastAnswer, List<ChunkView> lastChunks) {}
 
     @FunctionalInterface
     private interface Computation {
