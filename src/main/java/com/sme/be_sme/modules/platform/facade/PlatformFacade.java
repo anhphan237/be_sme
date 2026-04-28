@@ -127,17 +127,34 @@ public interface PlatformFacade extends OperationFacadeProvider {
     @OperationType("com.sme.platform.dashboard.risk")
     PlatformRiskDashboardResponse getRiskDashboard(PlatformRiskDashboardRequest request);
 
-    // Create Platform template
+    // ============================================================
+    // Platform Global Onboarding Template
+    // ============================================================
+
     @OperationType("com.sme.platform.template.create")
     CreatePlatformTemplateResponse createPlatformTemplate(CreatePlatformTemplateRequest request);
 
-    /** Activate a PLATFORM onboarding template: only DRAFT → ACTIVE; other fields unchanged. */
+    @OperationType("com.sme.platform.template.list")
+    ListPlatformTemplateResponse listPlatformTemplate(ListPlatformTemplateRequest request);
+
+    @OperationType("com.sme.platform.template.detail")
+    PlatformTemplateDetailResponse getPlatformTemplateDetail(PlatformTemplateDetailRequest request);
+
+    @OperationType("com.sme.platform.template.update")
+    CreatePlatformTemplateResponse updatePlatformTemplate(UpdatePlatformTemplateRequest request);
+
+    /** Activate a PLATFORM onboarding template. */
     @OperationType("com.sme.platform.template.activate")
     CreatePlatformTemplateResponse activatePlatformTemplate(ActivatePlatformTemplateRequest request);
 
+    /** Deactivate a PLATFORM onboarding template. Usually ACTIVE/DRAFT -> ARCHIVED. */
+    @OperationType("com.sme.platform.template.deactivate")
+    CreatePlatformTemplateResponse deactivatePlatformTemplate(DeactivatePlatformTemplateRequest request);
+
+    /** Delete only unused PLATFORM onboarding template. Used templates should be archived instead. */
+    @OperationType("com.sme.platform.template.delete")
+    DeletePlatformTemplateResponse deletePlatformTemplate(DeletePlatformTemplateRequest request);
+
     @OperationType("com.sme.platform.errorLog.list")
     PlatformErrorLogListResponse listPlatformErrorLogs(PlatformErrorLogListRequest request);
-
-    @OperationType("com.sme.platform.template.list")
-    ListPlatformTemplateResponse listPlatformTemplate(ListPlatformTemplateRequest request);
 }
