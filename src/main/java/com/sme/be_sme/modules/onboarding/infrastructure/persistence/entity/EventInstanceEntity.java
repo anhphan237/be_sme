@@ -10,6 +10,7 @@ public class EventInstanceEntity {
     private String eventInstanceId;
     private String companyId;
     private String eventTemplateId;
+    private String coverImageUrl;
     private Date eventAt;
     private String sourceType;
     private String sourceDepartmentIds;

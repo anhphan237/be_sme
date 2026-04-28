@@ -54,4 +54,11 @@
         #{id,jdbcType=VARCHAR}
       </foreach>
   </select>
+
+  <select id="selectByCompanyIdOrderByCreatedAtDesc" resultMap="BaseResultMap">
+    select event_template_id, company_id, name, content, description, status, created_by, created_at, updated_at
+    from event_templates
+    where company_id = #{companyId,jdbcType=VARCHAR}
+    order by created_at desc
+  </select>
 </mapper>

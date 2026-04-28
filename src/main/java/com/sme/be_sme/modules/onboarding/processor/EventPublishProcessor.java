@@ -131,6 +131,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         instance.setEventInstanceId(eventInstanceId);
         instance.setCompanyId(companyId);
         instance.setEventTemplateId(template.getEventTemplateId());
+        instance.setCoverImageUrl(StringUtils.hasText(request.getCoverImageUrl()) ? request.getCoverImageUrl().trim() : null);
         instance.setEventAt(request.getEventAt());
         instance.setSourceType(sourceType);
         instance.setSourceDepartmentIds(toJsonArray(departmentIds));
@@ -195,6 +196,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         EventPublishResponse response = new EventPublishResponse();
         response.setEventInstanceId(eventInstanceId);
         response.setEventTemplateId(template.getEventTemplateId());
+        response.setCoverImageUrl(instance.getCoverImageUrl());
         response.setEventAt(request.getEventAt());
         response.setEventEndAt(request.getEventEndAt());
         response.setTaskCount(participantUserIds.size());

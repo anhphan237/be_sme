@@ -62,6 +62,7 @@ public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
         EventDetailResponse response = new EventDetailResponse();
         response.setEventInstanceId(event.getEventInstanceId());
         response.setEventTemplateId(event.getEventTemplateId());
+        response.setCoverImageUrl(event.getCoverImageUrl());
         response.setEventAt(event.getEventAt());
         response.setSourceType(event.getSourceType());
         response.setSourceDepartmentIds(parseJsonArray(event.getSourceDepartmentIds()));

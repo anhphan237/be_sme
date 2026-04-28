@@ -5,6 +5,7 @@
     <id column="event_instance_id" jdbcType="VARCHAR" property="eventInstanceId" />
     <result column="company_id" jdbcType="VARCHAR" property="companyId" />
     <result column="event_template_id" jdbcType="VARCHAR" property="eventTemplateId" />
+    <result column="cover_image_url" jdbcType="VARCHAR" property="coverImageUrl" />
     <result column="event_at" jdbcType="TIMESTAMP" property="eventAt" />
     <result column="source_type" jdbcType="VARCHAR" property="sourceType" />
     <result column="source_department_ids" jdbcType="VARCHAR" property="sourceDepartmentIds" />
@@ -22,6 +23,7 @@
       event_instance_id,
       company_id,
       event_template_id,
+      cover_image_url,
       event_at,
       source_type,
       source_department_ids,
@@ -37,6 +39,7 @@
       #{eventInstanceId,jdbcType=VARCHAR},
       #{companyId,jdbcType=VARCHAR},
       #{eventTemplateId,jdbcType=VARCHAR},
+      #{coverImageUrl,jdbcType=VARCHAR},
       #{eventAt,jdbcType=TIMESTAMP},
       #{sourceType,jdbcType=VARCHAR},
       CAST(#{sourceDepartmentIds,jdbcType=VARCHAR} AS jsonb),
@@ -51,7 +54,7 @@
   </insert>
 
   <select id="selectByCompanyIdAndEventInstanceId" resultMap="BaseResultMap">
-    select event_instance_id, company_id, event_template_id, event_at, source_type, source_department_ids, source_user_ids,
+    select event_instance_id, company_id, event_template_id, cover_image_url, event_at, source_type, source_department_ids, source_user_ids,
            participant_user_ids, status, notified_at, created_by, created_at, updated_at
     from event_instances
     where company_id = #{companyId,jdbcType=VARCHAR}
@@ -60,7 +63,7 @@
   </select>
 
   <select id="selectByCompanyIdOrderByEventAtDesc" resultMap="BaseResultMap">
-    select event_instance_id, company_id, event_template_id, event_at, source_type, source_department_ids, source_user_ids,
+    select event_instance_id, company_id, event_template_id, cover_image_url, event_at, source_type, source_department_ids, source_user_ids,
            participant_user_ids, status, notified_at, created_by, created_at, updated_at
     from event_instances
     where company_id = #{companyId,jdbcType=VARCHAR}
@@ -68,7 +71,7 @@
   </select>
 
   <select id="selectReadyToNotify" resultMap="BaseResultMap">
-    select event_instance_id, company_id, event_template_id, event_at, source_type, source_department_ids, source_user_ids,
+    select event_instance_id, company_id, event_template_id, cover_image_url, event_at, source_type, source_department_ids, source_user_ids,
            participant_user_ids, status, notified_at, created_by, created_at, updated_at
     from event_instances
     where event_at >= #{windowStart,jdbcType=TIMESTAMP}

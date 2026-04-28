@@ -8,24 +8,18 @@ import java.util.List;
 
 @Getter
 @Setter
-public class EventInstanceListResponse {
+public class EventTemplateListResponse {
     private Integer totalCount;
     private List<Item> items;
 
     @Getter
     @Setter
     public static class Item {
-        private String eventInstanceId;
         private String eventTemplateId;
-        private String coverImageUrl;
-        private String eventName;
-        private String eventDescription;
-        private String eventContent;
-        private String eventTemplateStatus;
-        private Date eventAt;
-        private String sourceType;
+        private String name;
+        private String content;
+        private String description;
         private String status;
-        private Date notifiedAt;
         private String createdBy;
         private Date createdAt;
         private Date updatedAt;

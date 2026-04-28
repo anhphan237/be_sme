@@ -9,6 +9,7 @@ import lombok.Setter;
 @Setter
 public class EventPublishRequest {
     private String eventTemplateId;
+    private String coverImageUrl;
     private Date eventAt;
     private Date eventEndAt;
     private List<String> departmentIds;

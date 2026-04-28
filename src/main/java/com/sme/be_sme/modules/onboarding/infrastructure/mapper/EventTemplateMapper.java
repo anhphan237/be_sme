@@ -17,4 +17,6 @@ public interface EventTemplateMapper {
     List<EventTemplateEntity> selectByCompanyIdAndTemplateIds(
             @Param("companyId") String companyId,
             @Param("eventTemplateIds") List<String> eventTemplateIds);
+
+    List<EventTemplateEntity> selectByCompanyIdOrderByCreatedAtDesc(@Param("companyId") String companyId);
 }

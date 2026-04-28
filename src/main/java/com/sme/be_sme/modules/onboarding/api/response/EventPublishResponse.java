@@ -10,6 +10,7 @@ import lombok.Setter;
 public class EventPublishResponse {
     private String eventInstanceId;
     private String eventTemplateId;
+    private String coverImageUrl;
     private Date eventAt;
     private Date eventEndAt;
     private Integer taskCount;
