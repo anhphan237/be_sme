@@ -23,23 +23,36 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
 
-    private static final String SYSTEM_PROMPT =
-            "You are an HR assistant for the company. Answer the employee's question strictly based on the provided company documents. "
-                    + "If the information is not in the documents, say you don't know. "
-                    + "Respond in the same language as the user's question (Vietnamese or English). "
-                    + "Be helpful, professional, and explain clearly with appropriate context when useful.";
+    private static final String SYSTEM_BLOCK = """
+[SYSTEM]
+You are an AI assistant for a company knowledge system.
+Answer ONLY based on the provided context.
+If the answer is not in the context, say "I don't know".
+Keep answers concise and factual.
+""";
 
-    private static final int TOP_K_CHUNKS = 6;
+    private static final int TOP_K_CHUNKS = 4;
     private static final int MIN_TOKEN_LENGTH = 3;
-    private static final int MAX_HISTORY_MESSAGES = 10;
-    private static final int MAX_AI_RETRIES = 2;
-    private static final long RETRY_BACKOFF_MS = 600L;
+    private static final int MAX_HISTORY_MESSAGES = 5;
+    private static final int MAX_CHUNK_TOKENS = 420;
+    private static final int MIN_CHUNK_TOKENS = 140;
+    private static final int CHUNK_TRIM_STEP_TOKENS = 60;
+    private static final int MAX_HISTORY_MESSAGE_TOKENS = 120;
+    private static final int MAX_PROMPT_TOKENS = 4000;
+    private static final int RESERVED_OUTPUT_TOKENS = 700;
+    private static final int MAX_AI_RETRIES = 3;
+    private static final long RETRY_BASE_MS = 1000L;
+    private static final int MAX_DB_CHUNKS = 2000;
+    private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(10);
+    private static final double REQUESTS_PER_SECOND_PER_USER = 2.0d;
 
     private final ObjectMapper objectMapper;
     private final DocumentChunkMapper documentChunkMapper;
@@ -47,6 +60,9 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
     private final ChatMessageMapper chatMessageMapper;
     private final ChatSessionMapper chatSessionMapper;
     private final ChatLanguageModel chatModel;
+    private final ConcurrentHashMap<String, SimpleRateLimiter> operatorRateLimiters = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, CacheEntry> answerCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, CompletableFuture<AnswerBundle>> inFlightRequests = new ConcurrentHashMap<>();
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -56,48 +72,62 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
         String companyId = context.getTenantId();
         String operatorId = context.getOperatorId();
         String question = request.getQuestion().trim();
+        String normalizedQuestion = normalizeForCache(question);
+        String cacheKey = buildCacheKey(companyId, normalizedQuestion);
 
         String chatSessionId = StringUtils.hasText(request.getChatSessionId()) ? request.getChatSessionId().trim() : null;
         if (chatSessionId != null) {
             validateSessionOwnership(companyId, operatorId, chatSessionId);
         }
 
-        List<DocumentChunkEntity> allChunks = documentChunkMapper.selectByCompanyId(companyId);
-        if (allChunks == null) {
-            allChunks = new ArrayList<>();
+        CacheEntry cached = getCache(cacheKey);
+        if (cached != null) {
+            if (chatSessionId != null) {
+                saveMessages(companyId, chatSessionId, operatorId, question, cached.answer());
+            }
+            AssistantAskResponse response = new AssistantAskResponse();
+            response.setAnswer(cached.answer());
+            response.setSourceDocumentNames(cached.sourceDocumentNames());
+            response.setChatSessionId(chatSessionId);
+            return response;
         }
 
-        Map<String, String> documentIdToTitle = loadDocumentTitles(companyId, allChunks);
+        AnswerBundle bundle = getOrComputeInFlight(cacheKey, () -> {
+            List<DocumentChunkEntity> allChunks = loadChunksWithLimit(companyId, MAX_DB_CHUNKS);
+            Map<String, String> documentIdToTitle = loadDocumentTitles(companyId, allChunks);
 
-        List<DocumentChunkEntity> topChunks = selectTopChunksByLexicalScore(allChunks, question, TOP_K_CHUNKS);
-        String answer;
-        List<String> sourceDocumentNames;
+            List<DocumentChunkEntity> topChunks = selectTopChunksByLexicalScore(allChunks, question, TOP_K_CHUNKS);
+            if (topChunks.isEmpty()) {
+                return new AnswerBundle(
+                        "I don't know based on the available company documents.",
+                        new ArrayList<>()
+                );
+            }
 
-        if (topChunks.isEmpty()) {
-            answer = "I don't know based on the available company documents.";
-            sourceDocumentNames = new ArrayList<>();
-        } else {
-            String documentsExcerpts = buildExcerptsPrompt(topChunks, documentIdToTitle);
-            String conversationHistory = buildConversationHistory(chatSessionId);
-            String userPrompt = SYSTEM_PROMPT + "\n\nCompany document excerpts (use only this to answer):\n\n"
-                    + documentsExcerpts
-                    + (conversationHistory.isEmpty() ? "" : "\n\n--- Conversation history ---\n" + conversationHistory + "--- End history ---\n\n")
-                    + "Employee question: " + question;
-            answer = generateWithRetry(userPrompt);
-            sourceDocumentNames = topChunks.stream()
-                    .map(c -> documentIdToTitle.getOrDefault(c.getDocumentId(), "(no title)"))
+            List<ChunkView> chunkViews = topChunks.stream()
+                    .map(c -> new ChunkView(
+                            documentIdToTitle.getOrDefault(c.getDocumentId(), "(no title)"),
+                            c.getChunkText()
+                    ))
+                    .collect(Collectors.toList());
+            List<MessageView> history = loadConversationHistory(chatSessionId);
+            String prompt = buildPrompt(chunkViews, history, question);
+            String answer = callGeminiWithRetry(prompt, operatorId);
+            List<String> sourceDocumentNames = trimChunks(chunkViews, TOP_K_CHUNKS, MAX_CHUNK_TOKENS).stream()
+                    .map(ChunkView::documentName)
                     .collect(Collectors.toCollection(LinkedHashSet::new))
                     .stream()
                     .toList();
-        }
+            return new AnswerBundle(answer, sourceDocumentNames);
+        });
 
         if (chatSessionId != null) {
-            saveMessages(companyId, chatSessionId, operatorId, question, answer);
+            saveMessages(companyId, chatSessionId, operatorId, question, bundle.answer());
         }
 
         AssistantAskResponse response = new AssistantAskResponse();
-        response.setAnswer(answer);
-        response.setSourceDocumentNames(sourceDocumentNames);
+        response.setAnswer(bundle.answer());
+        response.setSourceDocumentNames(bundle.sourceDocumentNames());
         response.setChatSessionId(chatSessionId);
         return response;
     }
@@ -112,18 +142,18 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
         }
     }
 
-    private String buildConversationHistory(String chatSessionId) {
-        if (chatSessionId == null) return "";
+    private List<MessageView> loadConversationHistory(String chatSessionId) {
+        if (chatSessionId == null) return new ArrayList<>();
         List<ChatMessageEntity> messages = chatMessageMapper.selectBySessionIdOrderByCreatedAt(chatSessionId);
-        if (messages == null || messages.isEmpty()) return "";
+        if (messages == null || messages.isEmpty()) return new ArrayList<>();
         int fromIdx = Math.max(0, messages.size() - MAX_HISTORY_MESSAGES);
-        StringBuilder sb = new StringBuilder();
+        List<MessageView> history = new ArrayList<>();
         for (int i = fromIdx; i < messages.size(); i++) {
             ChatMessageEntity m = messages.get(i);
-            String role = "USER".equals(m.getSender()) ? "User" : "Assistant";
-            sb.append(role).append(": ").append(m.getContent() != null ? m.getContent() : "").append("\n");
+            String role = "USER".equalsIgnoreCase(m.getSender()) ? "User" : "Assistant";
+            history.add(new MessageView(role, m.getContent() != null ? m.getContent() : ""));
         }
-        return sb.toString();
+        return history;
     }
 
     private void saveMessages(String companyId, String chatSessionId, String operatorId, String question, String answer) {
@@ -203,35 +233,168 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
         return score;
     }
 
-    private static String buildExcerptsPrompt(List<DocumentChunkEntity> topChunks, Map<String, String> documentIdToTitle) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < topChunks.size(); i++) {
-            DocumentChunkEntity c = topChunks.get(i);
-            String title = documentIdToTitle.getOrDefault(c.getDocumentId(), "(no title)");
-            sb.append("[").append(i + 1).append("] Source: ").append(title)
-                    .append(" (chunk ").append(c.getChunkNo()).append(")\n")
-                    .append(c.getChunkText()).append("\n\n");
-        }
-        return sb.toString();
-    }
-
-    private String generateWithRetry(String userPrompt) {
+    private String callGeminiWithRetry(String prompt, String operatorId) {
         for (int attempt = 0; attempt <= MAX_AI_RETRIES; attempt++) {
             try {
-                return chatModel.generate(userPrompt);
+                acquirePerUserPermit(operatorId);
+                return chatModel.generate(prompt);
             } catch (Exception e) {
-                if (isRateLimited(e)) {
-                    if (attempt < MAX_AI_RETRIES) {
-                        sleepQuietly(RETRY_BACKOFF_MS * (attempt + 1));
-                        continue;
-                    }
+                if (!isRateLimited(e)) {
+                    throw AppException.of(ErrorCodes.INTERNAL_ERROR, "AI assistant failed: " + e.getMessage());
+                }
+                if (attempt >= MAX_AI_RETRIES) {
                     throw AppException.of(ErrorCodes.LIMIT_EXCEEDED,
                             "AI assistant is busy (rate limit reached). Please try again shortly.");
                 }
-                throw AppException.of(ErrorCodes.INTERNAL_ERROR, "AI assistant failed: " + e.getMessage());
+                long baseDelay = RETRY_BASE_MS * (1L << attempt);
+                long jitterMs = ThreadLocalRandom.current().nextLong(0L, 1001L);
+                sleepQuietly(baseDelay + jitterMs);
             }
         }
         throw AppException.of(ErrorCodes.INTERNAL_ERROR, "AI assistant failed: unknown retry state");
+    }
+
+    private String buildPrompt(List<ChunkView> chunks, List<MessageView> history, String question) {
+        String safeQuestion = question == null ? "" : question.trim();
+
+        List<ChunkView> selectedChunks = trimChunks(chunks, TOP_K_CHUNKS, MAX_CHUNK_TOKENS);
+        List<MessageView> selectedHistory = trimHistory(history, MAX_HISTORY_MESSAGES, MAX_HISTORY_MESSAGE_TOKENS);
+
+        String contextBlock = formatContext(selectedChunks);
+        String historyBlock = formatHistory(selectedHistory);
+        String prompt = formatPrompt(contextBlock, historyBlock, safeQuestion);
+
+        int promptBudget = MAX_PROMPT_TOKENS - RESERVED_OUTPUT_TOKENS;
+        if (estimateTokens(prompt) <= promptBudget) {
+            return prompt;
+        }
+
+        List<MessageView> historyAdaptive = new ArrayList<>(selectedHistory);
+        while (!historyAdaptive.isEmpty()) {
+            historyAdaptive.remove(0); // drop oldest first
+            prompt = formatPrompt(contextBlock, formatHistory(historyAdaptive), safeQuestion);
+            if (estimateTokens(prompt) <= promptBudget) {
+                return prompt;
+            }
+        }
+
+        int adaptiveChunkTokens = MAX_CHUNK_TOKENS;
+        List<ChunkView> chunkAdaptive = new ArrayList<>(selectedChunks);
+        while (!chunkAdaptive.isEmpty() && adaptiveChunkTokens > MIN_CHUNK_TOKENS) {
+            adaptiveChunkTokens -= CHUNK_TRIM_STEP_TOKENS;
+            int perChunkLimit = adaptiveChunkTokens;
+            chunkAdaptive = chunkAdaptive.stream()
+                    .map(c -> new ChunkView(c.documentName(), truncateByTokens(c.text(), perChunkLimit)))
+                    .toList();
+            prompt = formatPrompt(formatContext(chunkAdaptive), "", safeQuestion);
+            if (estimateTokens(prompt) <= promptBudget) {
+                return prompt;
+            }
+        }
+
+        return formatPrompt("", "", safeQuestion);
+    }
+
+    private List<ChunkView> trimChunks(List<ChunkView> chunks, int topK, int maxChunkTokens) {
+        if (chunks == null || chunks.isEmpty()) return new ArrayList<>();
+
+        List<ChunkView> normalized = chunks.stream()
+                .filter(Objects::nonNull)
+                .map(c -> new ChunkView(
+                        StringUtils.hasText(c.documentName()) ? c.documentName().trim() : "(no title)",
+                        normalizeWhitespace(c.text())
+                ))
+                .filter(c -> StringUtils.hasText(c.text()))
+                .map(c -> new ChunkView(c.documentName(), truncateByTokens(c.text(), maxChunkTokens)))
+                .toList();
+
+        List<ChunkView> deduped = new ArrayList<>();
+        for (ChunkView c : normalized) {
+            boolean nearDuplicate = deduped.stream().anyMatch(d -> similarity(d.text(), c.text()) >= 0.85d);
+            if (!nearDuplicate) {
+                deduped.add(c);
+            }
+            if (deduped.size() >= topK) {
+                break;
+            }
+        }
+        return deduped;
+    }
+
+    private List<MessageView> trimHistory(List<MessageView> history, int maxMessages, int maxMsgTokens) {
+        if (history == null || history.isEmpty()) return new ArrayList<>();
+
+        int fromIdx = Math.max(0, history.size() - maxMessages);
+        List<MessageView> latest = history.subList(fromIdx, history.size());
+        return latest.stream()
+                .filter(Objects::nonNull)
+                .map(m -> new MessageView(
+                        "Assistant".equalsIgnoreCase(m.role()) ? "Assistant" : "User",
+                        truncateByTokens(normalizeWhitespace(m.content()), maxMsgTokens)
+                ))
+                .filter(m -> StringUtils.hasText(m.content()))
+                .toList();
+    }
+
+    private String formatPrompt(String contextBlock, String historyBlock, String question) {
+        return SYSTEM_BLOCK.trim()
+                + "\n\n[CONTEXT]\n" + safeBlock(contextBlock)
+                + "\n\n[HISTORY]\n" + safeBlock(historyBlock)
+                + "\n\n[QUESTION]\n" + safeBlock(question)
+                + "\n\n[ANSWER]";
+    }
+
+    private String formatContext(List<ChunkView> chunks) {
+        if (chunks == null || chunks.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        for (ChunkView c : chunks) {
+            sb.append("--- Document: ").append(c.documentName()).append("\n")
+                    .append(c.text()).append("\n")
+                    .append("---\n");
+        }
+        return sb.toString().trim();
+    }
+
+    private String formatHistory(List<MessageView> history) {
+        if (history == null || history.isEmpty()) return "";
+        return history.stream()
+                .map(m -> m.role() + ": " + m.content())
+                .collect(Collectors.joining("\n"));
+    }
+
+    private static String safeBlock(String block) {
+        return StringUtils.hasText(block) ? block.trim() : "";
+    }
+
+    private static String normalizeWhitespace(String s) {
+        if (!StringUtils.hasText(s)) return "";
+        return s.replaceAll("\\s+", " ").trim();
+    }
+
+    private static int estimateTokens(String text) {
+        if (!StringUtils.hasText(text)) return 0;
+        return (int) Math.ceil(text.length() / 3.5d);
+    }
+
+    private static String truncateByTokens(String text, int tokenLimit) {
+        if (!StringUtils.hasText(text)) return "";
+        int charLimit = Math.max(1, (int) Math.ceil(tokenLimit * 3.5d));
+        if (text.length() <= charLimit) return text;
+        return text.substring(0, charLimit) + "...";
+    }
+
+    private static double similarity(String a, String b) {
+        Set<String> sa = new HashSet<>(Arrays.asList(normalizeWhitespace(a).toLowerCase(Locale.ROOT).split("\\W+")));
+        Set<String> sb = new HashSet<>(Arrays.asList(normalizeWhitespace(b).toLowerCase(Locale.ROOT).split("\\W+")));
+        sa.removeIf(token -> token.length() < MIN_TOKEN_LENGTH);
+        sb.removeIf(token -> token.length() < MIN_TOKEN_LENGTH);
+        if (sa.isEmpty() || sb.isEmpty()) return 0d;
+
+        Set<String> inter = new HashSet<>(sa);
+        inter.retainAll(sb);
+        Set<String> union = new HashSet<>(sa);
+        union.addAll(sb);
+        return union.isEmpty() ? 0d : (double) inter.size() / union.size();
     }
 
     private static boolean isRateLimited(Exception e) {
@@ -253,6 +416,86 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
         }
     }
 
+    private void acquirePerUserPermit(String operatorId) {
+        String key = StringUtils.hasText(operatorId) ? operatorId.trim() : "anonymous";
+        SimpleRateLimiter limiter = operatorRateLimiters.computeIfAbsent(
+                key,
+                k -> new SimpleRateLimiter(REQUESTS_PER_SECOND_PER_USER)
+        );
+        limiter.acquire();
+    }
+
+    private List<DocumentChunkEntity> loadChunksWithLimit(String companyId, int limit) {
+        List<DocumentChunkEntity> all = documentChunkMapper.selectByCompanyId(companyId);
+        if (all == null || all.isEmpty()) return new ArrayList<>();
+        if (all.size() <= limit) return all;
+        return new ArrayList<>(all.subList(0, limit));
+    }
+
+    private AnswerBundle getOrComputeInFlight(String cacheKey, Computation computation) {
+        CacheEntry cached = getCache(cacheKey);
+        if (cached != null) {
+            return new AnswerBundle(cached.answer(), cached.sourceDocumentNames());
+        }
+
+        CompletableFuture<AnswerBundle> myFuture = new CompletableFuture<>();
+        CompletableFuture<AnswerBundle> existing = inFlightRequests.putIfAbsent(cacheKey, myFuture);
+        if (existing != null) {
+            try {
+                return existing.get();
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw AppException.of(ErrorCodes.INTERNAL_ERROR, "AI assistant request interrupted");
+            } catch (ExecutionException ee) {
+                Throwable cause = ee.getCause();
+                if (cause instanceof AppException ae) {
+                    throw ae;
+                }
+                throw AppException.of(ErrorCodes.INTERNAL_ERROR, "AI assistant failed: " + (cause != null ? cause.getMessage() : ee.getMessage()));
+            }
+        }
+
+        try {
+            AnswerBundle result = computation.compute();
+            putCache(cacheKey, result);
+            myFuture.complete(result);
+            return result;
+        } catch (RuntimeException ex) {
+            myFuture.completeExceptionally(ex);
+            throw ex;
+        } finally {
+            inFlightRequests.remove(cacheKey, myFuture);
+        }
+    }
+
+    private CacheEntry getCache(String cacheKey) {
+        CacheEntry entry = answerCache.get(cacheKey);
+        if (entry == null) return null;
+        if (entry.expiresAtMs() <= System.currentTimeMillis()) {
+            answerCache.remove(cacheKey, entry);
+            return null;
+        }
+        return entry;
+    }
+
+    private void putCache(String cacheKey, AnswerBundle result) {
+        long expiresAt = System.currentTimeMillis() + CACHE_TTL_MS;
+        answerCache.put(cacheKey, new CacheEntry(
+                result.answer(),
+                result.sourceDocumentNames() != null ? result.sourceDocumentNames() : new ArrayList<>(),
+                expiresAt
+        ));
+    }
+
+    private static String buildCacheKey(String companyId, String normalizedQuestion) {
+        return companyId + "::" + normalizedQuestion;
+    }
+
+    private static String normalizeForCache(String question) {
+        if (!StringUtils.hasText(question)) return "";
+        return question.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim();
+    }
+
     private static final class ScoredChunk {
         final DocumentChunkEntity chunk;
         final int score;
@@ -260,6 +503,41 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
         ScoredChunk(DocumentChunkEntity chunk, int score) {
             this.chunk = chunk;
             this.score = score;
+        }
+    }
+
+    private record ChunkView(String documentName, String text) {}
+
+    private record MessageView(String role, String content) {}
+
+    private record AnswerBundle(String answer, List<String> sourceDocumentNames) {}
+
+    private record CacheEntry(String answer, List<String> sourceDocumentNames, long expiresAtMs) {}
+
+    @FunctionalInterface
+    private interface Computation {
+        AnswerBundle compute();
+    }
+
+    private static final class SimpleRateLimiter {
+        private final long intervalNanos;
+        private long nextFreeNanos;
+
+        private SimpleRateLimiter(double permitsPerSecond) {
+            this.intervalNanos = (long) (1_000_000_000d / permitsPerSecond);
+            this.nextFreeNanos = System.nanoTime();
+        }
+
+        synchronized void acquire() {
+            long now = System.nanoTime();
+            if (nextFreeNanos < now) {
+                nextFreeNanos = now;
+            }
+            long waitNanos = nextFreeNanos - now;
+            nextFreeNanos += intervalNanos;
+            if (waitNanos > 0) {
+                LockSupport.parkNanos(waitNanos);
+            }
         }
     }
 
