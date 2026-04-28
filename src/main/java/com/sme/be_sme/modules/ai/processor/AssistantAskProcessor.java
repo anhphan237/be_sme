@@ -35,13 +35,17 @@ public class AssistantAskProcessor extends BaseBizProcessor<BizContext> {
 
     private static final String SYSTEM_BLOCK = """
 [SYSTEM]
-You are an AI assistant for a company knowledge system.
-Answer ONLY based on the provided context.
-If the answer is not in the context, say "I don't know".
-Keep answers concise and factual.
+You are a knowledgeable company assistant.
+Answer based on the provided context.
+If context is incomplete, infer carefully from related information in the context.
+Provide a structured and concise answer.
+Suggest follow-up questions when more detail is needed.
+Do not immediately say "I don't know" if related context exists.
 """;
 
-    private static final int TOP_K_CHUNKS = 4;
+    private static final int INITIAL_CANDIDATE_K = 20;
+    private static final int OVERVIEW_CANDIDATE_K = 20;
+    private static final int FINAL_CONTEXT_K = 6;
     private static final int MIN_TOKEN_LENGTH = 3;
     private static final int MAX_HISTORY_MESSAGES = 5;
     private static final int MAX_CHUNK_TOKENS = 420;
@@ -55,6 +59,25 @@ Keep answers concise and factual.
     private static final int MAX_DB_CHUNKS = 2000;
     private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(10);
     private static final double REQUESTS_PER_SECOND_PER_USER = 2.0d;
+    private static final Set<String> OVERVIEW_KEYWORDS = Set.of(
+            "tổng quan", "tong quan", "khái quát", "khai quat", "giới thiệu", "gioi thieu",
+            "overview", "summary", "introduce", "introduction", "policy", "guideline"
+    );
+    private static final Set<String> SPECIFIC_HINT_KEYWORDS = Set.of(
+            "là gì", "bao nhiêu", "khi nào", "ở đâu", "như thế nào",
+            "what", "where", "when", "how", "which", "who"
+    );
+    private static final Map<String, List<String>> SYNONYM_MAP = Map.of(
+            "tổng quan", List.of("overview", "summary", "policy", "guideline", "process"),
+            "tong quan", List.of("overview", "summary", "policy", "guideline", "process"),
+            "quy định", List.of("rule", "policy", "regulation"),
+            "quy dinh", List.of("rule", "policy", "regulation"),
+            "hướng dẫn", List.of("guide", "instruction", "manual"),
+            "huong dan", List.of("guide", "instruction", "manual"),
+            "chính sách", List.of("policy", "rule", "guideline"),
+            "chinh sach", List.of("policy", "rule", "guideline"),
+            "onboarding", List.of("orientation", "new hire", "welcome process")
+    );
 
     private final ObjectMapper objectMapper;
     private final DocumentChunkMapper documentChunkMapper;
@@ -79,6 +102,12 @@ Keep answers concise and factual.
         String normalizedQuestion = normalizeForCache(question);
         String cacheKey = buildCacheKey(companyId, normalizedQuestion);
         String questionHash = Integer.toHexString(normalizedQuestion.hashCode());
+        QuestionIntent intent = detectIntent(question);
+        String rewrittenQuery = rewriteQuery(question);
+        log.info("Assistant intent: companyId={}, operatorId={}, questionHash={}, intent={}",
+                companyId, operatorId, questionHash, intent);
+        log.debug("Assistant rewritten query metadata: companyId={}, questionHash={}, originalLen={}, rewrittenLen={}",
+                companyId, questionHash, question.length(), rewrittenQuery.length());
 
         String chatSessionId = StringUtils.hasText(request.getChatSessionId()) ? request.getChatSessionId().trim() : null;
         if (chatSessionId != null) {
@@ -101,12 +130,12 @@ Keep answers concise and factual.
             List<DocumentChunkEntity> allChunks = loadChunksWithLimit(companyId, MAX_DB_CHUNKS);
             Map<String, String> documentIdToTitle = loadDocumentTitles(companyId, allChunks);
 
-            List<DocumentChunkEntity> topChunks = selectTopChunksByLexicalScore(allChunks, question, TOP_K_CHUNKS);
+            List<DocumentChunkEntity> topChunks = retrieveChunksByIntent(allChunks, rewrittenQuery, intent);
+            log.info("Assistant retrieval: companyId={}, questionHash={}, intent={}, chunksFound={}",
+                    companyId, questionHash, intent, topChunks.size());
             if (topChunks.isEmpty()) {
-                return new AnswerBundle(
-                        "I don't know based on the available company documents.",
-                        new ArrayList<>()
-                );
+                log.info("Assistant fallback triggered: companyId={}, questionHash={}, reason=no_chunks", companyId, questionHash);
+                return buildFallbackResponse(question, allChunks, documentIdToTitle);
             }
 
             List<ChunkView> chunkViews = topChunks.stream()
@@ -116,7 +145,10 @@ Keep answers concise and factual.
                     ))
                     .collect(Collectors.toList());
             List<MessageView> history = loadConversationHistory(chatSessionId);
-            String prompt = buildPrompt(chunkViews, history, question);
+            String promptQuestion = intent == QuestionIntent.OVERVIEW
+                    ? "Summarize the company's knowledge base based on the following documents.\nUser request: " + question
+                    : question;
+            String prompt = buildPrompt(chunkViews, history, promptQuestion);
             if (System.currentTimeMillis() < globalCooldownUntil) {
                 throw AppException.of(ErrorCodes.LIMIT_EXCEEDED,
                         "AI assistant is cooling down due to high traffic. Please try again shortly.");
@@ -125,7 +157,7 @@ Keep answers concise and factual.
             log.debug("Global limiter acquired before Gemini call");
             getLimiter(operatorId).acquire();
             String answer = callGeminiWithRetry(prompt, companyId, operatorId, questionHash);
-            List<String> sourceDocumentNames = trimChunks(chunkViews, TOP_K_CHUNKS, MAX_CHUNK_TOKENS).stream()
+            List<String> sourceDocumentNames = trimChunks(chunkViews, FINAL_CONTEXT_K, MAX_CHUNK_TOKENS).stream()
                     .map(ChunkView::documentName)
                     .collect(Collectors.toCollection(LinkedHashSet::new))
                     .stream()
@@ -220,6 +252,26 @@ Keep answers concise and factual.
         return new ArrayList<>();
     }
 
+    private List<DocumentChunkEntity> retrieveChunksByIntent(
+            List<DocumentChunkEntity> allChunks,
+            String rewrittenQuery,
+            QuestionIntent intent
+    ) {
+        if (allChunks == null || allChunks.isEmpty()) {
+            return new ArrayList<>();
+        }
+        if (intent == QuestionIntent.OVERVIEW) {
+            List<DocumentChunkEntity> overviewChunks = selectTopChunksByLexicalScore(allChunks, rewrittenQuery, OVERVIEW_CANDIDATE_K);
+            if (!overviewChunks.isEmpty()) {
+                return overviewChunks;
+            }
+            // For broad overview questions, use a representative sample instead of hard-empty.
+            int cap = Math.min(OVERVIEW_CANDIDATE_K, allChunks.size());
+            return new ArrayList<>(allChunks.subList(0, cap));
+        }
+        return selectTopChunksByLexicalScore(allChunks, rewrittenQuery, INITIAL_CANDIDATE_K);
+    }
+
     private static List<String> tokenize(String text) {
         if (text == null || text.isBlank()) return new ArrayList<>();
         List<String> tokens = new ArrayList<>();
@@ -279,7 +331,7 @@ Keep answers concise and factual.
     private String buildPrompt(List<ChunkView> chunks, List<MessageView> history, String question) {
         String safeQuestion = question == null ? "" : question.trim();
 
-        List<ChunkView> selectedChunks = trimChunks(chunks, TOP_K_CHUNKS, MAX_CHUNK_TOKENS);
+        List<ChunkView> selectedChunks = trimChunks(chunks, FINAL_CONTEXT_K, MAX_CHUNK_TOKENS);
         List<MessageView> selectedHistory = trimHistory(history, MAX_HISTORY_MESSAGES, MAX_HISTORY_MESSAGE_TOKENS);
 
         String contextBlock = formatContext(selectedChunks);
@@ -445,6 +497,38 @@ Keep answers concise and factual.
         return new ArrayList<>(all.subList(0, limit));
     }
 
+    private AnswerBundle buildFallbackResponse(
+            String question,
+            List<DocumentChunkEntity> allChunks,
+            Map<String, String> documentIdToTitle
+    ) {
+        List<String> topics = deriveAvailableTopics(allChunks, documentIdToTitle);
+        String topicLines = topics.isEmpty()
+                ? "- Company policies\n- Onboarding process\n- Internal guidelines"
+                : topics.stream().map(t -> "- " + t).collect(Collectors.joining("\n"));
+        String answer = "I couldn't find exact matching content for your question. "
+                + "Here are available topics you can ask about:\n"
+                + topicLines
+                + "\n\nTry asking one of these:\n"
+                + "- Give me an overview of onboarding policies\n"
+                + "- Summarize HR guidelines for new employees\n"
+                + "- What are the main engineering process documents?";
+        return new AnswerBundle(answer, topics);
+    }
+
+    private List<String> deriveAvailableTopics(List<DocumentChunkEntity> chunks, Map<String, String> documentIdToTitle) {
+        if (chunks == null || chunks.isEmpty()) return new ArrayList<>();
+        LinkedHashSet<String> topics = new LinkedHashSet<>();
+        for (DocumentChunkEntity chunk : chunks) {
+            if (chunk == null) continue;
+            String title = documentIdToTitle.get(chunk.getDocumentId());
+            if (!StringUtils.hasText(title)) continue;
+            topics.add(title.trim());
+            if (topics.size() >= 6) break;
+        }
+        return new ArrayList<>(topics);
+    }
+
     private AnswerBundle getOrComputeInFlight(String cacheKey, Computation computation) {
         CacheEntry cached = getCache(cacheKey);
         if (cached != null) {
@@ -509,6 +593,35 @@ Keep answers concise and factual.
         return question.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim();
     }
 
+    private static QuestionIntent detectIntent(String question) {
+        if (!StringUtils.hasText(question)) return QuestionIntent.UNKNOWN;
+        String normalized = normalizeForCache(question);
+        for (String keyword : OVERVIEW_KEYWORDS) {
+            if (normalized.contains(keyword)) {
+                return QuestionIntent.OVERVIEW;
+            }
+        }
+        for (String keyword : SPECIFIC_HINT_KEYWORDS) {
+            if (normalized.contains(keyword)) {
+                return QuestionIntent.SPECIFIC;
+            }
+        }
+        return QuestionIntent.UNKNOWN;
+    }
+
+    private static String rewriteQuery(String question) {
+        if (!StringUtils.hasText(question)) return "";
+        String normalized = normalizeForCache(question);
+        LinkedHashSet<String> terms = new LinkedHashSet<>();
+        terms.add(question.trim());
+        for (Map.Entry<String, List<String>> entry : SYNONYM_MAP.entrySet()) {
+            if (normalized.contains(entry.getKey())) {
+                terms.addAll(entry.getValue());
+            }
+        }
+        return String.join(" ", terms);
+    }
+
     private static final class ScoredChunk {
         final DocumentChunkEntity chunk;
         final int score;
@@ -530,6 +643,12 @@ Keep answers concise and factual.
     @FunctionalInterface
     private interface Computation {
         AnswerBundle compute();
+    }
+
+    private enum QuestionIntent {
+        OVERVIEW,
+        SPECIFIC,
+        UNKNOWN
     }
 
     private static void validate(BizContext context, AssistantAskRequest request) {
