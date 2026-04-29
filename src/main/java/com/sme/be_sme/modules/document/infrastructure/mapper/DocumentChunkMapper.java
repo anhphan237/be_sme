@@ -15,5 +15,8 @@ public interface DocumentChunkMapper {
                                     @Param("documentId") String documentId,
                                     @Param("versionNo") int versionNo);
 
+    int deleteByDocumentId(@Param("companyId") String companyId,
+                           @Param("documentId") String documentId);
+
     List<DocumentChunkEntity> selectByCompanyId(@Param("companyId") String companyId);
 }

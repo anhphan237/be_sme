@@ -6,10 +6,14 @@ import com.sme.be_sme.modules.content.api.request.DocumentPublishRequest;
 import com.sme.be_sme.modules.content.api.response.DocumentPublishResponse;
 import com.sme.be_sme.modules.content.doceditor.DocumentAccessEvaluator;
 import com.sme.be_sme.modules.content.doceditor.DocumentEditorConstants;
+import com.sme.be_sme.modules.content.support.DocumentChunker;
+import com.sme.be_sme.modules.content.support.DocumentEditorTextExtractor;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentActivityLogMapper;
+import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentChunkMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentVersionMapper;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentActivityLogEntity;
+import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentChunkEntity;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentEntity;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentVersionEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -22,7 +26,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -31,6 +37,7 @@ public class DocumentPublishProcessor extends BaseBizProcessor<BizContext> {
     private final ObjectMapper objectMapper;
     private final DocumentMapper documentMapper;
     private final DocumentVersionMapper documentVersionMapper;
+    private final DocumentChunkMapper documentChunkMapper;
     private final DocumentActivityLogMapper documentActivityLogMapper;
     private final DocumentAccessEvaluator documentAccessEvaluator;
 
@@ -97,6 +104,7 @@ public class DocumentPublishProcessor extends BaseBizProcessor<BizContext> {
         if (documentMapper.updateByPrimaryKey(doc) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "failed to update document");
         }
+        upsertChunksForPublishedEditorDocument(companyId, documentId, snapshot, nextVersion, now);
 
         DocumentActivityLogEntity logRow = new DocumentActivityLogEntity();
         logRow.setDocumentActivityLogId(UuidGenerator.generate());
@@ -113,5 +121,40 @@ public class DocumentPublishProcessor extends BaseBizProcessor<BizContext> {
         response.setVersionNo(nextVersion);
         response.setDocumentVersionId(versionId);
         return response;
+    }
+
+    private void upsertChunksForPublishedEditorDocument(
+            String companyId,
+            String documentId,
+            String publishedJson,
+            int versionNo,
+            Date now) {
+        String extracted = DocumentEditorTextExtractor.extractText(objectMapper, publishedJson);
+        String normalized = DocumentChunker.normalize(extracted);
+
+        // Keep only latest searchable snapshot for an editor document.
+        documentChunkMapper.deleteByDocumentId(companyId, documentId);
+        if (!StringUtils.hasText(normalized) || normalized.length() < 50) {
+            return;
+        }
+
+        List<String> chunks = DocumentChunker.chunk(normalized);
+        if (chunks.isEmpty()) {
+            return;
+        }
+
+        List<DocumentChunkEntity> rows = new ArrayList<>(chunks.size());
+        for (int i = 0; i < chunks.size(); i++) {
+            DocumentChunkEntity row = new DocumentChunkEntity();
+            row.setChunkId(UuidGenerator.generate());
+            row.setCompanyId(companyId);
+            row.setDocumentId(documentId);
+            row.setVersionNo(versionNo);
+            row.setChunkNo(i + 1);
+            row.setChunkText(chunks.get(i));
+            row.setCreatedAt(now);
+            rows.add(row);
+        }
+        documentChunkMapper.insertBatch(rows);
     }
 }
