@@ -23,6 +23,7 @@ public class EventInstanceListResponse {
         private String eventContent;
         private String eventTemplateStatus;
         private Date eventAt;
+        private Date eventEndAt;
         private String sourceType;
         private String status;
         private Date notifiedAt;
