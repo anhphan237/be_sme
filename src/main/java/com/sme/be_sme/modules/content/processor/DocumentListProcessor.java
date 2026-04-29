@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.content.api.request.DocumentListRequest;
 import com.sme.be_sme.modules.content.api.response.DocumentListResponse;
+import com.sme.be_sme.modules.content.doceditor.DocumentEditorConstants;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentVersionMapper;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentEntity;
@@ -38,7 +39,8 @@ public class DocumentListProcessor extends BaseBizProcessor<BizContext> {
         }
 
         String companyId = context.getTenantId();
-        List<DocumentEntity> docs = documentMapper.selectByCompanyId(companyId);
+        List<DocumentEntity> docs = documentMapper.selectByCompanyIdAndContentKind(
+                companyId, DocumentEditorConstants.CONTENT_KIND_FILE);
         if (docs == null) {
             docs = new ArrayList<>();
         }
