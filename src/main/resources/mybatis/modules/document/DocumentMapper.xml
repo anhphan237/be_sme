@@ -103,4 +103,10 @@
     where company_id = #{companyId,jdbcType=VARCHAR}
     order by created_at desc
   </select>
+
+  <select id="countByCompanyId" resultType="long">
+    select count(1)
+    from documents
+    where company_id = #{companyId,jdbcType=VARCHAR}
+  </select>
 </mapper>

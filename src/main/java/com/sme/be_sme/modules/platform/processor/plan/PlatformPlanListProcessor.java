@@ -43,6 +43,10 @@ public class PlatformPlanListProcessor extends BaseBizProcessor<BizContext> {
             item.setCode(plan.getCode());
             item.setName(plan.getName());
             item.setEmployeeLimitPerMonth(plan.getEmployeeLimitPerMonth());
+            item.setOnboardingTemplateLimit(plan.getOnboardingTemplateLimit());
+            item.setEventTemplateLimit(plan.getEventTemplateLimit());
+            item.setDocumentLimit(plan.getDocumentLimit());
+            item.setStorageLimitBytes(plan.getStorageLimitBytes());
             item.setPriceVndMonthly(plan.getPriceVndMonthly());
             item.setPriceVndYearly(plan.getPriceVndYearly());
             item.setStatus(plan.getStatus());

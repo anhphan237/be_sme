@@ -42,6 +42,8 @@ public interface DocumentMapper {
 
     List<DocumentEntity> selectByCompanyId(@Param("companyId") String companyId);
 
+    long countByCompanyId(@Param("companyId") String companyId);
+
     List<DocumentEntity> selectByCompanyIdAndContentKind(
             @Param("companyId") String companyId,
             @Param("contentKind") String contentKind);

@@ -57,6 +57,10 @@ public class PlanGetProcessor extends BaseBizProcessor<BizContext> {
         response.setCode(plan.getCode());
         response.setName(plan.getName());
         response.setEmployeeLimitPerMonth(plan.getEmployeeLimitPerMonth());
+        response.setOnboardingTemplateLimit(plan.getOnboardingTemplateLimit());
+        response.setEventTemplateLimit(plan.getEventTemplateLimit());
+        response.setDocumentLimit(plan.getDocumentLimit());
+        response.setStorageLimitBytes(plan.getStorageLimitBytes());
         response.setPriceVndMonthly(plan.getPriceVndMonthly());
         response.setPriceVndYearly(plan.getPriceVndYearly());
         response.setStatus(plan.getStatus());

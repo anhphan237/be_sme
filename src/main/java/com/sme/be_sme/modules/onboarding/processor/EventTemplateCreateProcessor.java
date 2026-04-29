@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.onboarding.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.billing.service.CompanyPlanQuotaService;
 import com.sme.be_sme.modules.onboarding.api.request.EventTemplateCreateRequest;
 import com.sme.be_sme.modules.onboarding.api.response.EventTemplateCreateResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.EventTemplateMapper;
@@ -24,12 +25,14 @@ public class EventTemplateCreateProcessor extends BaseBizProcessor<BizContext> {
 
     private final ObjectMapper objectMapper;
     private final EventTemplateMapper eventTemplateMapper;
+    private final CompanyPlanQuotaService companyPlanQuotaService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     protected Object doProcess(BizContext context, JsonNode payload) {
         EventTemplateCreateRequest request = objectMapper.convertValue(payload, EventTemplateCreateRequest.class);
         validate(context, request);
+        companyPlanQuotaService.assertCanCreateEventTemplate(context.getTenantId().trim());
 
         Date now = new Date();
         EventTemplateEntity entity = new EventTemplateEntity();

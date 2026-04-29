@@ -11,6 +11,10 @@ public class PlanGetResponse {
     private String name;
     /** e.g. Basic: 5, Pro: 50 employees/month */
     private Integer employeeLimitPerMonth;
+    private Integer onboardingTemplateLimit;
+    private Integer eventTemplateLimit;
+    private Integer documentLimit;
+    private Long storageLimitBytes;
     private Integer priceVndMonthly;
     private Integer priceVndYearly;
     private String status;

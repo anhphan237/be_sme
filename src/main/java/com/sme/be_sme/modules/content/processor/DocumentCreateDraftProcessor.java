@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.content.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.billing.service.CompanyPlanQuotaService;
 import com.sme.be_sme.modules.content.api.request.DocumentCreateDraftRequest;
 import com.sme.be_sme.modules.content.api.response.DocumentCreateDraftResponse;
 import com.sme.be_sme.modules.content.doceditor.DocumentEditorConstants;
@@ -27,6 +28,7 @@ public class DocumentCreateDraftProcessor extends BaseBizProcessor<BizContext> {
     private final ObjectMapper objectMapper;
     private final DocumentMapper documentMapper;
     private final DocumentActivityLogMapper documentActivityLogMapper;
+    private final CompanyPlanQuotaService companyPlanQuotaService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -39,6 +41,7 @@ public class DocumentCreateDraftProcessor extends BaseBizProcessor<BizContext> {
         }
 
         String companyId = context.getTenantId();
+        companyPlanQuotaService.assertCanCreateDocument(companyId);
         String operatorId = context.getOperatorId();
         Date now = new Date();
 

@@ -9,6 +9,7 @@ import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
+import com.sme.be_sme.modules.billing.service.CompanyPlanQuotaService;
 import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
 import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -48,6 +49,7 @@ public class UsageCheckProcessor extends BaseBizProcessor<BizContext> {
     private final PlanMapper planMapper;
     private final SubscriptionMapper subscriptionMapper;
     private final NotificationService notificationService;
+    private final CompanyPlanQuotaService companyPlanQuotaService;
 
     private static final DateTimeFormatter YEAR_MONTH = DateTimeFormatter.ofPattern("yyyy-MM");
 
@@ -92,12 +94,31 @@ public class UsageCheckProcessor extends BaseBizProcessor<BizContext> {
             createUsageAlertNotification(companyId, operatorId, month, count, limit, alertLevel);
         }
 
+        long currentStorageBytes = companyPlanQuotaService.getCurrentStorageBytes(companyId);
+        Long storageLimit = plan != null && plan.getStorageLimitBytes() != null && plan.getStorageLimitBytes() > 0
+                ? plan.getStorageLimitBytes()
+                : null;
+        String storageAlertLevel = ALERT_NONE;
+        Integer storageLimitPercent = null;
+        if (storageLimit != null) {
+            storageLimitPercent = storageLimit == 0L ? 0 : (int) Math.round(100.0 * currentStorageBytes / storageLimit);
+            if (storageLimitPercent >= EXCEEDED_THRESHOLD) {
+                storageAlertLevel = ALERT_EXCEEDED;
+            } else if (storageLimitPercent >= APPROACHING_THRESHOLD) {
+                storageAlertLevel = ALERT_APPROACHING;
+            }
+        }
+
         UsageCheckResponse response = new UsageCheckResponse();
         response.setCurrentUsage(count);
         response.setMonth(month);
         response.setEmployeeLimitPerMonth(limit);
         response.setAlertLevel(alertLevel);
         response.setLimitPercent(limitPercent);
+        response.setCurrentStorageBytes(currentStorageBytes);
+        response.setStorageLimitBytes(storageLimit);
+        response.setStorageAlertLevel(storageAlertLevel);
+        response.setStorageLimitPercent(storageLimitPercent);
         return response;
     }
 

@@ -53,6 +53,10 @@ public class PlanListProcessor extends BaseBizProcessor<BizContext> {
         response.setCode(entity.getCode());
         response.setName(entity.getName());
         response.setEmployeeLimitPerMonth(entity.getEmployeeLimitPerMonth());
+        response.setOnboardingTemplateLimit(entity.getOnboardingTemplateLimit());
+        response.setEventTemplateLimit(entity.getEventTemplateLimit());
+        response.setDocumentLimit(entity.getDocumentLimit());
+        response.setStorageLimitBytes(entity.getStorageLimitBytes());
         response.setPriceVndMonthly(entity.getPriceVndMonthly());
         response.setPriceVndYearly(entity.getPriceVndYearly());
         response.setStatus(entity.getStatus());

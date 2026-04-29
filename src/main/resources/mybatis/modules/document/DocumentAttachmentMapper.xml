@@ -46,4 +46,10 @@
     order by uploaded_at desc
     limit #{limit,jdbcType=INTEGER}
   </select>
+
+  <select id="sumFileSizeBytesByCompanyId" resultType="long">
+    select coalesce(sum(file_size_bytes), 0)
+    from document_attachments
+    where company_id = #{companyId,jdbcType=VARCHAR}
+  </select>
 </mapper>

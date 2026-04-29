@@ -94,4 +94,11 @@
     </if>
     order by created_at desc
   </select>
+
+  <select id="countTenantTemplatesByCompanyId" resultType="long">
+    select count(1)
+    from onboarding_templates
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and upper(coalesce(trim(level), 'TENANT')) = 'TENANT'
+  </select>
 </mapper>

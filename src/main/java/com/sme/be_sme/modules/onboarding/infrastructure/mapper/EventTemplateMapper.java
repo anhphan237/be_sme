@@ -19,4 +19,6 @@ public interface EventTemplateMapper {
             @Param("eventTemplateIds") List<String> eventTemplateIds);
 
     List<EventTemplateEntity> selectByCompanyIdOrderByCreatedAtDesc(@Param("companyId") String companyId);
+
+    long countByCompanyId(@Param("companyId") String companyId);
 }

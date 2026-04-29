@@ -52,4 +52,6 @@ public interface OnboardingTemplateMapper {
             @Param("companyId") String companyId,
             @Param("status") String status
     );
+
+    long countTenantTemplatesByCompanyId(@Param("companyId") String companyId);
 }
