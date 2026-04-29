@@ -109,6 +109,54 @@ public class UsageCheckProcessor extends BaseBizProcessor<BizContext> {
             }
         }
 
+        long currentOnboardingTemplateCount = companyPlanQuotaService.getCurrentOnboardingTemplateCount(companyId);
+        Integer onboardingTemplateLimit = plan != null && plan.getOnboardingTemplateLimit() != null && plan.getOnboardingTemplateLimit() > 0
+                ? plan.getOnboardingTemplateLimit()
+                : null;
+        String onboardingTemplateAlertLevel = ALERT_NONE;
+        Integer onboardingTemplateLimitPercent = null;
+        if (onboardingTemplateLimit != null) {
+            onboardingTemplateLimitPercent = onboardingTemplateLimit == 0 ? 0
+                    : (int) Math.round(100.0 * currentOnboardingTemplateCount / onboardingTemplateLimit);
+            if (onboardingTemplateLimitPercent >= EXCEEDED_THRESHOLD) {
+                onboardingTemplateAlertLevel = ALERT_EXCEEDED;
+            } else if (onboardingTemplateLimitPercent >= APPROACHING_THRESHOLD) {
+                onboardingTemplateAlertLevel = ALERT_APPROACHING;
+            }
+        }
+
+        long currentEventTemplateCount = companyPlanQuotaService.getCurrentEventTemplateCount(companyId);
+        Integer eventTemplateLimit = plan != null && plan.getEventTemplateLimit() != null && plan.getEventTemplateLimit() > 0
+                ? plan.getEventTemplateLimit()
+                : null;
+        String eventTemplateAlertLevel = ALERT_NONE;
+        Integer eventTemplateLimitPercent = null;
+        if (eventTemplateLimit != null) {
+            eventTemplateLimitPercent = eventTemplateLimit == 0 ? 0
+                    : (int) Math.round(100.0 * currentEventTemplateCount / eventTemplateLimit);
+            if (eventTemplateLimitPercent >= EXCEEDED_THRESHOLD) {
+                eventTemplateAlertLevel = ALERT_EXCEEDED;
+            } else if (eventTemplateLimitPercent >= APPROACHING_THRESHOLD) {
+                eventTemplateAlertLevel = ALERT_APPROACHING;
+            }
+        }
+
+        long currentDocumentCount = companyPlanQuotaService.getCurrentDocumentCount(companyId);
+        Integer documentLimit = plan != null && plan.getDocumentLimit() != null && plan.getDocumentLimit() > 0
+                ? plan.getDocumentLimit()
+                : null;
+        String documentAlertLevel = ALERT_NONE;
+        Integer documentLimitPercent = null;
+        if (documentLimit != null) {
+            documentLimitPercent = documentLimit == 0 ? 0
+                    : (int) Math.round(100.0 * currentDocumentCount / documentLimit);
+            if (documentLimitPercent >= EXCEEDED_THRESHOLD) {
+                documentAlertLevel = ALERT_EXCEEDED;
+            } else if (documentLimitPercent >= APPROACHING_THRESHOLD) {
+                documentAlertLevel = ALERT_APPROACHING;
+            }
+        }
+
         UsageCheckResponse response = new UsageCheckResponse();
         response.setCurrentUsage(count);
         response.setMonth(month);
@@ -119,6 +167,18 @@ public class UsageCheckProcessor extends BaseBizProcessor<BizContext> {
         response.setStorageLimitBytes(storageLimit);
         response.setStorageAlertLevel(storageAlertLevel);
         response.setStorageLimitPercent(storageLimitPercent);
+        response.setCurrentOnboardingTemplateCount(currentOnboardingTemplateCount);
+        response.setOnboardingTemplateLimit(onboardingTemplateLimit);
+        response.setOnboardingTemplateAlertLevel(onboardingTemplateAlertLevel);
+        response.setOnboardingTemplateLimitPercent(onboardingTemplateLimitPercent);
+        response.setCurrentEventTemplateCount(currentEventTemplateCount);
+        response.setEventTemplateLimit(eventTemplateLimit);
+        response.setEventTemplateAlertLevel(eventTemplateAlertLevel);
+        response.setEventTemplateLimitPercent(eventTemplateLimitPercent);
+        response.setCurrentDocumentCount(currentDocumentCount);
+        response.setDocumentLimit(documentLimit);
+        response.setDocumentAlertLevel(documentAlertLevel);
+        response.setDocumentLimitPercent(documentLimitPercent);
         return response;
     }
 

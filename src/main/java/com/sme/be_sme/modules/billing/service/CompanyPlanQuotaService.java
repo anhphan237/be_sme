@@ -92,6 +92,27 @@ public class CompanyPlanQuotaService {
         return task + doc;
     }
 
+    public long getCurrentOnboardingTemplateCount(String companyId) {
+        if (!StringUtils.hasText(companyId)) {
+            return 0L;
+        }
+        return onboardingTemplateMapper.countTenantTemplatesByCompanyId(companyId.trim());
+    }
+
+    public long getCurrentEventTemplateCount(String companyId) {
+        if (!StringUtils.hasText(companyId)) {
+            return 0L;
+        }
+        return eventTemplateMapper.countByCompanyId(companyId.trim());
+    }
+
+    public long getCurrentDocumentCount(String companyId) {
+        if (!StringUtils.hasText(companyId)) {
+            return 0L;
+        }
+        return documentMapper.countByCompanyId(companyId.trim());
+    }
+
     private PlanEntity resolveCurrentPlan(String companyId) {
         if (!StringUtils.hasText(companyId)) {
             return null;
