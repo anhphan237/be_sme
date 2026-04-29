@@ -21,4 +21,19 @@ public class UsageCheckResponse {
     private Long storageLimitBytes;
     private String storageAlertLevel;
     private Integer storageLimitPercent;
+
+    private long currentOnboardingTemplateCount;
+    private Integer onboardingTemplateLimit;
+    private String onboardingTemplateAlertLevel;
+    private Integer onboardingTemplateLimitPercent;
+
+    private long currentEventTemplateCount;
+    private Integer eventTemplateLimit;
+    private String eventTemplateAlertLevel;
+    private Integer eventTemplateLimitPercent;
+
+    private long currentDocumentCount;
+    private Integer documentLimit;
+    private String documentAlertLevel;
+    private Integer documentLimitPercent;
 }
