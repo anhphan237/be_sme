@@ -1,8 +1,9 @@
 package com.sme.be_sme.modules.billing.service;
 
-import com.sme.be_sme.modules.billing.api.request.PlanGetRequest;
-import com.sme.be_sme.modules.billing.api.response.PlanGetResponse;
-import com.sme.be_sme.modules.billing.facade.BillingFacade;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
+import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
+import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAttachmentMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.EventTemplateMapper;
@@ -14,11 +15,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+
 @Service
 @RequiredArgsConstructor
 public class CompanyPlanQuotaService {
 
-    private final BillingFacade billingFacade;
+    private final SubscriptionMapper subscriptionMapper;
+    private final PlanMapper planMapper;
     private final OnboardingTemplateMapper onboardingTemplateMapper;
     private final EventTemplateMapper eventTemplateMapper;
     private final DocumentMapper documentMapper;
@@ -26,7 +33,7 @@ public class CompanyPlanQuotaService {
     private final DocumentAttachmentMapper documentAttachmentMapper;
 
     public void assertCanCreateOnboardingTemplate(String companyId) {
-        PlanGetResponse plan = resolveCurrentPlan();
+        PlanEntity plan = resolveCurrentPlan(companyId);
         if (plan == null || plan.getOnboardingTemplateLimit() == null || plan.getOnboardingTemplateLimit() <= 0) {
             return;
         }
@@ -37,7 +44,7 @@ public class CompanyPlanQuotaService {
     }
 
     public void assertCanCreateEventTemplate(String companyId) {
-        PlanGetResponse plan = resolveCurrentPlan();
+        PlanEntity plan = resolveCurrentPlan(companyId);
         if (plan == null || plan.getEventTemplateLimit() == null || plan.getEventTemplateLimit() <= 0) {
             return;
         }
@@ -48,7 +55,7 @@ public class CompanyPlanQuotaService {
     }
 
     public void assertCanCreateDocument(String companyId) {
-        PlanGetResponse plan = resolveCurrentPlan();
+        PlanEntity plan = resolveCurrentPlan(companyId);
         if (plan == null || plan.getDocumentLimit() == null || plan.getDocumentLimit() <= 0) {
             return;
         }
@@ -64,7 +71,7 @@ public class CompanyPlanQuotaService {
 
     public void assertCanAddStorage(String companyId, Long additionalBytes) {
         long incoming = normalizeBytes(additionalBytes);
-        PlanGetResponse plan = resolveCurrentPlan();
+        PlanEntity plan = resolveCurrentPlan(companyId);
         if (plan == null || plan.getStorageLimitBytes() == null || plan.getStorageLimitBytes() <= 0) {
             return;
         }
@@ -85,12 +92,24 @@ public class CompanyPlanQuotaService {
         return task + doc;
     }
 
-    private PlanGetResponse resolveCurrentPlan() {
-        try {
-            return billingFacade.getPlan(new PlanGetRequest());
-        } catch (Exception e) {
+    private PlanEntity resolveCurrentPlan(String companyId) {
+        if (!StringUtils.hasText(companyId)) {
             return null;
         }
+        List<SubscriptionEntity> list = subscriptionMapper.selectAll();
+        if (list == null) {
+            return null;
+        }
+        SubscriptionEntity current = list.stream()
+                .filter(Objects::nonNull)
+                .filter(s -> companyId.trim().equals(s.getCompanyId()))
+                .filter(s -> "ACTIVE".equalsIgnoreCase(trimLower(s.getStatus())))
+                .max(Comparator.comparing(SubscriptionEntity::getUpdatedAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                .orElse(null);
+        if (current == null || !StringUtils.hasText(current.getPlanId())) {
+            return null;
+        }
+        return planMapper.selectByPrimaryKey(current.getPlanId().trim());
     }
 
     private static long normalizeBytes(Long value) {
@@ -98,5 +117,9 @@ public class CompanyPlanQuotaService {
             return 0L;
         }
         return value;
+    }
+
+    private static String trimLower(String value) {
+        return value == null ? null : value.trim().toLowerCase(Locale.ROOT);
     }
 }
