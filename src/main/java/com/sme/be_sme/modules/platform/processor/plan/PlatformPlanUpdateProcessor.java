@@ -42,6 +42,18 @@ public class PlatformPlanUpdateProcessor extends BaseBizProcessor<BizContext> {
         if (request.getEmployeeLimitPerMonth() != null) {
             plan.setEmployeeLimitPerMonth(request.getEmployeeLimitPerMonth());
         }
+        if (request.getOnboardingTemplateLimit() != null) {
+            plan.setOnboardingTemplateLimit(request.getOnboardingTemplateLimit());
+        }
+        if (request.getEventTemplateLimit() != null) {
+            plan.setEventTemplateLimit(request.getEventTemplateLimit());
+        }
+        if (request.getDocumentLimit() != null) {
+            plan.setDocumentLimit(request.getDocumentLimit());
+        }
+        if (request.getStorageLimitBytes() != null) {
+            plan.setStorageLimitBytes(request.getStorageLimitBytes());
+        }
         if (request.getPriceVndMonthly() != null) {
             plan.setPriceVndMonthly(request.getPriceVndMonthly());
         }
@@ -56,6 +68,11 @@ public class PlatformPlanUpdateProcessor extends BaseBizProcessor<BizContext> {
         response.setPlanId(plan.getPlanId());
         response.setCode(plan.getCode());
         response.setName(plan.getName());
+        response.setEmployeeLimitPerMonth(plan.getEmployeeLimitPerMonth());
+        response.setOnboardingTemplateLimit(plan.getOnboardingTemplateLimit());
+        response.setEventTemplateLimit(plan.getEventTemplateLimit());
+        response.setDocumentLimit(plan.getDocumentLimit());
+        response.setStorageLimitBytes(plan.getStorageLimitBytes());
         response.setStatus(plan.getStatus());
         return response;
     }

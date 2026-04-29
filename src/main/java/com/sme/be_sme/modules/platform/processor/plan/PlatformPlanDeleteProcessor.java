@@ -44,6 +44,11 @@ public class PlatformPlanDeleteProcessor extends BaseBizProcessor<BizContext> {
         response.setPlanId(plan.getPlanId());
         response.setCode(plan.getCode());
         response.setName(plan.getName());
+        response.setEmployeeLimitPerMonth(plan.getEmployeeLimitPerMonth());
+        response.setOnboardingTemplateLimit(plan.getOnboardingTemplateLimit());
+        response.setEventTemplateLimit(plan.getEventTemplateLimit());
+        response.setDocumentLimit(plan.getDocumentLimit());
+        response.setStorageLimitBytes(plan.getStorageLimitBytes());
         response.setStatus(plan.getStatus());
         return response;
     }

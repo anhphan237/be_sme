@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.content.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.billing.service.CompanyPlanQuotaService;
 import com.sme.be_sme.modules.content.api.request.DocumentAttachmentAddRequest;
 import com.sme.be_sme.modules.content.api.response.DocumentAttachmentAddResponse;
 import com.sme.be_sme.modules.content.doceditor.DocumentAccessEvaluator;
@@ -33,6 +34,7 @@ public class DocumentAttachmentAddProcessor extends BaseBizProcessor<BizContext>
     private final DocumentAttachmentMapper documentAttachmentMapper;
     private final DocumentActivityLogMapper documentActivityLogMapper;
     private final DocumentAccessEvaluator documentAccessEvaluator;
+    private final CompanyPlanQuotaService companyPlanQuotaService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -51,6 +53,7 @@ public class DocumentAttachmentAddProcessor extends BaseBizProcessor<BizContext>
         }
 
         String companyId = context.getTenantId();
+        companyPlanQuotaService.assertCanAddStorage(companyId, request.getFileSizeBytes());
         String operatorId = context.getOperatorId();
         String documentId = request.getDocumentId().trim();
 

@@ -45,6 +45,10 @@ public class PlatformPlanCreateProcessor extends BaseBizProcessor<BizContext> {
         entity.setCode(request.getCode());
         entity.setName(request.getName());
         entity.setEmployeeLimitPerMonth(request.getEmployeeLimitPerMonth());
+        entity.setOnboardingTemplateLimit(request.getOnboardingTemplateLimit());
+        entity.setEventTemplateLimit(request.getEventTemplateLimit());
+        entity.setDocumentLimit(request.getDocumentLimit());
+        entity.setStorageLimitBytes(request.getStorageLimitBytes());
         entity.setPriceVndMonthly(request.getPriceVndMonthly());
         entity.setPriceVndYearly(request.getPriceVndYearly());
         entity.setStatus("ACTIVE");
@@ -57,6 +61,11 @@ public class PlatformPlanCreateProcessor extends BaseBizProcessor<BizContext> {
         response.setPlanId(entity.getPlanId());
         response.setCode(entity.getCode());
         response.setName(entity.getName());
+        response.setEmployeeLimitPerMonth(entity.getEmployeeLimitPerMonth());
+        response.setOnboardingTemplateLimit(entity.getOnboardingTemplateLimit());
+        response.setEventTemplateLimit(entity.getEventTemplateLimit());
+        response.setDocumentLimit(entity.getDocumentLimit());
+        response.setStorageLimitBytes(entity.getStorageLimitBytes());
         response.setStatus(entity.getStatus());
         return response;
     }

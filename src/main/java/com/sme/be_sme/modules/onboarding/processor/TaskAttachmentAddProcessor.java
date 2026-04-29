@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.onboarding.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.billing.service.CompanyPlanQuotaService;
 import com.sme.be_sme.modules.onboarding.api.request.TaskAttachmentAddRequest;
 import com.sme.be_sme.modules.onboarding.api.response.TaskAttachmentAddResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskAttachmentMapper;
@@ -26,6 +27,7 @@ public class TaskAttachmentAddProcessor extends BaseBizProcessor<BizContext> {
     private final ObjectMapper objectMapper;
     private final TaskInstanceMapper taskInstanceMapper;
     private final TaskAttachmentMapper taskAttachmentMapper;
+    private final CompanyPlanQuotaService companyPlanQuotaService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -44,6 +46,7 @@ public class TaskAttachmentAddProcessor extends BaseBizProcessor<BizContext> {
         }
 
         String companyId = context.getTenantId();
+        companyPlanQuotaService.assertCanAddStorage(companyId, request.getFileSizeBytes());
         TaskInstanceEntity task = taskInstanceMapper.selectByPrimaryKey(request.getTaskId().trim());
         if (task == null) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "task not found");

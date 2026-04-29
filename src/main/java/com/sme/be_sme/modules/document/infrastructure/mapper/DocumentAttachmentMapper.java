@@ -19,4 +19,6 @@ public interface DocumentAttachmentMapper {
             @Param("companyId") String companyId,
             @Param("documentId") String documentId,
             @Param("limit") int limit);
+
+    Long sumFileSizeBytesByCompanyId(@Param("companyId") String companyId);
 }

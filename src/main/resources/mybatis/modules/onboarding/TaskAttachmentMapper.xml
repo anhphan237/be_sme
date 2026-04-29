@@ -79,4 +79,10 @@
     uploaded_by, uploaded_at
     from task_attachments
   </select>
+
+  <select id="sumFileSizeBytesByCompanyId" resultType="long">
+    select coalesce(sum(file_size_bytes), 0)
+    from task_attachments
+    where company_id = #{companyId,jdbcType=VARCHAR}
+  </select>
 </mapper>

@@ -5,6 +5,7 @@ import com.sme.be_sme.modules.billing.api.request.UsageCheckRequest;
 import com.sme.be_sme.modules.billing.api.response.PlanGetResponse;
 import com.sme.be_sme.modules.billing.api.response.UsageCheckResponse;
 import com.sme.be_sme.modules.billing.facade.BillingFacade;
+import com.sme.be_sme.modules.billing.service.CompanyPlanQuotaService;
 import com.sme.be_sme.modules.billing.service.BillingEntitlementService;
 import com.sme.be_sme.modules.onboarding.context.OnboardingInstanceCreateContext;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -20,6 +21,7 @@ public class OnboardingInstanceCreateUsageCheckCoreProcessor
 
     private final BillingFacade billingFacade;
     private final BillingEntitlementService billingEntitlementService;
+    private final CompanyPlanQuotaService companyPlanQuotaService;
 
     @Override
     protected Object process(OnboardingInstanceCreateContext ctx) {
@@ -28,6 +30,7 @@ public class OnboardingInstanceCreateUsageCheckCoreProcessor
         }
 
         billingEntitlementService.assertPaidForOperationalAccess(ctx.getBiz().getTenantId());
+        companyPlanQuotaService.assertStorageWithinLimit(ctx.getBiz().getTenantId());
 
         UsageCheckResponse usage = billingFacade.checkUsage(new UsageCheckRequest());
         PlanGetResponse plan;

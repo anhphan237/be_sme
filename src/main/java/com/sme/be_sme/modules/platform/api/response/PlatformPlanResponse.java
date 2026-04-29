@@ -7,5 +7,10 @@ public class PlatformPlanResponse {
     private String planId;
     private String code;
     private String name;
+    private Integer employeeLimitPerMonth;
+    private Integer onboardingTemplateLimit;
+    private Integer eventTemplateLimit;
+    private Integer documentLimit;
+    private Long storageLimitBytes;
     private String status;
 }

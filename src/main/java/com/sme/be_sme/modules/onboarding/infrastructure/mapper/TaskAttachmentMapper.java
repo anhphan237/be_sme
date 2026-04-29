@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.onboarding.infrastructure.mapper;
 
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskAttachmentEntity;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -46,4 +47,6 @@ public interface TaskAttachmentMapper {
      * @mbg.generated Thu Jan 22 16:08:37 ICT 2026
      */
     int updateByPrimaryKey(TaskAttachmentEntity row);
+
+    Long sumFileSizeBytesByCompanyId(@Param("companyId") String companyId);
 }

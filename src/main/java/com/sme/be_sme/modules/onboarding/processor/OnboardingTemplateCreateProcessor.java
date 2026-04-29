@@ -3,6 +3,7 @@ package com.sme.be_sme.modules.onboarding.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingTemplateCreateRequest;
+import com.sme.be_sme.modules.billing.service.CompanyPlanQuotaService;
 import com.sme.be_sme.modules.onboarding.context.OnboardingTemplateCreateContext;
 import com.sme.be_sme.modules.onboarding.processor.template.core.OnboardingTemplateCreateBuildResponseCoreProcessor;
 import com.sme.be_sme.modules.onboarding.processor.template.core.OnboardingTemplateCreateChecklistsAndTasksCoreProcessor;
@@ -23,6 +24,7 @@ import java.util.Date;
 public class OnboardingTemplateCreateProcessor extends BaseCoreProcessor<OnboardingTemplateCreateContext> {
 
     private final ObjectMapper objectMapper;
+    private final CompanyPlanQuotaService companyPlanQuotaService;
     private final OnboardingTemplateCreateValidateCoreProcessor validate;
     private final OnboardingTemplateCreateCloneSourceCoreProcessor cloneSource;
     private final OnboardingTemplateCreateInsertTemplateCoreProcessor insertTemplate;
@@ -45,6 +47,7 @@ public class OnboardingTemplateCreateProcessor extends BaseCoreProcessor<Onboard
     @Transactional(rollbackFor = Exception.class)
     protected Object process(OnboardingTemplateCreateContext ctx) {
         validate.processWith(ctx);
+        companyPlanQuotaService.assertCanCreateOnboardingTemplate(ctx.getCompanyId());
         cloneSource.processWith(ctx);
         insertTemplate.processWith(ctx);
         createChecklistsAndTasks.processWith(ctx);

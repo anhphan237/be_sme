@@ -16,4 +16,9 @@ public class UsageCheckResponse {
     private String alertLevel;
     /** Usage as percent of limit (0-100+), null if no limit */
     private Integer limitPercent;
+
+    private long currentStorageBytes;
+    private Long storageLimitBytes;
+    private String storageAlertLevel;
+    private Integer storageLimitPercent;
 }
