@@ -28,6 +28,12 @@
       and version_no = #{versionNo,jdbcType=INTEGER}
   </delete>
 
+  <delete id="deleteByDocumentId">
+    delete from document_chunks
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and document_id = #{documentId,jdbcType=VARCHAR}
+  </delete>
+
   <select id="selectByCompanyId" resultMap="BaseResultMap">
     select chunk_id, company_id, document_id, version_no, chunk_no, chunk_text, created_at
     from document_chunks
