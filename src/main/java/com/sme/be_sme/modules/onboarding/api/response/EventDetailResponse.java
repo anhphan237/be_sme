@@ -13,6 +13,7 @@ public class EventDetailResponse {
     private String eventTemplateId;
     private String coverImageUrl;
     private Date eventAt;
+    private Date eventEndAt;
     private String sourceType;
     private List<String> sourceDepartmentIds;
     private List<String> sourceUserIds;

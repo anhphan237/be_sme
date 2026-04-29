@@ -126,6 +126,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         }
 
         Date now = new Date();
+        Date eventEndAt = request.getEventEndAt() != null ? request.getEventEndAt() : request.getEventAt();
         String eventInstanceId = UuidGenerator.generate();
         EventInstanceEntity instance = new EventInstanceEntity();
         instance.setEventInstanceId(eventInstanceId);
@@ -133,6 +134,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         instance.setEventTemplateId(template.getEventTemplateId());
         instance.setCoverImageUrl(StringUtils.hasText(request.getCoverImageUrl()) ? request.getCoverImageUrl().trim() : null);
         instance.setEventAt(request.getEventAt());
+        instance.setEventEndAt(eventEndAt);
         instance.setSourceType(sourceType);
         instance.setSourceDepartmentIds(toJsonArray(departmentIds));
         instance.setSourceUserIds(toJsonArray(userIds));
@@ -155,7 +157,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         checklist.setStatus("NOT_STARTED");
         checklist.setProgressPercent(0);
         checklist.setOpenAt(request.getEventAt());
-        checklist.setDeadlineAt(request.getEventEndAt() != null ? request.getEventEndAt() : request.getEventAt());
+        checklist.setDeadlineAt(eventEndAt);
         checklist.setCreatedAt(now);
         checklist.setUpdatedAt(now);
         if (checklistInstanceMapper.insert(checklist) != 1) {
@@ -185,7 +187,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
             task.setRequiresManagerApproval(false);
             task.setApprovalStatus(OnboardingTaskWorkflow.APPROVAL_NONE);
             task.setScheduledStartAt(request.getEventAt());
-            task.setScheduledEndAt(request.getEventEndAt());
+            task.setScheduledEndAt(eventEndAt);
             task.setScheduleStatus(OnboardingTaskWorkflow.SCHEDULE_CONFIRMED);
             if (taskInstanceMapper.insert(task) != 1) {
                 throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create event task failed");
@@ -198,7 +200,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         response.setEventTemplateId(template.getEventTemplateId());
         response.setCoverImageUrl(instance.getCoverImageUrl());
         response.setEventAt(request.getEventAt());
-        response.setEventEndAt(request.getEventEndAt());
+        response.setEventEndAt(eventEndAt);
         response.setTaskCount(participantUserIds.size());
         response.setParticipantUserIds(participantUserIds);
         return response;

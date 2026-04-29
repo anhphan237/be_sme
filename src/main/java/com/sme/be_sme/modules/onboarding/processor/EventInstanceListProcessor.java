@@ -65,6 +65,7 @@ public class EventInstanceListProcessor extends BaseBizProcessor<BizContext> {
         item.setEventContent(template == null ? null : template.getContent());
         item.setEventTemplateStatus(template == null ? null : template.getStatus());
         item.setEventAt(entity.getEventAt());
+        item.setEventEndAt(entity.getEventEndAt());
         item.setSourceType(entity.getSourceType());
         item.setStatus(entity.getStatus());
         item.setNotifiedAt(entity.getNotifiedAt());

@@ -12,6 +12,7 @@ public class EventInstanceEntity {
     private String eventTemplateId;
     private String coverImageUrl;
     private Date eventAt;
+    private Date eventEndAt;
     private String sourceType;
     private String sourceDepartmentIds;
     private String sourceUserIds;
