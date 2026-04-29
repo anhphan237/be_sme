@@ -9,6 +9,7 @@ import com.sme.be_sme.modules.platform.api.response.PlatformPlanListResponse;
 import com.sme.be_sme.modules.platform.api.response.PlatformPlanListResponse.PlanItem;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import com.sme.be_sme.shared.util.StorageUnitConverter;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,8 @@ public class PlatformPlanListProcessor extends BaseBizProcessor<BizContext> {
             item.setEventTemplateLimit(plan.getEventTemplateLimit());
             item.setDocumentLimit(plan.getDocumentLimit());
             item.setStorageLimitBytes(plan.getStorageLimitBytes());
+            item.setStorageLimitMb(StorageUnitConverter.toMb(plan.getStorageLimitBytes()));
+            item.setStorageLimitGb(StorageUnitConverter.toGb(plan.getStorageLimitBytes()));
             item.setPriceVndMonthly(plan.getPriceVndMonthly());
             item.setPriceVndYearly(plan.getPriceVndYearly());
             item.setStatus(plan.getStatus());

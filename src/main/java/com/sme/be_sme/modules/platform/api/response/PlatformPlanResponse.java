@@ -12,5 +12,7 @@ public class PlatformPlanResponse {
     private Integer eventTemplateLimit;
     private Integer documentLimit;
     private Long storageLimitBytes;
+    private Double storageLimitMb;
+    private Double storageLimitGb;
     private String status;
 }

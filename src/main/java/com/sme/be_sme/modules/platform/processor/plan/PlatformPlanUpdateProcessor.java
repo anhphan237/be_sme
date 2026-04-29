@@ -10,6 +10,7 @@ import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import com.sme.be_sme.shared.util.StorageUnitConverter;
 import java.util.Date;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -73,6 +74,8 @@ public class PlatformPlanUpdateProcessor extends BaseBizProcessor<BizContext> {
         response.setEventTemplateLimit(plan.getEventTemplateLimit());
         response.setDocumentLimit(plan.getDocumentLimit());
         response.setStorageLimitBytes(plan.getStorageLimitBytes());
+        response.setStorageLimitMb(StorageUnitConverter.toMb(plan.getStorageLimitBytes()));
+        response.setStorageLimitGb(StorageUnitConverter.toGb(plan.getStorageLimitBytes()));
         response.setStatus(plan.getStatus());
         return response;
     }

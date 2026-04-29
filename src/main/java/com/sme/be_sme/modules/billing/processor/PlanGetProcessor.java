@@ -12,6 +12,7 @@ import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import com.sme.be_sme.shared.util.StorageUnitConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -61,6 +62,8 @@ public class PlanGetProcessor extends BaseBizProcessor<BizContext> {
         response.setEventTemplateLimit(plan.getEventTemplateLimit());
         response.setDocumentLimit(plan.getDocumentLimit());
         response.setStorageLimitBytes(plan.getStorageLimitBytes());
+        response.setStorageLimitMb(StorageUnitConverter.toMb(plan.getStorageLimitBytes()));
+        response.setStorageLimitGb(StorageUnitConverter.toGb(plan.getStorageLimitBytes()));
         response.setPriceVndMonthly(plan.getPriceVndMonthly());
         response.setPriceVndYearly(plan.getPriceVndYearly());
         response.setStatus(plan.getStatus());

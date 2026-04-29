@@ -16,6 +16,7 @@ import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import com.sme.be_sme.shared.util.StorageUnitConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -165,6 +166,10 @@ public class UsageCheckProcessor extends BaseBizProcessor<BizContext> {
         response.setLimitPercent(limitPercent);
         response.setCurrentStorageBytes(currentStorageBytes);
         response.setStorageLimitBytes(storageLimit);
+        response.setCurrentStorageMb(StorageUnitConverter.toMb(currentStorageBytes));
+        response.setCurrentStorageGb(StorageUnitConverter.toGb(currentStorageBytes));
+        response.setStorageLimitMb(StorageUnitConverter.toMb(storageLimit));
+        response.setStorageLimitGb(StorageUnitConverter.toGb(storageLimit));
         response.setStorageAlertLevel(storageAlertLevel);
         response.setStorageLimitPercent(storageLimitPercent);
         response.setCurrentOnboardingTemplateCount(currentOnboardingTemplateCount);
