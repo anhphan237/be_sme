@@ -117,4 +117,19 @@ public interface DocumentEditorFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.document.attachment.list")
     DocumentAttachmentListResponse listAttachments(DocumentAttachmentListRequest request);
+
+    @OperationType("com.sme.document.block.list")
+    DocumentBlockListResponse listBlocks(DocumentBlockListRequest request);
+
+    @OperationType("com.sme.document.block.create")
+    DocumentBlockMutateResponse createBlock(DocumentBlockCreateRequest request);
+
+    @OperationType("com.sme.document.block.update")
+    DocumentBlockMutateResponse updateBlock(DocumentBlockUpdateRequest request);
+
+    @OperationType("com.sme.document.block.move")
+    DocumentBlockMutateResponse moveBlock(DocumentBlockMoveRequest request);
+
+    @OperationType("com.sme.document.block.delete")
+    DocumentBlockMutateResponse deleteBlock(DocumentBlockDeleteRequest request);
 }

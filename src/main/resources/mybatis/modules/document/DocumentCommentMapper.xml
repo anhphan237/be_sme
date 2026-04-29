@@ -7,6 +7,10 @@
     <result column="company_id" jdbcType="VARCHAR" property="companyId" />
     <result column="document_id" jdbcType="VARCHAR" property="documentId" />
     <result column="parent_comment_id" jdbcType="VARCHAR" property="parentCommentId" />
+    <result column="anchor_block_id" jdbcType="VARCHAR" property="anchorBlockId" />
+    <result column="anchor_start" jdbcType="INTEGER" property="anchorStart" />
+    <result column="anchor_end" jdbcType="INTEGER" property="anchorEnd" />
+    <result column="anchor_text" jdbcType="LONGVARCHAR" property="anchorText" />
     <result column="author_user_id" jdbcType="VARCHAR" property="authorUserId" />
     <result column="body" jdbcType="LONGVARCHAR" property="body" />
     <result column="status" jdbcType="VARCHAR" property="status" />
@@ -16,9 +20,10 @@
 
   <insert id="insert" parameterType="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentCommentEntity">
     insert into document_comments (document_comment_id, company_id, document_id, parent_comment_id,
-      author_user_id, body, status, created_at, updated_at)
+      anchor_block_id, anchor_start, anchor_end, anchor_text, author_user_id, body, status, created_at, updated_at)
     values (#{documentCommentId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{documentId,jdbcType=VARCHAR},
-      #{parentCommentId,jdbcType=VARCHAR}, #{authorUserId,jdbcType=VARCHAR}, #{body,jdbcType=LONGVARCHAR},
+      #{parentCommentId,jdbcType=VARCHAR}, #{anchorBlockId,jdbcType=VARCHAR}, #{anchorStart,jdbcType=INTEGER},
+      #{anchorEnd,jdbcType=INTEGER}, #{anchorText,jdbcType=LONGVARCHAR}, #{authorUserId,jdbcType=VARCHAR}, #{body,jdbcType=LONGVARCHAR},
       #{status,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
   </insert>
 
@@ -27,6 +32,10 @@
     set company_id = #{companyId,jdbcType=VARCHAR},
         document_id = #{documentId,jdbcType=VARCHAR},
         parent_comment_id = #{parentCommentId,jdbcType=VARCHAR},
+        anchor_block_id = #{anchorBlockId,jdbcType=VARCHAR},
+        anchor_start = #{anchorStart,jdbcType=INTEGER},
+        anchor_end = #{anchorEnd,jdbcType=INTEGER},
+        anchor_text = #{anchorText,jdbcType=LONGVARCHAR},
         author_user_id = #{authorUserId,jdbcType=VARCHAR},
         body = #{body,jdbcType=LONGVARCHAR},
         status = #{status,jdbcType=VARCHAR},
@@ -36,13 +45,13 @@
   </update>
 
   <select id="selectByPrimaryKey" resultMap="BaseResultMap">
-    select document_comment_id, company_id, document_id, parent_comment_id, author_user_id, body, status, created_at, updated_at
+    select document_comment_id, company_id, document_id, parent_comment_id, anchor_block_id, anchor_start, anchor_end, anchor_text, author_user_id, body, status, created_at, updated_at
     from document_comments
     where document_comment_id = #{documentCommentId,jdbcType=VARCHAR}
   </select>
 
   <select id="selectByCompanyIdAndDocumentIdOrderByCreatedAsc" resultMap="BaseResultMap">
-    select document_comment_id, company_id, document_id, parent_comment_id, author_user_id, body, status, created_at, updated_at
+    select document_comment_id, company_id, document_id, parent_comment_id, anchor_block_id, anchor_start, anchor_end, anchor_text, author_user_id, body, status, created_at, updated_at
     from document_comments
     where company_id = #{companyId,jdbcType=VARCHAR}
       and document_id = #{documentId,jdbcType=VARCHAR}

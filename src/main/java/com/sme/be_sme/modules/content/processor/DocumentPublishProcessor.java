@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.content.api.request.DocumentPublishRequest;
 import com.sme.be_sme.modules.content.api.response.DocumentPublishResponse;
 import com.sme.be_sme.modules.content.doceditor.DocumentAccessEvaluator;
 import com.sme.be_sme.modules.content.doceditor.DocumentEditorConstants;
+import com.sme.be_sme.modules.content.service.DocumentBlockSyncService;
 import com.sme.be_sme.modules.content.support.DocumentChunker;
 import com.sme.be_sme.modules.content.support.DocumentEditorTextExtractor;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentActivityLogMapper;
@@ -40,6 +41,7 @@ public class DocumentPublishProcessor extends BaseBizProcessor<BizContext> {
     private final DocumentChunkMapper documentChunkMapper;
     private final DocumentActivityLogMapper documentActivityLogMapper;
     private final DocumentAccessEvaluator documentAccessEvaluator;
+    private final DocumentBlockSyncService documentBlockSyncService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -104,6 +106,7 @@ public class DocumentPublishProcessor extends BaseBizProcessor<BizContext> {
         if (documentMapper.updateByPrimaryKey(doc) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "failed to update document");
         }
+        documentBlockSyncService.syncFromDraftJson(companyId, documentId, snapshot, operatorId, now);
         upsertChunksForPublishedEditorDocument(companyId, documentId, snapshot, nextVersion, now);
 
         DocumentActivityLogEntity logRow = new DocumentActivityLogEntity();

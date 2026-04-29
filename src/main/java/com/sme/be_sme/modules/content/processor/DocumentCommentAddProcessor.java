@@ -85,6 +85,10 @@ public class DocumentCommentAddProcessor extends BaseBizProcessor<BizContext> {
         row.setCompanyId(companyId);
         row.setDocumentId(documentId);
         row.setParentCommentId(parentId);
+        row.setAnchorBlockId(StringUtils.hasText(request.getAnchorBlockId()) ? request.getAnchorBlockId().trim() : null);
+        row.setAnchorStart(request.getAnchorStart());
+        row.setAnchorEnd(request.getAnchorEnd());
+        row.setAnchorText(StringUtils.hasText(request.getAnchorText()) ? request.getAnchorText().trim() : null);
         row.setAuthorUserId(operatorId);
         row.setBody(body);
         row.setStatus(DocumentEditorConstants.STATUS_ACTIVE);
@@ -114,6 +118,10 @@ public class DocumentCommentAddProcessor extends BaseBizProcessor<BizContext> {
         response.setCommentId(commentId);
         response.setDocumentId(documentId);
         response.setParentCommentId(parentId);
+        response.setAnchorBlockId(row.getAnchorBlockId());
+        response.setAnchorStart(row.getAnchorStart());
+        response.setAnchorEnd(row.getAnchorEnd());
+        response.setAnchorText(row.getAnchorText());
         response.setCreatedAt(now);
         return response;
     }
