@@ -48,6 +48,11 @@ public class DocumentEditorFacadeImpl extends BaseOperationFacade implements Doc
     private final DocumentAttachmentAddProcessor documentAttachmentAddProcessor;
     private final DocumentAttachmentRemoveProcessor documentAttachmentRemoveProcessor;
     private final DocumentAttachmentListProcessor documentAttachmentListProcessor;
+    private final DocumentBlockListProcessor documentBlockListProcessor;
+    private final DocumentBlockCreateProcessor documentBlockCreateProcessor;
+    private final DocumentBlockUpdateProcessor documentBlockUpdateProcessor;
+    private final DocumentBlockMoveProcessor documentBlockMoveProcessor;
+    private final DocumentBlockDeleteProcessor documentBlockDeleteProcessor;
 
     @Override
     public DocumentCreateDraftResponse createDraft(DocumentCreateDraftRequest request) {
@@ -232,5 +237,30 @@ public class DocumentEditorFacadeImpl extends BaseOperationFacade implements Doc
     @Override
     public DocumentAttachmentListResponse listAttachments(DocumentAttachmentListRequest request) {
         return call(documentAttachmentListProcessor, request, DocumentAttachmentListResponse.class);
+    }
+
+    @Override
+    public DocumentBlockListResponse listBlocks(DocumentBlockListRequest request) {
+        return call(documentBlockListProcessor, request, DocumentBlockListResponse.class);
+    }
+
+    @Override
+    public DocumentBlockMutateResponse createBlock(DocumentBlockCreateRequest request) {
+        return call(documentBlockCreateProcessor, request, DocumentBlockMutateResponse.class);
+    }
+
+    @Override
+    public DocumentBlockMutateResponse updateBlock(DocumentBlockUpdateRequest request) {
+        return call(documentBlockUpdateProcessor, request, DocumentBlockMutateResponse.class);
+    }
+
+    @Override
+    public DocumentBlockMutateResponse moveBlock(DocumentBlockMoveRequest request) {
+        return call(documentBlockMoveProcessor, request, DocumentBlockMutateResponse.class);
+    }
+
+    @Override
+    public DocumentBlockMutateResponse deleteBlock(DocumentBlockDeleteRequest request) {
+        return call(documentBlockDeleteProcessor, request, DocumentBlockMutateResponse.class);
     }
 }

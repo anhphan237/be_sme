@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.content.api.request.DocumentUpdateDraftRequest;
 import com.sme.be_sme.modules.content.api.response.DocumentEditorSaveResponse;
 import com.sme.be_sme.modules.content.doceditor.DocumentAccessEvaluator;
 import com.sme.be_sme.modules.content.doceditor.DocumentEditorConstants;
+import com.sme.be_sme.modules.content.service.DocumentBlockSyncService;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentActivityLogMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentActivityLogEntity;
@@ -29,6 +30,7 @@ public class DocumentUpdateDraftProcessor extends BaseBizProcessor<BizContext> {
     private final DocumentMapper documentMapper;
     private final DocumentActivityLogMapper documentActivityLogMapper;
     private final DocumentAccessEvaluator documentAccessEvaluator;
+    private final DocumentBlockSyncService documentBlockSyncService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -77,6 +79,7 @@ public class DocumentUpdateDraftProcessor extends BaseBizProcessor<BizContext> {
         if (documentMapper.updateByPrimaryKey(doc) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "failed to update document");
         }
+        documentBlockSyncService.syncFromDraftJson(companyId, documentId, doc.getDraftJson(), operatorId, now);
 
         insertActivity(companyId, documentId, operatorId, DocumentEditorConstants.ACTION_DRAFT_SAVE, null, now);
 

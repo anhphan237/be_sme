@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.document.infrastructure.mapper.DocumentBlockMapper">
+
+  <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentBlockEntity">
+    <id column="document_block_id" jdbcType="VARCHAR" property="documentBlockId" />
+    <result column="company_id" jdbcType="VARCHAR" property="companyId" />
+    <result column="document_id" jdbcType="VARCHAR" property="documentId" />
+    <result column="parent_block_id" jdbcType="VARCHAR" property="parentBlockId" />
+    <result column="block_type" jdbcType="VARCHAR" property="blockType" />
+    <result column="props_json" jdbcType="LONGVARCHAR" property="propsJson" />
+    <result column="content_json" jdbcType="LONGVARCHAR" property="contentJson" />
+    <result column="order_key" jdbcType="VARCHAR" property="orderKey" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentBlockEntity">
+    insert into document_blocks (
+      document_block_id, company_id, document_id, parent_block_id, block_type,
+      props_json, content_json, order_key, status, created_by, created_at, updated_at
+    )
+    values (
+      #{documentBlockId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{documentId,jdbcType=VARCHAR},
+      #{parentBlockId,jdbcType=VARCHAR}, #{blockType,jdbcType=VARCHAR}, #{propsJson,jdbcType=LONGVARCHAR},
+      #{contentJson,jdbcType=LONGVARCHAR}, #{orderKey,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR},
+      #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}
+    )
+  </insert>
+
+  <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentBlockEntity">
+    update document_blocks
+    set company_id = #{companyId,jdbcType=VARCHAR},
+        document_id = #{documentId,jdbcType=VARCHAR},
+        parent_block_id = #{parentBlockId,jdbcType=VARCHAR},
+        block_type = #{blockType,jdbcType=VARCHAR},
+        props_json = #{propsJson,jdbcType=LONGVARCHAR},
+        content_json = #{contentJson,jdbcType=LONGVARCHAR},
+        order_key = #{orderKey,jdbcType=VARCHAR},
+        status = #{status,jdbcType=VARCHAR},
+        created_by = #{createdBy,jdbcType=VARCHAR},
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where document_block_id = #{documentBlockId,jdbcType=VARCHAR}
+  </update>
+
+  <delete id="deleteByPrimaryKey">
+    delete from document_blocks
+    where document_block_id = #{documentBlockId,jdbcType=VARCHAR}
+  </delete>
+
+  <update id="softDeleteByPrimaryKey">
+    update document_blocks
+    set status = 'DELETED',
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where document_block_id = #{documentBlockId,jdbcType=VARCHAR}
+  </update>
+
+  <delete id="deleteByCompanyAndDocumentId">
+    delete from document_blocks
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and document_id = #{documentId,jdbcType=VARCHAR}
+  </delete>
+
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+    select document_block_id, company_id, document_id, parent_block_id, block_type, props_json,
+           content_json, order_key, status, created_by, created_at, updated_at
+    from document_blocks
+    where document_block_id = #{documentBlockId,jdbcType=VARCHAR}
+  </select>
+
+  <select id="selectActiveByCompanyAndDocumentId" resultMap="BaseResultMap">
+    select document_block_id, company_id, document_id, parent_block_id, block_type, props_json,
+           content_json, order_key, status, created_by, created_at, updated_at
+    from document_blocks
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and document_id = #{documentId,jdbcType=VARCHAR}
+      and upper(coalesce(trim(status), 'ACTIVE')) = 'ACTIVE'
+    order by coalesce(parent_block_id, ''), order_key asc, created_at asc
+  </select>
+</mapper>

@@ -69,6 +69,10 @@ public class DocumentCommentTreeProcessor extends BaseBizProcessor<BizContext> {
             DocumentCommentTreeResponse.CommentNode node = new DocumentCommentTreeResponse.CommentNode();
             node.setCommentId(c.getDocumentCommentId());
             node.setParentCommentId(c.getParentCommentId());
+            node.setAnchorBlockId(c.getAnchorBlockId());
+            node.setAnchorStart(c.getAnchorStart());
+            node.setAnchorEnd(c.getAnchorEnd());
+            node.setAnchorText(c.getAnchorText());
             node.setAuthorUserId(c.getAuthorUserId());
             node.setBody(c.getBody());
             node.setStatus(c.getStatus());

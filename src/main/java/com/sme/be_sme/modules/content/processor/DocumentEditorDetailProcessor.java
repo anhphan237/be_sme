@@ -4,13 +4,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.content.api.request.DocumentEditorDetailRequest;
 import com.sme.be_sme.modules.content.api.response.DocumentEditorDetailResponse;
+import com.sme.be_sme.modules.content.config.DocumentBlockFeatureFlags;
 import com.sme.be_sme.modules.content.doceditor.DocumentAccessEvaluator;
 import com.sme.be_sme.modules.content.doceditor.DocumentDetailInclude;
+import com.sme.be_sme.modules.content.service.DocumentBlockSyncService;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAccessRuleMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentActivityLogMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAcknowledgementMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAssignmentMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAttachmentMapper;
+import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentBlockMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentCommentMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentFolderItemMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentFolderMapper;
@@ -21,6 +24,7 @@ import com.sme.be_sme.modules.document.infrastructure.persistence.entity.Documen
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentAcknowledgementEntity;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentAssignmentEntity;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentAttachmentEntity;
+import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentBlockEntity;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentCommentEntity;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentEntity;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentFolderEntity;
@@ -53,8 +57,11 @@ public class DocumentEditorDetailProcessor extends BaseBizProcessor<BizContext> 
     private final DocumentLinkMapper documentLinkMapper;
     private final DocumentAssignmentMapper documentAssignmentMapper;
     private final DocumentAttachmentMapper documentAttachmentMapper;
+    private final DocumentBlockMapper documentBlockMapper;
     private final DocumentAccessRuleMapper documentAccessRuleMapper;
     private final DocumentAccessEvaluator documentAccessEvaluator;
+    private final DocumentBlockSyncService documentBlockSyncService;
+    private final DocumentBlockFeatureFlags documentBlockFeatureFlags;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -86,6 +93,7 @@ public class DocumentEditorDetailProcessor extends BaseBizProcessor<BizContext> 
             throw AppException.of(ErrorCodes.FORBIDDEN, "document does not belong to tenant");
         }
         documentAccessEvaluator.assertCanAccess(context, doc);
+        documentBlockSyncService.ensureBlocksBackfilled(companyId, documentId, doc.getDraftJson(), context.getOperatorId());
 
         DocumentEditorDetailResponse response = new DocumentEditorDetailResponse();
         response.setDocumentId(doc.getDocumentId());
@@ -168,6 +176,10 @@ public class DocumentEditorDetailProcessor extends BaseBizProcessor<BizContext> 
                 DocumentEditorDetailResponse.CommentItem item = new DocumentEditorDetailResponse.CommentItem();
                 item.setCommentId(c.getDocumentCommentId());
                 item.setParentCommentId(c.getParentCommentId());
+                item.setAnchorBlockId(c.getAnchorBlockId());
+                item.setAnchorStart(c.getAnchorStart());
+                item.setAnchorEnd(c.getAnchorEnd());
+                item.setAnchorText(c.getAnchorText());
                 item.setAuthorUserId(c.getAuthorUserId());
                 item.setBody(c.getBody());
                 item.setStatus(c.getStatus());
@@ -274,6 +286,28 @@ public class DocumentEditorDetailProcessor extends BaseBizProcessor<BizContext> 
             response.setAccessRules(ruleItems);
         } else {
             response.setAccessRules(null);
+        }
+
+        if (inc.blocks && documentBlockFeatureFlags.isReadEnabled()) {
+            List<DocumentBlockEntity> blockRows = documentBlockMapper.selectActiveByCompanyAndDocumentId(companyId, documentId);
+            List<DocumentEditorDetailResponse.BlockItem> blockItems = new ArrayList<>();
+            if (blockRows != null) {
+                for (DocumentBlockEntity b : blockRows) {
+                    DocumentEditorDetailResponse.BlockItem item = new DocumentEditorDetailResponse.BlockItem();
+                    item.setBlockId(b.getDocumentBlockId());
+                    item.setParentBlockId(b.getParentBlockId());
+                    item.setBlockType(b.getBlockType());
+                    item.setProps(parseJson(b.getPropsJson()));
+                    item.setContent(parseJson(b.getContentJson()));
+                    item.setOrderKey(b.getOrderKey());
+                    item.setCreatedAt(b.getCreatedAt());
+                    item.setUpdatedAt(b.getUpdatedAt());
+                    blockItems.add(item);
+                }
+            }
+            response.setBlocks(blockItems);
+        } else {
+            response.setBlocks(null);
         }
 
         return response;

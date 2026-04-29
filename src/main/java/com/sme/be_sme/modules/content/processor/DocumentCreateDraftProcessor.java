@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.billing.service.CompanyPlanQuotaService;
 import com.sme.be_sme.modules.content.api.request.DocumentCreateDraftRequest;
 import com.sme.be_sme.modules.content.api.response.DocumentCreateDraftResponse;
 import com.sme.be_sme.modules.content.doceditor.DocumentEditorConstants;
+import com.sme.be_sme.modules.content.service.DocumentBlockSyncService;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentActivityLogMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentActivityLogEntity;
@@ -29,6 +30,7 @@ public class DocumentCreateDraftProcessor extends BaseBizProcessor<BizContext> {
     private final DocumentMapper documentMapper;
     private final DocumentActivityLogMapper documentActivityLogMapper;
     private final CompanyPlanQuotaService companyPlanQuotaService;
+    private final DocumentBlockSyncService documentBlockSyncService;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -71,6 +73,7 @@ public class DocumentCreateDraftProcessor extends BaseBizProcessor<BizContext> {
         if (documentMapper.insert(doc) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "failed to create document");
         }
+        documentBlockSyncService.syncFromDraftJson(companyId, documentId, draftNormalized, operatorId, now);
 
         insertActivity(companyId, documentId, operatorId, DocumentEditorConstants.ACTION_DRAFT_CREATE, null, now);
 

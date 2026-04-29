@@ -18,6 +18,10 @@ public class DocumentCommentTreeResponse {
     public static class CommentNode {
         private String commentId;
         private String parentCommentId;
+        private String anchorBlockId;
+        private Integer anchorStart;
+        private Integer anchorEnd;
+        private String anchorText;
         private String authorUserId;
         private String body;
         private String status;

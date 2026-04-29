@@ -58,6 +58,10 @@ public class DocumentCommentListProcessor extends BaseBizProcessor<BizContext> {
                 DocumentCommentListResponse.CommentRow item = new DocumentCommentListResponse.CommentRow();
                 item.setCommentId(c.getDocumentCommentId());
                 item.setParentCommentId(c.getParentCommentId());
+                item.setAnchorBlockId(c.getAnchorBlockId());
+                item.setAnchorStart(c.getAnchorStart());
+                item.setAnchorEnd(c.getAnchorEnd());
+                item.setAnchorText(c.getAnchorText());
                 item.setAuthorUserId(c.getAuthorUserId());
                 item.setBody(c.getBody());
                 item.setStatus(c.getStatus());

@@ -7,18 +7,17 @@ import java.util.Date;
 
 @Getter
 @Setter
-public class DocumentCommentEntity {
-    private String documentCommentId;
+public class DocumentBlockEntity {
+    private String documentBlockId;
     private String companyId;
     private String documentId;
-    private String parentCommentId;
-    private String anchorBlockId;
-    private Integer anchorStart;
-    private Integer anchorEnd;
-    private String anchorText;
-    private String authorUserId;
-    private String body;
+    private String parentBlockId;
+    private String blockType;
+    private String propsJson;
+    private String contentJson;
+    private String orderKey;
     private String status;
+    private String createdBy;
     private Date createdAt;
     private Date updatedAt;
 }

@@ -31,6 +31,7 @@ public class DocumentEditorDetailResponse {
     private List<LinkItem> links;
     private List<AssignmentItem> assignments;
     private List<AttachmentItem> attachments;
+    private List<BlockItem> blocks;
     /** Present when {@code include} contains {@code accessRules} */
     private List<AccessRuleItem> accessRules;
 
@@ -65,6 +66,10 @@ public class DocumentEditorDetailResponse {
     public static class CommentItem {
         private String commentId;
         private String parentCommentId;
+        private String anchorBlockId;
+        private Integer anchorStart;
+        private Integer anchorEnd;
+        private String anchorText;
         private String authorUserId;
         private String body;
         private String status;
@@ -104,6 +109,19 @@ public class DocumentEditorDetailResponse {
         private String mediaKind;
         private Date uploadedAt;
         private String uploadedBy;
+    }
+
+    @Getter
+    @Setter
+    public static class BlockItem {
+        private String blockId;
+        private String parentBlockId;
+        private String blockType;
+        private JsonNode props;
+        private JsonNode content;
+        private String orderKey;
+        private Date createdAt;
+        private Date updatedAt;
     }
 
     @Getter
