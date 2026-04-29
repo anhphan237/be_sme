@@ -18,6 +18,8 @@ public class PlatformPlanListResponse {
         private Integer eventTemplateLimit;
         private Integer documentLimit;
         private Long storageLimitBytes;
+        private Double storageLimitMb;
+        private Double storageLimitGb;
         private Integer priceVndMonthly;
         private Integer priceVndYearly;
         private String status;

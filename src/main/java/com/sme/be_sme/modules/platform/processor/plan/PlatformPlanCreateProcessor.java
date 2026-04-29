@@ -10,6 +10,7 @@ import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import com.sme.be_sme.shared.util.StorageUnitConverter;
 import com.sme.be_sme.shared.util.UuidGenerator;
 import java.util.Date;
 import lombok.RequiredArgsConstructor;
@@ -66,6 +67,8 @@ public class PlatformPlanCreateProcessor extends BaseBizProcessor<BizContext> {
         response.setEventTemplateLimit(entity.getEventTemplateLimit());
         response.setDocumentLimit(entity.getDocumentLimit());
         response.setStorageLimitBytes(entity.getStorageLimitBytes());
+        response.setStorageLimitMb(StorageUnitConverter.toMb(entity.getStorageLimitBytes()));
+        response.setStorageLimitGb(StorageUnitConverter.toGb(entity.getStorageLimitBytes()));
         response.setStatus(entity.getStatus());
         return response;
     }

@@ -19,6 +19,10 @@ public class UsageCheckResponse {
 
     private long currentStorageBytes;
     private Long storageLimitBytes;
+    private Double currentStorageMb;
+    private Double currentStorageGb;
+    private Double storageLimitMb;
+    private Double storageLimitGb;
     private String storageAlertLevel;
     private Integer storageLimitPercent;
 

@@ -9,6 +9,7 @@ import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import com.sme.be_sme.shared.util.StorageUnitConverter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -57,6 +58,8 @@ public class PlanListProcessor extends BaseBizProcessor<BizContext> {
         response.setEventTemplateLimit(entity.getEventTemplateLimit());
         response.setDocumentLimit(entity.getDocumentLimit());
         response.setStorageLimitBytes(entity.getStorageLimitBytes());
+        response.setStorageLimitMb(StorageUnitConverter.toMb(entity.getStorageLimitBytes()));
+        response.setStorageLimitGb(StorageUnitConverter.toGb(entity.getStorageLimitBytes()));
         response.setPriceVndMonthly(entity.getPriceVndMonthly());
         response.setPriceVndYearly(entity.getPriceVndYearly());
         response.setStatus(entity.getStatus());
