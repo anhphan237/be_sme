@@ -25,9 +25,9 @@ public class CloudinaryUploadService {
      * Upload file to Cloudinary.
      *
      * @param file the multipart file to upload
-     * @return secure URL of the uploaded file, or null on failure
+     * @return uploaded secure URL and file size in bytes, or null on failure
      */
-    public String upload(MultipartFile file) throws IOException {
+    public CloudinaryUploadResult upload(MultipartFile file) throws IOException {
         if (file == null || file.isEmpty()) return null;
         File tempFile = Files.createTempFile("doc-upload-", "-" + getSafeFileName(file.getOriginalFilename())).toFile();
         try {
@@ -35,11 +35,19 @@ public class CloudinaryUploadService {
             Map<?, ?> params = ObjectUtils.asMap("resource_type", "auto");
             Map<?, ?> result = cloudinary.uploader().upload(tempFile, params);
             String url = (String) result.get("secure_url");
+            Long bytes = toLong(result.get("bytes"));
             log.info("Uploaded to Cloudinary: {}", url);
-            return url;
+            return new CloudinaryUploadResult(url, bytes);
         } finally {
             tempFile.delete();
         }
+    }
+
+    private static Long toLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        return null;
     }
 
     private static String getSafeFileName(String name) {

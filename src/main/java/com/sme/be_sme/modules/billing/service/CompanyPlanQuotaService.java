@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEnti
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAttachmentMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper;
+import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentVersionMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.EventTemplateMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingTemplateMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskAttachmentMapper;
@@ -29,6 +30,7 @@ public class CompanyPlanQuotaService {
     private final OnboardingTemplateMapper onboardingTemplateMapper;
     private final EventTemplateMapper eventTemplateMapper;
     private final DocumentMapper documentMapper;
+    private final DocumentVersionMapper documentVersionMapper;
     private final TaskAttachmentMapper taskAttachmentMapper;
     private final DocumentAttachmentMapper documentAttachmentMapper;
 
@@ -87,9 +89,11 @@ public class CompanyPlanQuotaService {
         }
         Long taskBytes = taskAttachmentMapper.sumFileSizeBytesByCompanyId(companyId.trim());
         Long docBytes = documentAttachmentMapper.sumFileSizeBytesByCompanyId(companyId.trim());
+        Long docVersionBytes = documentVersionMapper.sumFileSizeBytesByCompanyId(companyId.trim());
         long task = taskBytes == null ? 0L : taskBytes;
         long doc = docBytes == null ? 0L : docBytes;
-        return task + doc;
+        long docVersions = docVersionBytes == null ? 0L : docVersionBytes;
+        return task + doc + docVersions;
     }
 
     public long getCurrentOnboardingTemplateCount(String companyId) {

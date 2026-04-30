@@ -8,6 +8,7 @@ import com.sme.be_sme.modules.content.api.response.DocumentAttachmentAddResponse
 import com.sme.be_sme.modules.content.api.response.DocumentUploadResponse;
 import com.sme.be_sme.modules.content.facade.ContentFacade;
 import com.sme.be_sme.modules.content.facade.DocumentEditorFacade;
+import com.sme.be_sme.modules.content.service.CloudinaryUploadResult;
 import com.sme.be_sme.modules.content.service.CloudinaryUploadService;
 import com.sme.be_sme.shared.api.BaseResponse;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -59,14 +60,15 @@ public class DocumentUploadController {
                 new ObjectNode(JsonNodeFactory.instance),
                 authorization);
 
-        String fileUrl;
+        CloudinaryUploadResult uploadResult;
         try {
-            fileUrl = cloudinaryUploadService.upload(file);
+            uploadResult = cloudinaryUploadService.upload(file);
         } catch (RuntimeException e) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "cloudinary is not configured (check CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET)");
         } catch (IOException e) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "failed to upload file: " + e.getMessage());
         }
+        String fileUrl = uploadResult != null ? uploadResult.getSecureUrl() : null;
         if (fileUrl == null) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "failed to upload file to Cloudinary");
         }
@@ -76,6 +78,7 @@ public class DocumentUploadController {
         request.setFileUrl(fileUrl);
         request.setDescription(description);
         request.setDocumentCategoryId(documentCategoryId);
+        request.setFileSizeBytes(uploadResult.getBytes());
 
         BizContextHolder.set(ctx);
         try {
@@ -112,14 +115,15 @@ public class DocumentUploadController {
                 new ObjectNode(JsonNodeFactory.instance),
                 authorization);
 
-        String fileUrl;
+        CloudinaryUploadResult uploadResult;
         try {
-            fileUrl = cloudinaryUploadService.upload(file);
+            uploadResult = cloudinaryUploadService.upload(file);
         } catch (RuntimeException e) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "cloudinary is not configured (check CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET)");
         } catch (IOException e) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "failed to upload file: " + e.getMessage());
         }
+        String fileUrl = uploadResult != null ? uploadResult.getSecureUrl() : null;
         if (fileUrl == null) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "failed to upload file to Cloudinary");
         }
@@ -129,7 +133,7 @@ public class DocumentUploadController {
         request.setFileUrl(fileUrl);
         request.setFileName(attachmentName);
         request.setFileType(file.getContentType());
-        request.setFileSizeBytes(file.getSize());
+        request.setFileSizeBytes(uploadResult.getBytes());
         request.setMediaKind(mediaKind);
 
         BizContextHolder.set(ctx);
