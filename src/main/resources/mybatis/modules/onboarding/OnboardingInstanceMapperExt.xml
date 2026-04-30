@@ -17,4 +17,15 @@
         AND onboarding_id = #{onboardingId}
         LIMIT 1
     </select>
+
+  <select id="selectByCompanyTemplateAndStatus"
+          resultMap="com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper.BaseResultMap">
+    select onboarding_id, company_id, employee_id, onboarding_template_id, status, start_date,
+           completed_at, completed_by, created_by, created_at, updated_at, updated_by, progress_percent, request_no,
+           manager_user_id, it_staff_user_id
+    from onboarding_instances
+    where company_id = #{companyId,jdbcType=VARCHAR}
+      and onboarding_template_id = #{templateId,jdbcType=VARCHAR}
+      and upper(status) = upper(#{status,jdbcType=VARCHAR})
+  </select>
 </mapper>

@@ -6,6 +6,7 @@ import com.sme.be_sme.modules.analytics.api.request.CompanyOnboardingSummaryRequ
 import com.sme.be_sme.modules.analytics.api.response.CompanyOnboardingSummaryResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
+import com.sme.be_sme.modules.onboarding.support.OnboardingInstanceStatus;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -132,6 +133,11 @@ public class CompanyOnboardingSummaryProcessor extends BaseBizProcessor<BizConte
         if (instance.getCompletedAt() != null) {
             return true;
         }
-        return instance.getStatus() != null && "COMPLETED".equalsIgnoreCase(instance.getStatus());
+        if (instance.getStatus() == null) {
+            return false;
+        }
+        String status = instance.getStatus().trim();
+        return OnboardingInstanceStatus.DONE.equalsIgnoreCase(status)
+                || OnboardingInstanceStatus.COMPLETED_LEGACY.equalsIgnoreCase(status);
     }
 }

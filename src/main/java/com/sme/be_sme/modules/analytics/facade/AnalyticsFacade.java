@@ -23,9 +23,16 @@ public interface AnalyticsFacade extends OperationFacadeProvider {
     CompanyOnboardingTemplateScoreboardResponse getOnboardingTemplateScoreboard(
             CompanyOnboardingTemplateScoreboardRequest request);
 
+    @OperationType("com.sme.analytics.onboarding.template.scoreboard.completed")
+    CompanyOnboardingTemplateScoreboardResponse getCompletedOnboardingTemplateScoreboard(
+            CompanyOnboardingTemplateScoreboardRequest request);
+
     @OperationType("com.sme.analytics.platform.subscription.metrics")
     PlatformSubscriptionMetricsResponse getPlatformSubscriptionMetrics(PlatformSubscriptionMetricsRequest request);
 
     @OperationType("com.sme.analytics.manager.team.summary")
     ManagerTeamSummaryResponse getManagerTeamSummary(ManagerTeamSummaryRequest request);
+
+    @OperationType("com.sme.analytics.candidate.fit.assess")
+    CandidateFitAssessResponse assessCandidateFit(CandidateFitAssessRequest request);
 }

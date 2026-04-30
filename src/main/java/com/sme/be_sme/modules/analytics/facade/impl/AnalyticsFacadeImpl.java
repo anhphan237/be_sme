@@ -4,7 +4,9 @@ import com.sme.be_sme.modules.analytics.api.request.*;
 import com.sme.be_sme.modules.analytics.api.response.*;
 import com.sme.be_sme.modules.analytics.facade.AnalyticsFacade;
 import com.sme.be_sme.modules.analytics.processor.*;
+import com.sme.be_sme.modules.onboarding.support.OnboardingInstanceStatus;
 import com.sme.be_sme.shared.gateway.core.BaseOperationFacade;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +21,7 @@ public class AnalyticsFacadeImpl extends BaseOperationFacade implements Analytic
     private final CompanyOnboardingTemplateScoreboardProcessor companyOnboardingTemplateScoreboardProcessor;
     private final PlatformSubscriptionMetricsProcessor platformSubscriptionMetricsProcessor;
     private final ManagerTeamSummaryProcessor managerTeamSummaryProcessor;
+    private final CandidateFitAssessProcessor candidateFitAssessProcessor;
 
     @Override
     public CompanyOnboardingSummaryResponse getCompanyOnboardingSummary(CompanyOnboardingSummaryRequest request) {
@@ -50,6 +53,18 @@ public class AnalyticsFacadeImpl extends BaseOperationFacade implements Analytic
     }
 
     @Override
+    public CompanyOnboardingTemplateScoreboardResponse getCompletedOnboardingTemplateScoreboard(
+            CompanyOnboardingTemplateScoreboardRequest request) {
+        CompanyOnboardingTemplateScoreboardRequest effectiveRequest =
+                Objects.requireNonNullElseGet(request, CompanyOnboardingTemplateScoreboardRequest::new);
+        effectiveRequest.setStatus(OnboardingInstanceStatus.DONE);
+        return call(
+                companyOnboardingTemplateScoreboardProcessor,
+                effectiveRequest,
+                CompanyOnboardingTemplateScoreboardResponse.class);
+    }
+
+    @Override
     public PlatformSubscriptionMetricsResponse getPlatformSubscriptionMetrics(PlatformSubscriptionMetricsRequest request) {
         return call(platformSubscriptionMetricsProcessor, request, PlatformSubscriptionMetricsResponse.class);
     }
@@ -57,5 +72,10 @@ public class AnalyticsFacadeImpl extends BaseOperationFacade implements Analytic
     @Override
     public ManagerTeamSummaryResponse getManagerTeamSummary(ManagerTeamSummaryRequest request) {
         return call(managerTeamSummaryProcessor, request, ManagerTeamSummaryResponse.class);
+    }
+
+    @Override
+    public CandidateFitAssessResponse assessCandidateFit(CandidateFitAssessRequest request) {
+        return call(candidateFitAssessProcessor, request, CandidateFitAssessResponse.class);
     }
 }
