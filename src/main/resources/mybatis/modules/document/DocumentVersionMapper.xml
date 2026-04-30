@@ -90,4 +90,12 @@
     where document_id = #{documentId,jdbcType=VARCHAR}
     order by version_no desc
   </select>
+
+  <select id="sumFileSizeBytesByCompanyId" resultType="long">
+    select coalesce(sum(v.file_size_bytes), 0)
+    from document_versions v
+    where v.company_id = #{companyId,jdbcType=VARCHAR}
+      and v.file_size_bytes is not null
+      and v.file_url is not null
+  </select>
 </mapper>

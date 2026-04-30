@@ -51,4 +51,6 @@ public interface DocumentVersionMapper {
     List<DocumentVersionEntity> selectByDocumentId(@Param("documentId") String documentId);
 
     Integer selectMaxVersionNoByDocumentId(@Param("documentId") String documentId);
+
+    Long sumFileSizeBytesByCompanyId(@Param("companyId") String companyId);
 }

@@ -14,4 +14,6 @@ public class DocumentUploadRequest {
     private String description;
     /** Optional category id */
     private String documentCategoryId;
+    /** File size in bytes */
+    private Long fileSizeBytes;
 }

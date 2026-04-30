@@ -76,6 +76,7 @@ public class DocumentUploadProcessor extends BaseBizProcessor<BizContext> {
             version.setVersionNo(VERSION_NO);
             version.setFileUrl(fileUrl);
             version.setFileName(request.getName() != null ? request.getName().trim() : null);
+            version.setFileSizeBytes(request.getFileSizeBytes());
             version.setUploadedBy(operatorId);
             version.setUploadedAt(now);
             documentVersionMapper.insert(version);
