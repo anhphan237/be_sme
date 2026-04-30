@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sme.be_sme.modules.analytics.infrastructure.mapper.CandidateFitAuditMapper">
+
+  <insert id="insert"
+          parameterType="com.sme.be_sme.modules.analytics.infrastructure.persistence.entity.CandidateFitAuditEntity">
+    insert into candidate_fit_audits (
+      candidate_fit_audit_id, company_id, employee_id,
+      jd_match_score, competency_score, interview_score,
+      jd_weight, competency_weight, interview_weight,
+      fit_score, fit_level, note,
+      assessed_by, assessed_at, created_at
+    )
+    values (
+      #{candidateFitAuditId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{employeeId,jdbcType=VARCHAR},
+      #{jdMatchScore,jdbcType=DOUBLE}, #{competencyScore,jdbcType=DOUBLE}, #{interviewScore,jdbcType=DOUBLE},
+      #{jdWeight,jdbcType=DOUBLE}, #{competencyWeight,jdbcType=DOUBLE}, #{interviewWeight,jdbcType=DOUBLE},
+      #{fitScore,jdbcType=DOUBLE}, #{fitLevel,jdbcType=VARCHAR}, #{note,jdbcType=VARCHAR},
+      #{assessedBy,jdbcType=VARCHAR}, #{assessedAt,jdbcType=TIMESTAMP}, #{createdAt,jdbcType=TIMESTAMP}
+    )
+  </insert>
+</mapper>
+

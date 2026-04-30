@@ -19,4 +19,10 @@ public interface OnboardingInstanceMapperExt {
             @Param("companyId") String companyId,
             @Param("onboardingId") String onboardingId
     );
+
+    List<OnboardingInstanceEntity> selectByCompanyTemplateAndStatus(
+            @Param("companyId") String companyId,
+            @Param("templateId") String templateId,
+            @Param("status") String status
+    );
 }

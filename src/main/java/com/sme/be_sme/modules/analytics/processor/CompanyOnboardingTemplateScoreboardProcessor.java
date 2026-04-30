@@ -4,11 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.analytics.api.request.CompanyOnboardingTemplateScoreboardRequest;
 import com.sme.be_sme.modules.analytics.api.response.CompanyOnboardingTemplateScoreboardResponse;
-import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper;
+import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapperExt;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
 import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
+import com.sme.be_sme.modules.onboarding.support.OnboardingInstanceStatus;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -28,9 +29,10 @@ public class CompanyOnboardingTemplateScoreboardProcessor extends BaseBizProcess
 
     private static final int DEFAULT_LIMIT = 20;
     private static final int MAX_LIMIT = 200;
+    private static final String FIT_TYPE_ONBOARDING_PERFORMANCE = "ONBOARDING_PERFORMANCE";
 
     private final ObjectMapper objectMapper;
-    private final OnboardingInstanceMapper onboardingInstanceMapper;
+    private final OnboardingInstanceMapperExt onboardingInstanceMapperExt;
     private final TaskInstanceMapper taskInstanceMapper;
 
     @Override
@@ -45,15 +47,11 @@ public class CompanyOnboardingTemplateScoreboardProcessor extends BaseBizProcess
         int limit = normalizeLimit(request.getLimit());
 
         Date now = new Date();
+        List<OnboardingInstanceEntity> matchingInstances =
+                onboardingInstanceMapperExt.selectByCompanyTemplateAndStatus(companyId, templateId, status);
         List<CompanyOnboardingTemplateScoreboardResponse.CandidateScoreItem> allCandidates = new ArrayList<>();
-        for (OnboardingInstanceEntity instance : onboardingInstanceMapper.selectAll()) {
-            if (instance == null || !companyId.equals(instance.getCompanyId())) {
-                continue;
-            }
-            if (!templateId.equals(normalize(instance.getOnboardingTemplateId()))) {
-                continue;
-            }
-            if (status != null && !status.equals(normalize(instance.getStatus()))) {
+        for (OnboardingInstanceEntity instance : matchingInstances) {
+            if (instance == null) {
                 continue;
             }
             allCandidates.add(toCandidate(instance, now));
@@ -129,6 +127,8 @@ public class CompanyOnboardingTemplateScoreboardProcessor extends BaseBizProcess
                 new CompanyOnboardingTemplateScoreboardResponse.CandidateScoreItem();
         item.setInstanceId(instance.getOnboardingId());
         item.setEmployeeId(instance.getEmployeeId());
+        item.setFitType(FIT_TYPE_ONBOARDING_PERFORMANCE);
+        item.setFitLevel(resolveFitLevel(qualityScore));
         item.setProgressPercent(instance.getProgressPercent() != null ? instance.getProgressPercent() : 0);
         item.setTotalTasks(totalTasks);
         item.setCompletedTasks(completedTasks);
@@ -141,7 +141,7 @@ public class CompanyOnboardingTemplateScoreboardProcessor extends BaseBizProcess
 
     private static String normalizeStatus(String status) {
         if (!StringUtils.hasText(status)) {
-            return "ACTIVE";
+            return OnboardingInstanceStatus.ACTIVE;
         }
         return normalize(status);
     }
@@ -206,5 +206,15 @@ public class CompanyOnboardingTemplateScoreboardProcessor extends BaseBizProcess
 
     private static double round2(double value) {
         return Math.round(value * 100.0) / 100.0;
+    }
+
+    private static String resolveFitLevel(double qualityScore) {
+        if (qualityScore >= 80d) {
+            return "HIGH";
+        }
+        if (qualityScore >= 60d) {
+            return "MEDIUM";
+        }
+        return "LOW";
     }
 }

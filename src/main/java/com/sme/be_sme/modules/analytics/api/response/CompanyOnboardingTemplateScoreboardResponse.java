@@ -19,6 +19,9 @@ public class CompanyOnboardingTemplateScoreboardResponse {
         private Integer rank;
         private String instanceId;
         private String employeeId;
+        /** Semantic lock: this fit is about onboarding execution performance, not hiring suitability. */
+        private String fitType;
+        private String fitLevel;
         private Integer progressPercent;
         private Integer totalTasks;
         private Integer completedTasks;
