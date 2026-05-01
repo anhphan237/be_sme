@@ -64,4 +64,27 @@ public interface SurveyInstanceMapperExt {
             @Param("now") Date now,
             @Param("limit") int limit
     );
+    SurveyInstanceEntity findExistingManagerEvaluation(
+            @Param("companyId") String companyId,
+            @Param("onboardingId") String onboardingId,
+            @Param("surveyTemplateId") String surveyTemplateId,
+            @Param("responderUserId") String responderUserId,
+            @Param("subjectUserId") String subjectUserId
+    );
+
+    int insertManagerEvaluationInstance(
+            @Param("surveyInstanceId") String surveyInstanceId,
+            @Param("companyId") String companyId,
+            @Param("onboardingId") String onboardingId,
+            @Param("surveyTemplateId") String surveyTemplateId,
+            @Param("scheduledAt") Date scheduledAt,
+            @Param("sentAt") Date sentAt,
+            @Param("closedAt") Date closedAt,
+            @Param("status") String status,
+            @Param("createdAt") Date createdAt,
+            @Param("responderUserId") String responderUserId,
+            @Param("updatedAt") Date updatedAt,
+            @Param("purpose") String purpose,
+            @Param("subjectUserId") String subjectUserId
+    );
 }

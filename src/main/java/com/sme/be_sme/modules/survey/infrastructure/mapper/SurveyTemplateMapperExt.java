@@ -2,6 +2,7 @@ package com.sme.be_sme.modules.survey.infrastructure.mapper;
 
 
 import com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyTemplateEntity;
+import com.sme.be_sme.modules.survey.infrastructure.persistence.model.ManagerEvaluationTemplateRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -19,4 +20,14 @@ public interface SurveyTemplateMapperExt {
 
     int deleteByIdAndCompanyId(@Param("surveyTemplateId") String surveyTemplateId,
                                @Param("companyId") String companyId);
+
+    ManagerEvaluationTemplateRow selectDefaultManagerEvaluationTemplate(
+            @Param("companyId") String companyId
+    );
+
+    ManagerEvaluationTemplateRow selectManagerEvaluationTemplateById(
+            @Param("companyId") String companyId,
+            @Param("surveyTemplateId") String surveyTemplateId
+    );
+    int countManagerEvaluationTemplates(@Param("companyId") String companyId);
 }

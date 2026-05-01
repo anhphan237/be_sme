@@ -175,4 +175,61 @@
         ORDER BY closed_at ASC
             LIMIT #{limit}
     </select>
+    <select id="findExistingManagerEvaluation"
+            resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyInstanceEntity">
+        select
+        survey_instance_id as surveyInstanceId,
+        company_id as companyId,
+        onboarding_id as onboardingId,
+        survey_template_id as surveyTemplateId,
+        scheduled_at as scheduledAt,
+        sent_at as sentAt,
+        closed_at as closedAt,
+        status,
+        created_at as createdAt,
+        responder_user_id as responderUserId,
+        updated_at as updatedAt
+        from survey_instances
+        where company_id = #{companyId}
+        and onboarding_id = #{onboardingId}
+        and survey_template_id = #{surveyTemplateId}
+        and responder_user_id = #{responderUserId}
+        and subject_user_id = #{subjectUserId}
+        and coalesce(purpose, 'ONBOARDING_FEEDBACK') = 'MANAGER_EVALUATION'
+        and upper(status) in ('SCHEDULED', 'PENDING', 'SENT', 'COMPLETED', 'SUBMITTED')
+        limit 1
+    </select>
+
+    <insert id="insertManagerEvaluationInstance">
+        insert into survey_instances (
+        survey_instance_id,
+        company_id,
+        onboarding_id,
+        survey_template_id,
+        scheduled_at,
+        sent_at,
+        closed_at,
+        status,
+        created_at,
+        responder_user_id,
+        updated_at,
+        purpose,
+        subject_user_id
+        )
+        values (
+        #{surveyInstanceId},
+        #{companyId},
+        #{onboardingId},
+        #{surveyTemplateId},
+        #{scheduledAt},
+        #{sentAt},
+        #{closedAt},
+        #{status},
+        #{createdAt},
+        #{responderUserId},
+        #{updatedAt},
+        #{purpose},
+        #{subjectUserId}
+        )
+    </insert>
 </mapper>
