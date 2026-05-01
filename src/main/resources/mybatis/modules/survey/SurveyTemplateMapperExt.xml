@@ -2,6 +2,7 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
 <mapper namespace="com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyTemplateMapperExt">
 
     <select id="selectByIdAndCompanyId"
@@ -19,7 +20,8 @@
         description,
         version,
         is_default,
-        target_role
+        target_role,
+        coalesce(purpose, 'ONBOARDING_FEEDBACK') as purpose
         FROM survey_templates
         WHERE survey_template_id = #{surveyTemplateId}
         AND company_id = #{companyId}
@@ -46,6 +48,7 @@
         WHERE survey_template_id = #{surveyTemplateId}
         AND company_id = #{companyId}
     </delete>
+
     <resultMap id="ManagerEvaluationTemplateRowMap"
                type="com.sme.be_sme.modules.survey.infrastructure.persistence.model.ManagerEvaluationTemplateRow">
         <id column="survey_template_id" property="surveyTemplateId"/>
@@ -59,8 +62,17 @@
         <result column="question_count" property="questionCount"/>
     </resultMap>
 
+    <select id="countManagerEvaluationTemplates" resultType="int">
+        SELECT COUNT(1)
+        FROM survey_templates st
+        WHERE st.company_id = #{companyId}
+        AND coalesce(st.purpose, 'ONBOARDING_FEEDBACK') = 'MANAGER_EVALUATION'
+        AND upper(st.stage) = 'COMPLETED'
+        AND upper(st.target_role) = 'MANAGER'
+    </select>
+
     <select id="selectDefaultManagerEvaluationTemplate" resultMap="ManagerEvaluationTemplateRowMap">
-        select
+        SELECT
         st.survey_template_id,
         st.company_id,
         st.name,
@@ -69,18 +81,18 @@
         st.target_role,
         st.status,
         st.is_default,
-        count(sq.survey_question_id) as question_count
-        from survey_templates st
-        left join survey_questions sq
-        on sq.company_id = st.company_id
-        and sq.survey_template_id = st.survey_template_id
-        where st.company_id = #{companyId}
-        and coalesce(st.purpose, 'ONBOARDING_FEEDBACK') = 'MANAGER_EVALUATION'
-        and upper(st.stage) = 'COMPLETED'
-        and upper(st.target_role) = 'MANAGER'
-        and st.is_default = true
-        and upper(st.status) = 'ACTIVE'
-        group by
+        COUNT(sq.survey_question_id) as question_count
+        FROM survey_templates st
+        LEFT JOIN survey_questions sq
+        ON sq.company_id = st.company_id
+        AND sq.survey_template_id = st.survey_template_id
+        WHERE st.company_id = #{companyId}
+        AND coalesce(st.purpose, 'ONBOARDING_FEEDBACK') = 'MANAGER_EVALUATION'
+        AND upper(st.stage) = 'COMPLETED'
+        AND upper(st.target_role) = 'MANAGER'
+        AND st.is_default = true
+        AND upper(st.status) = 'ACTIVE'
+        GROUP BY
         st.survey_template_id,
         st.company_id,
         st.name,
@@ -89,13 +101,12 @@
         st.target_role,
         st.status,
         st.is_default
-        having count(sq.survey_question_id) > 0
-        order by st.created_at desc
-        limit 1
+        ORDER BY st.created_at DESC
+        LIMIT 1
     </select>
 
     <select id="selectManagerEvaluationTemplateById" resultMap="ManagerEvaluationTemplateRowMap">
-        select
+        SELECT
         st.survey_template_id,
         st.company_id,
         st.name,
@@ -104,18 +115,18 @@
         st.target_role,
         st.status,
         st.is_default,
-        count(sq.survey_question_id) as question_count
-        from survey_templates st
-        left join survey_questions sq
-        on sq.company_id = st.company_id
-        and sq.survey_template_id = st.survey_template_id
-        where st.company_id = #{companyId}
-        and st.survey_template_id = #{surveyTemplateId}
-        and coalesce(st.purpose, 'ONBOARDING_FEEDBACK') = 'MANAGER_EVALUATION'
-        and upper(st.stage) = 'COMPLETED'
-        and upper(st.target_role) = 'MANAGER'
-        and upper(st.status) = 'ACTIVE'
-        group by
+        COUNT(sq.survey_question_id) as question_count
+        FROM survey_templates st
+        LEFT JOIN survey_questions sq
+        ON sq.company_id = st.company_id
+        AND sq.survey_template_id = st.survey_template_id
+        WHERE st.company_id = #{companyId}
+        AND st.survey_template_id = #{surveyTemplateId}
+        AND coalesce(st.purpose, 'ONBOARDING_FEEDBACK') = 'MANAGER_EVALUATION'
+        AND upper(st.stage) = 'COMPLETED'
+        AND upper(st.target_role) = 'MANAGER'
+        AND upper(st.status) = 'ACTIVE'
+        GROUP BY
         st.survey_template_id,
         st.company_id,
         st.name,
@@ -124,15 +135,7 @@
         st.target_role,
         st.status,
         st.is_default
-        having count(sq.survey_question_id) > 0
-        limit 1
+        LIMIT 1
     </select>
-    <select id="countManagerEvaluationTemplates" resultType="int">
-        select count(1)
-        from survey_templates st
-        where st.company_id = #{companyId}
-        and coalesce(st.purpose, 'ONBOARDING_FEEDBACK') = 'MANAGER_EVALUATION'
-        and upper(st.stage) = 'COMPLETED'
-        and upper(st.target_role) = 'MANAGER'
-    </select>
+
 </mapper>
