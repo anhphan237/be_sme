@@ -353,4 +353,28 @@ public class ManagerOnboardingEvaluationService {
 
         return Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant());
     }
+    public void validateCanSendAfterOnboardingCompleted(
+            String companyId,
+            OnboardingInstanceEntity onboardingInstance,
+            String requestedTemplateId,
+            Integer requestedDueDays
+    ) {
+        validateBase(companyId, onboardingInstance);
+
+        EmployeeProfileEntity employeeProfile = resolveEmployeeProfileIfExists(onboardingInstance);
+
+        String employeeUserId = resolveEmployeeUserId(onboardingInstance, employeeProfile);
+        String managerUserId = resolveManagerUserId(onboardingInstance, employeeProfile);
+
+        validateEmployeeAndManager(employeeUserId, managerUserId);
+
+        ManagerEvaluationTemplateRow template = resolveManagerEvaluationTemplate(
+                companyId,
+                requestedTemplateId
+        );
+
+        validateManagerEvaluationTemplate(template);
+
+        resolveDueDays(requestedDueDays);
+    }
 }

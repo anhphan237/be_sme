@@ -7,27 +7,16 @@ import lombok.Setter;
 @Setter
 public class OnboardingInstanceCompleteRequest {
 
+
     private String instanceId;
+
     /**
-     * Optional.
-     * Nếu không truyền, BE tự lấy template mặc định:
-     * purpose = MANAGER_EVALUATION
-     * stage = COMPLETED
-     * target_role = MANAGER
-     * is_default = true
+     * SEND_NOW | SEND_LATER
+     * Default = SEND_NOW
      */
+    private String managerEvaluationMode;
+
     private String managerEvaluationTemplateId;
 
-    /**
-     * Optional.
-     * Default = 7.
-     */
     private Integer managerEvaluationDueDays;
-
-    /**
-     * Optional.
-     * Default = false.
-     * Chỉ dùng nếu HR muốn hoàn tất onboarding nhưng không gửi đánh giá manager.
-     */
-    private Boolean skipManagerEvaluation;
 }
