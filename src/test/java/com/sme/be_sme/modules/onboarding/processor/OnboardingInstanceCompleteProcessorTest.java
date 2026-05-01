@@ -7,6 +7,7 @@ import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanc
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.service.ManagerOnboardingEvaluationService;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BizContext;
@@ -35,6 +36,8 @@ class OnboardingInstanceCompleteProcessorTest {
     @Mock
     private IdentityUserUpdateProcessor identityUserUpdateProcessor;
 
+    @Mock
+    private ManagerOnboardingEvaluationService managerOnboardingEvaluationService;
     @Test
     void complete_rejectsWhenAnyTaskPending() {
         OnboardingInstanceCompleteProcessor processor = new OnboardingInstanceCompleteProcessor(
@@ -42,7 +45,8 @@ class OnboardingInstanceCompleteProcessorTest {
                 onboardingInstanceMapper,
                 taskInstanceMapper,
                 employeeProfileMapper,
-                identityUserUpdateProcessor
+                identityUserUpdateProcessor,
+                managerOnboardingEvaluationService
         );
         BizContext context = new BizContext();
         context.setTenantId("c1");
@@ -62,6 +66,12 @@ class OnboardingInstanceCompleteProcessorTest {
         AppException ex = assertThrows(AppException.class, () -> processor.execute(context));
         assertEquals(ErrorCodes.BAD_REQUEST, ex.getCode());
         verify(onboardingInstanceMapper, never()).updateByPrimaryKey(instance);
+        verify(managerOnboardingEvaluationService, never()).sendAfterOnboardingCompleted(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()
+        );
     }
 }
-
