@@ -101,6 +101,7 @@
     published_at, published_by
     from documents
     where company_id = #{companyId,jdbcType=VARCHAR}
+      and upper(trim(coalesce(status, ''))) &lt;&gt; 'DELETED'
     order by created_at desc
   </select>
 
@@ -108,5 +109,6 @@
     select count(1)
     from documents
     where company_id = #{companyId,jdbcType=VARCHAR}
+      and upper(trim(coalesce(status, ''))) &lt;&gt; 'DELETED'
   </select>
 </mapper>

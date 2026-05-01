@@ -62,9 +62,32 @@ public class DocumentAccessEvaluator {
     }
 
     public void assertCanAccess(BizContext ctx, DocumentEntity doc) {
+        assertNotSoftDeleted(doc);
+        applyEditorRuleChecks(ctx, doc);
+    }
+
+    /**
+     * Like {@link #assertCanAccess} but ignores {@link DocumentEditorConstants#STATUS_DELETED} so callers may
+     * authorize idempotent soft-delete after the document row is already marked deleted.
+     */
+    public void assertCanMutateIncludingSoftDeleted(BizContext ctx, DocumentEntity doc) {
         if (doc == null) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "document not found");
         }
+        applyEditorRuleChecks(ctx, doc);
+    }
+
+    private static void assertNotSoftDeleted(DocumentEntity doc) {
+        if (doc == null) {
+            throw AppException.of(ErrorCodes.NOT_FOUND, "document not found");
+        }
+        if (DocumentEditorConstants.STATUS_DELETED.equalsIgnoreCase(
+                doc.getStatus() != null ? doc.getStatus().trim() : "")) {
+            throw AppException.of(ErrorCodes.NOT_FOUND, "document not found");
+        }
+    }
+
+    private void applyEditorRuleChecks(BizContext ctx, DocumentEntity doc) {
         if (!DocumentEditorConstants.CONTENT_KIND_EDITOR.equalsIgnoreCase(doc.getContentKind())) {
             return;
         }

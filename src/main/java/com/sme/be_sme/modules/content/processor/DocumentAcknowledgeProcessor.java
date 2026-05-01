@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.content.api.request.DocumentAcknowledgeRequest;
 import com.sme.be_sme.modules.content.api.response.DocumentAcknowledgeResponse;
+import com.sme.be_sme.modules.content.doceditor.DocumentEditorConstants;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentAcknowledgementMapper;
 import com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper;
 import com.sme.be_sme.modules.document.infrastructure.persistence.entity.DocumentAcknowledgementEntity;
@@ -56,6 +57,10 @@ public class DocumentAcknowledgeProcessor extends BaseBizProcessor<BizContext> {
         }
         if (!companyId.equals(doc.getCompanyId())) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "document does not belong to tenant");
+        }
+        if (DocumentEditorConstants.STATUS_DELETED.equalsIgnoreCase(
+                doc.getStatus() != null ? doc.getStatus().trim() : "")) {
+            throw AppException.of(ErrorCodes.NOT_FOUND, "document not found");
         }
 
         DocumentAcknowledgementEntity existing = null;

@@ -48,6 +48,20 @@ public interface DocumentMapper {
             @Param("companyId") String companyId,
             @Param("contentKind") String contentKind);
 
+    long countContentFileDocumentsPaged(
+            @Param("companyId") String companyId,
+            @Param("contentKind") String contentKind,
+            @Param("documentCategoryId") String documentCategoryId,
+            @Param("createdBy") String createdBy);
+
+    List<DocumentEntity> selectContentFileDocumentsPaged(
+            @Param("companyId") String companyId,
+            @Param("contentKind") String contentKind,
+            @Param("documentCategoryId") String documentCategoryId,
+            @Param("createdBy") String createdBy,
+            @Param("limit") int limit,
+            @Param("offset") int offset);
+
     long countEditorDocumentsHrPaged(
             @Param("companyId") String companyId,
             @Param("contentKind") String contentKind,
