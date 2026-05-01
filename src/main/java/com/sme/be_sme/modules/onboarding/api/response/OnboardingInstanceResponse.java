@@ -8,4 +8,8 @@ import lombok.Setter;
 public class OnboardingInstanceResponse {
     private String instanceId;
     private String status;
+
+    private String managerEvaluationSurveyInstanceId;
+    private String managerEvaluationStatus;
+    private String managerEvaluationMessage;
 }
