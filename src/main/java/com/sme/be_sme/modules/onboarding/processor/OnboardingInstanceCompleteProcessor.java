@@ -13,7 +13,9 @@ import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanc
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+import com.sme.be_sme.modules.onboarding.service.ManagerOnboardingEvaluationService;
 import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
+import com.sme.be_sme.modules.survey.service.ManagerEvaluationSendResult;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -35,37 +37,60 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
     private final TaskInstanceMapper taskInstanceMapper;
     private final EmployeeProfileMapper employeeProfileMapper;
     private final IdentityUserUpdateProcessor identityUserUpdateProcessor;
+    private final ManagerOnboardingEvaluationService managerOnboardingEvaluationService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     protected Object doProcess(BizContext context, JsonNode payload) {
-        OnboardingInstanceCompleteRequest request = objectMapper.convertValue(payload, OnboardingInstanceCompleteRequest.class);
+        OnboardingInstanceCompleteRequest request =
+                objectMapper.convertValue(payload, OnboardingInstanceCompleteRequest.class);
+
         validate(context, request);
 
         String companyId = context.getTenantId();
-        OnboardingInstanceEntity instance = onboardingInstanceMapper.selectByPrimaryKey(request.getInstanceId().trim());
+
+        OnboardingInstanceEntity instance =
+                onboardingInstanceMapper.selectByPrimaryKey(request.getInstanceId().trim());
+
         if (instance == null) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "onboarding instance not found");
         }
+
         if (!companyId.equals(instance.getCompanyId())) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "instance does not belong to tenant");
         }
+
+        if ("DONE".equalsIgnoreCase(instance.getStatus())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "onboarding instance already completed");
+        }
+
+        if ("CANCELLED".equalsIgnoreCase(instance.getStatus())
+                || "CANCELED".equalsIgnoreCase(instance.getStatus())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "cannot complete cancelled onboarding");
+        }
+
         List<TaskInstanceEntity> tasks =
                 taskInstanceMapper.selectByCompanyIdAndOnboardingId(companyId, instance.getOnboardingId());
+
         if (tasks == null || tasks.isEmpty()) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "cannot complete onboarding without generated tasks");
         }
-        boolean hasIncompleteTask = tasks.stream().anyMatch(t -> !OnboardingInstanceProgressService.isEffectivelyComplete(t));
+
+        boolean hasIncompleteTask = tasks.stream()
+                .anyMatch(t -> !OnboardingInstanceProgressService.isEffectivelyComplete(t));
+
         if (hasIncompleteTask) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "cannot complete onboarding while tasks are pending");
         }
 
         Date now = new Date();
+
         instance.setStatus("DONE");
         instance.setCompletedAt(now);
         instance.setCompletedBy(context.getOperatorId());
         instance.setUpdatedAt(now);
         instance.setUpdatedBy(context.getOperatorId());
+
         int updated = onboardingInstanceMapper.updateByPrimaryKey(instance);
         if (updated != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "complete onboarding instance failed");
@@ -76,17 +101,41 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
             IdentityUpdateUserContext identityContext = new IdentityUpdateUserContext();
             identityContext.setTenantId(context.getTenantId());
             identityContext.setOperatorId(context.getOperatorId());
+
             UpdateUserRequest updateUserRequest = UpdateUserRequest.builder()
                     .userId(employeeUserId)
                     .companyId(companyId)
                     .status("OFFICIAL")
                     .build();
+
             identityUserUpdateProcessor.process(identityContext, updateUserRequest);
+        }
+
+        ManagerEvaluationSendResult evaluationResult = null;
+
+        if (!Boolean.TRUE.equals(request.getSkipManagerEvaluation())) {
+            evaluationResult = managerOnboardingEvaluationService.sendAfterOnboardingCompleted(
+                    companyId,
+                    context.getOperatorId(),
+                    instance,
+                    request.getManagerEvaluationTemplateId(),
+                    request.getManagerEvaluationDueDays()
+            );
         }
 
         OnboardingInstanceResponse response = new OnboardingInstanceResponse();
         response.setInstanceId(instance.getOnboardingId());
         response.setStatus(instance.getStatus());
+
+        if (evaluationResult != null) {
+            response.setManagerEvaluationSurveyInstanceId(evaluationResult.getSurveyInstanceId());
+            response.setManagerEvaluationStatus(evaluationResult.getStatus());
+            response.setManagerEvaluationMessage(evaluationResult.getMessage());
+        } else {
+            response.setManagerEvaluationStatus("SKIPPED");
+            response.setManagerEvaluationMessage("manager evaluation skipped by request");
+        }
+
         return response;
     }
 
@@ -94,11 +143,14 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
         if (!StringUtils.hasText(employeeIdRaw)) {
             return null;
         }
+
         String key = employeeIdRaw.trim();
+
         EmployeeProfileEntity profile = employeeProfileMapper.selectByPrimaryKey(key);
         if (profile != null && StringUtils.hasText(profile.getUserId())) {
             return profile.getUserId().trim();
         }
+
         return key;
     }
 
@@ -106,6 +158,7 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
         if (context == null || !StringUtils.hasText(context.getTenantId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
         }
+
         if (request == null || !StringUtils.hasText(request.getInstanceId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "instanceId is required");
         }
