@@ -2,34 +2,40 @@ package com.sme.be_sme.modules.onboarding.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapper;
+import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
+import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
 import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
 import com.sme.be_sme.modules.onboarding.api.request.OnboardingInstanceListRequest;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceDetailResponse;
 import com.sme.be_sme.modules.onboarding.api.response.OnboardingInstanceListResponse;
-import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapper;
-import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
-import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 @Component
 @RequiredArgsConstructor
 public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext> {
 
-    private static final String INSTANCE_STATUS_ACTIVE = "ACTIVE";
+    private static final String STATUS_ALL = "ALL";
+    private static final String STATUS_ACTIVE = "ACTIVE";
+    private static final String STATUS_DONE = "DONE";
+    private static final String STATUS_COMPLETED = "COMPLETED";
+    private static final String STATUS_CANCELLED = "CANCELLED";
+    private static final String STATUS_CANCELED = "CANCELED";
 
     private final ObjectMapper objectMapper;
     private final OnboardingInstanceMapper onboardingInstanceMapper;
@@ -39,35 +45,35 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
-        OnboardingInstanceListRequest request = objectMapper.convertValue(payload, OnboardingInstanceListRequest.class);
         validate(context);
 
+        OnboardingInstanceListRequest request =
+                payload == null || payload.isNull()
+                        ? new OnboardingInstanceListRequest()
+                        : objectMapper.convertValue(payload, OnboardingInstanceListRequest.class);
+
         String companyId = context.getTenantId();
-        final boolean employeeScope = isEmployeeRole(context);
-        String requestedEmployeeId = request == null ? null : request.getEmployeeId();
-        final String operatorId = normalize(context == null ? null : context.getOperatorId());
+        String requestedEmployeeId = request == null ? null : normalize(request.getEmployeeId());
+        String requestedStatus = request == null ? null : normalizeStatus(request.getStatus());
+
+        final boolean employeeScope = isEmployeeOnlyRole(context);
+        final String operatorId = normalize(context.getOperatorId());
+
         if (employeeScope && !StringUtils.hasText(operatorId)) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "employee context is required");
         }
+
         final String employeeId = employeeScope
-                ? resolveEmployeeIdForOperator(context) // EMPLOYEE can only query own onboarding instances
+                ? resolveEmployeeIdForOperator(context)
                 : requestedEmployeeId;
+
         final Map<String, EmployeeLinkInfo> employeeLinkByOnboardingEmployeeId = new HashMap<>();
         final Map<String, String> managerNameByUserId = new HashMap<>();
 
         List<OnboardingInstanceDetailResponse> instances = onboardingInstanceMapper.selectAll().stream()
                 .filter(row -> Objects.equals(companyId, row.getCompanyId()))
-                .filter(row -> {
-                    if (employeeScope) {
-                        if (!StringUtils.hasText(row.getEmployeeId())) return false;
-                        String rowEmployeeId = normalize(row.getEmployeeId());
-                        // Compatibility: old data may store userId in onboarding_instances.employee_id
-                        return Objects.equals(employeeId, rowEmployeeId)
-                                || Objects.equals(operatorId, rowEmployeeId);
-                    }
-                    return !StringUtils.hasText(employeeId) || employeeId.trim().equals(normalize(row.getEmployeeId()));
-                })
-                .filter(row -> INSTANCE_STATUS_ACTIVE.equalsIgnoreCase(StringUtils.trimWhitespace(row.getStatus())))
+                .filter(row -> matchesEmployeeScope(row, employeeScope, employeeId, operatorId))
+                .filter(row -> matchesStatus(row.getStatus(), requestedStatus))
                 .map(row -> toDetailResponse(
                         row,
                         companyId,
@@ -87,18 +93,97 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
         }
     }
 
-    private boolean isEmployeeRole(BizContext context) {
-        if (context == null || context.getRoles() == null) return false;
-        return context.getRoles().stream().anyMatch(r -> "EMPLOYEE".equalsIgnoreCase(r));
+    private boolean matchesEmployeeScope(
+            OnboardingInstanceEntity row,
+            boolean employeeScope,
+            String employeeId,
+            String operatorId
+    ) {
+        String rowEmployeeId = normalize(row.getEmployeeId());
+
+        if (employeeScope) {
+            if (!StringUtils.hasText(rowEmployeeId)) {
+                return false;
+            }
+
+            /*
+             * Compatibility:
+             * - Data chuẩn: onboarding_instances.employee_id = employee_profiles.employee_id
+             * - Data cũ/demo: onboarding_instances.employee_id = users.user_id
+             */
+            return Objects.equals(employeeId, rowEmployeeId)
+                    || Objects.equals(operatorId, rowEmployeeId);
+        }
+
+        if (!StringUtils.hasText(employeeId)) {
+            return true;
+        }
+
+        return Objects.equals(employeeId, rowEmployeeId);
+    }
+
+    private boolean matchesStatus(String rowStatusRaw, String requestedStatus) {
+        String rowStatus = normalizeStatus(rowStatusRaw);
+
+
+        if (!StringUtils.hasText(requestedStatus) || STATUS_ALL.equalsIgnoreCase(requestedStatus)) {
+            return true;
+        }
+
+        if (STATUS_COMPLETED.equalsIgnoreCase(requestedStatus)) {
+            return STATUS_DONE.equalsIgnoreCase(rowStatus)
+                    || STATUS_COMPLETED.equalsIgnoreCase(rowStatus);
+        }
+
+        if (STATUS_CANCELLED.equalsIgnoreCase(requestedStatus)
+                || STATUS_CANCELED.equalsIgnoreCase(requestedStatus)) {
+            return STATUS_CANCELLED.equalsIgnoreCase(rowStatus)
+                    || STATUS_CANCELED.equalsIgnoreCase(rowStatus);
+        }
+
+        return requestedStatus.equalsIgnoreCase(rowStatus);
+    }
+
+    private boolean isEmployeeOnlyRole(BizContext context) {
+        if (context == null || context.getRoles() == null) {
+            return false;
+        }
+
+        boolean hasEmployee = context.getRoles().stream()
+                .anyMatch(role -> "EMPLOYEE".equalsIgnoreCase(role));
+
+        boolean hasHighPrivilege = context.getRoles().stream()
+                .anyMatch(role ->
+                        "HR".equalsIgnoreCase(role)
+                                || "HR_ADMIN".equalsIgnoreCase(role)
+                                || "ADMIN".equalsIgnoreCase(role)
+                                || "ADMIN_PLATFORM".equalsIgnoreCase(role)
+                                || "PLATFORM_ADMIN".equalsIgnoreCase(role)
+                                || "MANAGER".equalsIgnoreCase(role)
+                );
+
+        return hasEmployee && !hasHighPrivilege;
     }
 
     private String resolveEmployeeIdForOperator(BizContext context) {
-        if (context == null || !StringUtils.hasText(context.getOperatorId())) return null;
+        if (context == null || !StringUtils.hasText(context.getOperatorId())) {
+            return null;
+        }
+
         EmployeeProfileEntity me = employeeProfileMapperExt.selectByCompanyIdAndUserId(
                 context.getTenantId(),
                 context.getOperatorId()
         );
-        if (me == null || !StringUtils.hasText(me.getEmployeeId())) return null;
+
+        if (me == null || !StringUtils.hasText(me.getEmployeeId())) {
+            /*
+             * Compatibility:
+             * Nếu không có employee profile thì dùng luôn operatorId.
+             * Vì data cũ có thể lưu onboarding_instances.employee_id = users.user_id.
+             */
+            return normalize(context.getOperatorId());
+        }
+
         return normalize(me.getEmployeeId());
     }
 
@@ -106,6 +191,23 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
         return StringUtils.hasText(value) ? value.trim() : null;
     }
 
+    private String normalizeStatus(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+
+        String status = value.trim().toUpperCase();
+
+        if (STATUS_COMPLETED.equals(status)) {
+            return STATUS_DONE;
+        }
+
+        if (STATUS_CANCELED.equals(status)) {
+            return STATUS_CANCELLED;
+        }
+
+        return status;
+    }
     private OnboardingInstanceDetailResponse toDetailResponse(
             OnboardingInstanceEntity entity,
             String companyId,
@@ -154,36 +256,46 @@ public class OnboardingInstanceListProcessor extends BaseBizProcessor<BizContext
             String employeeUserId = normalize(profileByEmployeeId.getUserId());
             String managerUserId = normalize(profileByEmployeeId.getManagerUserId());
             String managerName = resolveManagerName(companyId, managerUserId, managerNameByUserId);
+
             EmployeeLinkInfo link = new EmployeeLinkInfo(employeeUserId, managerUserId, managerName);
             employeeLinkByOnboardingEmployeeId.put(normalizedId, link);
             return link;
         }
 
-        EmployeeProfileEntity profileByUserId = employeeProfileMapperExt.selectByCompanyIdAndUserId(companyId, normalizedId);
+        EmployeeProfileEntity profileByUserId =
+                employeeProfileMapperExt.selectByCompanyIdAndUserId(companyId, normalizedId);
+
         if (profileByUserId != null && StringUtils.hasText(profileByUserId.getUserId())) {
             String employeeUserId = normalize(profileByUserId.getUserId());
             String managerUserId = normalize(profileByUserId.getManagerUserId());
             String managerName = resolveManagerName(companyId, managerUserId, managerNameByUserId);
+
             EmployeeLinkInfo link = new EmployeeLinkInfo(employeeUserId, managerUserId, managerName);
             employeeLinkByOnboardingEmployeeId.put(normalizedId, link);
             return link;
         }
 
-        // Compatibility: old onboarding_instances.employee_id may already store identity user_id.
         EmployeeLinkInfo link = new EmployeeLinkInfo(normalizedId, null, null);
         employeeLinkByOnboardingEmployeeId.put(normalizedId, link);
         return link;
     }
 
-    private String resolveManagerName(String companyId, String managerUserId, Map<String, String> managerNameByUserId) {
+    private String resolveManagerName(
+            String companyId,
+            String managerUserId,
+            Map<String, String> managerNameByUserId
+    ) {
         if (!StringUtils.hasText(managerUserId)) {
             return null;
         }
+
         if (managerNameByUserId.containsKey(managerUserId)) {
             return managerNameByUserId.get(managerUserId);
         }
+
         UserEntity manager = userMapperExt.selectByCompanyIdAndUserId(companyId, managerUserId);
         String managerName = manager == null ? null : normalize(manager.getFullName());
+
         managerNameByUserId.put(managerUserId, managerName);
         return managerName;
     }
