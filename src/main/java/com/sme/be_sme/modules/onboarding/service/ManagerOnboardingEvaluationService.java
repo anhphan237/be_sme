@@ -1,6 +1,7 @@
 package com.sme.be_sme.modules.onboarding.service;
 
 import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapper;
+import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
 import com.sme.be_sme.modules.employee.infrastructure.persistence.entity.EmployeeProfileEntity;
 import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
 import com.sme.be_sme.modules.notification.service.NotificationService;
@@ -34,6 +35,7 @@ public class ManagerOnboardingEvaluationService {
     private static final String STAGE_COMPLETED = "COMPLETED";
     private static final String TARGET_ROLE_MANAGER = "MANAGER";
     private static final String TEMPLATE_SURVEY_READY = "SURVEY_READY";
+
     private static final int DEFAULT_DUE_DAYS = 7;
     private static final int MAX_DUE_DAYS = 30;
 
@@ -53,6 +55,7 @@ public class ManagerOnboardingEvaluationService {
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final EmployeeProfileMapper employeeProfileMapper;
+    private final EmployeeProfileMapperExt employeeProfileMapperExt;
     private final SurveyTemplateMapperExt surveyTemplateMapperExt;
     private final SurveyInstanceMapperExt surveyInstanceMapperExt;
     private final NotificationService notificationService;
@@ -66,9 +69,9 @@ public class ManagerOnboardingEvaluationService {
     ) {
         validateBase(companyId, onboardingInstance);
 
-        EmployeeProfileEntity employeeProfile = resolveEmployeeProfile(onboardingInstance);
+        EmployeeProfileEntity employeeProfile = resolveEmployeeProfileIfExists(onboardingInstance);
 
-        String employeeUserId = resolveEmployeeUserId(employeeProfile);
+        String employeeUserId = resolveEmployeeUserId(onboardingInstance, employeeProfile);
         String managerUserId = resolveManagerUserId(onboardingInstance, employeeProfile);
 
         validateEmployeeAndManager(employeeUserId, managerUserId);
@@ -145,24 +148,38 @@ public class ManagerOnboardingEvaluationService {
         }
     }
 
-    private EmployeeProfileEntity resolveEmployeeProfile(OnboardingInstanceEntity onboardingInstance) {
-        EmployeeProfileEntity profile =
-                employeeProfileMapper.selectByPrimaryKey(onboardingInstance.getEmployeeId().trim());
+    /**
+     * Data hiện tại có thể đang lưu:
+     * onboarding_instances.employee_id = users.user_id
+     *
+     * Vì vậy resolve theo thứ tự:
+     * 1. employee_profiles.employee_id = onboarding.employee_id
+     * 2. employee_profiles.user_id = onboarding.employee_id
+     * 3. nếu không có profile thì fallback dùng onboarding.employee_id như user_id
+     */
+    private EmployeeProfileEntity resolveEmployeeProfileIfExists(OnboardingInstanceEntity onboardingInstance) {
+        String companyId = onboardingInstance.getCompanyId();
+        String rawEmployeeId = onboardingInstance.getEmployeeId().trim();
 
-        if (profile == null) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "employee profile not found for onboarding instance");
+        EmployeeProfileEntity profile = employeeProfileMapper.selectByPrimaryKey(rawEmployeeId);
+
+        if (profile != null && companyId.equals(profile.getCompanyId())) {
+            return profile;
         }
 
-        if (!onboardingInstance.getCompanyId().equals(profile.getCompanyId())) {
-            throw AppException.of(ErrorCodes.FORBIDDEN, "employee profile does not belong to tenant");
-        }
-
-        return profile;
+        return employeeProfileMapperExt.selectByCompanyIdAndUserId(companyId, rawEmployeeId);
     }
 
-    private String resolveEmployeeUserId(EmployeeProfileEntity employeeProfile) {
+    private String resolveEmployeeUserId(
+            OnboardingInstanceEntity onboardingInstance,
+            EmployeeProfileEntity employeeProfile
+    ) {
         if (employeeProfile != null && StringUtils.hasText(employeeProfile.getUserId())) {
             return employeeProfile.getUserId().trim();
+        }
+
+        if (onboardingInstance != null && StringUtils.hasText(onboardingInstance.getEmployeeId())) {
+            return onboardingInstance.getEmployeeId().trim();
         }
 
         return null;
@@ -296,9 +313,9 @@ public class ManagerOnboardingEvaluationService {
                 .companyId(companyId)
                 .userId(managerUserId)
                 .type("MANAGER_EVALUATION_READY")
-                .title("Manager evaluation required")
-                .content("Please evaluate the new employee after onboarding completion."
-                        + (StringUtils.hasText(dueStr) ? " Please submit by " + dueStr + "." : ""))
+                .title("Yêu cầu đánh giá nhân viên sau onboarding")
+                .content("Vui lòng thực hiện khảo sát đánh giá nhân viên sau khi hoàn thành onboarding."
+                        + (StringUtils.hasText(dueStr) ? " Hạn hoàn thành: " + dueStr + "." : ""))
                 .refType("SURVEY")
                 .refId(surveyInstanceId)
                 .sendEmail(true)
