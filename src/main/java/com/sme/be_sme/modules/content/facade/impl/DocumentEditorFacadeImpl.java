@@ -15,6 +15,7 @@ public class DocumentEditorFacadeImpl extends BaseOperationFacade implements Doc
     private final DocumentCreateDraftProcessor documentCreateDraftProcessor;
     private final DocumentUpdateDraftProcessor documentUpdateDraftProcessor;
     private final DocumentPublishProcessor documentPublishProcessor;
+    private final DocumentSoftDeleteProcessor documentSoftDeleteProcessor;
     private final DocumentEditorDetailProcessor documentEditorDetailProcessor;
     private final DocumentEditorListProcessor documentEditorListProcessor;
     private final DocumentVersionListProcessor documentVersionListProcessor;
@@ -72,6 +73,11 @@ public class DocumentEditorFacadeImpl extends BaseOperationFacade implements Doc
     @Override
     public DocumentPublishResponse publish(DocumentPublishRequest request) {
         return call(documentPublishProcessor, request, DocumentPublishResponse.class);
+    }
+
+    @Override
+    public DocumentSoftDeleteResponse softDelete(DocumentSoftDeleteRequest request) {
+        return call(documentSoftDeleteProcessor, request, DocumentSoftDeleteResponse.class);
     }
 
     @Override

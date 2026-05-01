@@ -2,19 +2,53 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.sme.be_sme.modules.document.infrastructure.mapper.DocumentMapper">
 
+  <sql id="notSoftDeletedClause">
+      and upper(trim(coalesce(d.status, ''))) &lt;&gt; 'DELETED'
+  </sql>
+
   <select id="selectByCompanyIdAndContentKind" resultMap="BaseResultMap">
     select document_id, company_id, document_category_id, title, description, visibility,
            status, created_by, created_at, updated_at, content_kind, draft_json, published_json,
            published_at, published_by
-    from documents
-    where company_id = #{companyId,jdbcType=VARCHAR}
-      and content_kind = #{contentKind,jdbcType=VARCHAR}
+    from documents d
+    where d.company_id = #{companyId,jdbcType=VARCHAR}
+      and d.content_kind = #{contentKind,jdbcType=VARCHAR}
+      and upper(trim(coalesce(d.status, ''))) &lt;&gt; 'DELETED'
     order by updated_at desc nulls last, created_at desc
+  </select>
+
+  <sql id="contentFileDocWhere">
+    where d.company_id = #{companyId,jdbcType=VARCHAR}
+      and d.content_kind = #{contentKind,jdbcType=VARCHAR}
+      <include refid="notSoftDeletedClause"/>
+    <if test="documentCategoryId != null and documentCategoryId != ''">
+      and d.document_category_id = #{documentCategoryId,jdbcType=VARCHAR}
+    </if>
+    <if test="createdBy != null and createdBy != ''">
+      and trim(coalesce(d.created_by, '')) = #{createdBy,jdbcType=VARCHAR}
+    </if>
+  </sql>
+
+  <select id="countContentFileDocumentsPaged" resultType="long">
+    select count(1)
+    from documents d
+    <include refid="contentFileDocWhere"/>
+  </select>
+
+  <select id="selectContentFileDocumentsPaged" resultMap="BaseResultMap">
+    select d.document_id, d.company_id, d.document_category_id, d.title, d.description, d.visibility,
+           d.status, d.created_by, d.created_at, d.updated_at, d.content_kind, d.draft_json, d.published_json,
+           d.published_at, d.published_by
+    from documents d
+    <include refid="contentFileDocWhere"/>
+    order by d.created_at desc nulls last, d.updated_at desc nulls last
+    limit #{limit} offset #{offset}
   </select>
 
   <sql id="editorDocWhereHr">
     where d.company_id = #{companyId,jdbcType=VARCHAR}
       and d.content_kind = #{contentKind,jdbcType=VARCHAR}
+      <include refid="notSoftDeletedClause"/>
     <if test="titleQuery != null and titleQuery != ''">
       and d.title ilike concat('%', #{titleQuery,jdbcType=VARCHAR}, '%')
     </if>
@@ -73,6 +107,7 @@
     from documents d
     where d.company_id = #{companyId,jdbcType=VARCHAR}
       and d.content_kind = #{contentKind,jdbcType=VARCHAR}
+      <include refid="notSoftDeletedClause"/>
     <if test="titleQuery != null and titleQuery != ''">
       and d.title ilike concat('%', #{titleQuery,jdbcType=VARCHAR}, '%')
     </if>
@@ -86,6 +121,7 @@
     from documents d
     where d.company_id = #{companyId,jdbcType=VARCHAR}
       and d.content_kind = #{contentKind,jdbcType=VARCHAR}
+      <include refid="notSoftDeletedClause"/>
     <if test="titleQuery != null and titleQuery != ''">
       and d.title ilike concat('%', #{titleQuery,jdbcType=VARCHAR}, '%')
     </if>

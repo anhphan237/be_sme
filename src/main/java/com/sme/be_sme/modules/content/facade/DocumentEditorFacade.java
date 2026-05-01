@@ -19,6 +19,9 @@ public interface DocumentEditorFacade extends OperationFacadeProvider {
     @OperationType("com.sme.document.publish")
     DocumentPublishResponse publish(DocumentPublishRequest request);
 
+    @OperationType("com.sme.document.softDelete")
+    DocumentSoftDeleteResponse softDelete(DocumentSoftDeleteRequest request);
+
     @OperationType("com.sme.document.detail")
     DocumentEditorDetailResponse detail(DocumentEditorDetailRequest request);
 

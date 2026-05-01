@@ -10,6 +10,12 @@ import java.util.List;
 public class DocumentListResponse {
     private List<DocumentItem> items;
 
+    private Long totalCount;
+
+    private Integer page;
+
+    private Integer pageSize;
+
     @Getter
     @Setter
     public static class DocumentItem {

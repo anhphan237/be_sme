@@ -19,11 +19,13 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 public class DocumentListProcessor extends BaseBizProcessor<BizContext> {
+
+    private static final int DEFAULT_PAGE_SIZE = 50;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final ObjectMapper objectMapper;
     private final DocumentMapper documentMapper;
@@ -39,14 +41,34 @@ public class DocumentListProcessor extends BaseBizProcessor<BizContext> {
         }
 
         String companyId = context.getTenantId();
-        List<DocumentEntity> docs = documentMapper.selectByCompanyIdAndContentKind(
-                companyId, DocumentEditorConstants.CONTENT_KIND_FILE);
+        String contentKind = DocumentEditorConstants.CONTENT_KIND_FILE;
+
+        int page = request.getPage() != null && request.getPage() > 0 ? request.getPage() : 1;
+        int pageSize = request.getPageSize() != null && request.getPageSize() > 0
+                ? Math.min(request.getPageSize(), MAX_PAGE_SIZE)
+                : DEFAULT_PAGE_SIZE;
+        int offset = (page - 1) * pageSize;
+
+        String categoryFilter = StringUtils.hasText(request.getDocumentCategoryId())
+                ? request.getDocumentCategoryId().trim()
+                : null;
+
+        String createdByFilter = null;
+        if (Boolean.TRUE.equals(request.getOnlyMine())) {
+            String operatorId = context.getOperatorId();
+            if (!StringUtils.hasText(operatorId)) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "operatorId is required for onlyMine");
+            }
+            createdByFilter = operatorId.trim();
+        }
+
+        long total = documentMapper.countContentFileDocumentsPaged(
+                companyId, contentKind, categoryFilter, createdByFilter);
+
+        List<DocumentEntity> docs = documentMapper.selectContentFileDocumentsPaged(
+                companyId, contentKind, categoryFilter, createdByFilter, pageSize, offset);
         if (docs == null) {
             docs = new ArrayList<>();
-        }
-        if (StringUtils.hasText(request.getDocumentCategoryId())) {
-            String catId = request.getDocumentCategoryId().trim();
-            docs = docs.stream().filter(d -> catId.equals(d.getDocumentCategoryId())).collect(Collectors.toList());
         }
 
         List<DocumentListResponse.DocumentItem> items = new ArrayList<>();
@@ -63,6 +85,9 @@ public class DocumentListProcessor extends BaseBizProcessor<BizContext> {
 
         DocumentListResponse response = new DocumentListResponse();
         response.setItems(items);
+        response.setTotalCount(total);
+        response.setPage(page);
+        response.setPageSize(pageSize);
         return response;
     }
 
