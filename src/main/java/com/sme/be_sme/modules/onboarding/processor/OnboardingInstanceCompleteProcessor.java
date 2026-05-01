@@ -13,6 +13,7 @@ import com.sme.be_sme.modules.onboarding.infrastructure.mapper.OnboardingInstanc
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.TaskInstanceMapper;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.OnboardingInstanceEntity;
 import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskInstanceEntity;
+
 import com.sme.be_sme.modules.onboarding.service.ManagerOnboardingEvaluationService;
 import com.sme.be_sme.modules.onboarding.service.OnboardingInstanceProgressService;
 import com.sme.be_sme.modules.survey.service.ManagerEvaluationSendResult;
@@ -32,6 +33,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizContext> {
 
+    private static final String MODE_SEND_NOW = "SEND_NOW";
+    private static final String MODE_SEND_LATER = "SEND_LATER";
+
     private final ObjectMapper objectMapper;
     private final OnboardingInstanceMapper onboardingInstanceMapper;
     private final TaskInstanceMapper taskInstanceMapper;
@@ -43,11 +47,14 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
     @Transactional(rollbackFor = Exception.class)
     protected Object doProcess(BizContext context, JsonNode payload) {
         OnboardingInstanceCompleteRequest request =
-                objectMapper.convertValue(payload, OnboardingInstanceCompleteRequest.class);
+                payload == null || payload.isNull()
+                        ? null
+                        : objectMapper.convertValue(payload, OnboardingInstanceCompleteRequest.class);
 
         validate(context, request);
 
         String companyId = context.getTenantId();
+        String mode = resolveManagerEvaluationMode(request.getManagerEvaluationMode());
 
         OnboardingInstanceEntity instance =
                 onboardingInstanceMapper.selectByPrimaryKey(request.getInstanceId().trim());
@@ -60,7 +67,8 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
             throw AppException.of(ErrorCodes.FORBIDDEN, "instance does not belong to tenant");
         }
 
-        if ("DONE".equalsIgnoreCase(instance.getStatus())) {
+        if ("DONE".equalsIgnoreCase(instance.getStatus())
+                || "COMPLETED".equalsIgnoreCase(instance.getStatus())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "onboarding instance already completed");
         }
 
@@ -77,10 +85,19 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
         }
 
         boolean hasIncompleteTask = tasks.stream()
-                .anyMatch(t -> !OnboardingInstanceProgressService.isEffectivelyComplete(t));
+                .anyMatch(task -> !OnboardingInstanceProgressService.isEffectivelyComplete(task));
 
         if (hasIncompleteTask) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "cannot complete onboarding while tasks are pending");
+        }
+
+        if (MODE_SEND_NOW.equals(mode)) {
+            managerOnboardingEvaluationService.validateCanSendAfterOnboardingCompleted(
+                    companyId,
+                    instance,
+                    request.getManagerEvaluationTemplateId(),
+                    request.getManagerEvaluationDueDays()
+            );
         }
 
         Date now = new Date();
@@ -97,6 +114,7 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
         }
 
         String employeeUserId = resolveEmployeeUserId(instance.getEmployeeId());
+
         if (StringUtils.hasText(employeeUserId)) {
             IdentityUpdateUserContext identityContext = new IdentityUpdateUserContext();
             identityContext.setTenantId(context.getTenantId());
@@ -111,29 +129,26 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
             identityUserUpdateProcessor.process(identityContext, updateUserRequest);
         }
 
-        ManagerEvaluationSendResult evaluationResult = null;
-
-        if (!Boolean.TRUE.equals(request.getSkipManagerEvaluation())) {
-            evaluationResult = managerOnboardingEvaluationService.sendAfterOnboardingCompleted(
-                    companyId,
-                    context.getOperatorId(),
-                    instance,
-                    request.getManagerEvaluationTemplateId(),
-                    request.getManagerEvaluationDueDays()
-            );
-        }
-
         OnboardingInstanceResponse response = new OnboardingInstanceResponse();
         response.setInstanceId(instance.getOnboardingId());
         response.setStatus(instance.getStatus());
 
-        if (evaluationResult != null) {
+        if (MODE_SEND_NOW.equals(mode)) {
+            ManagerEvaluationSendResult evaluationResult =
+                    managerOnboardingEvaluationService.sendAfterOnboardingCompleted(
+                            companyId,
+                            context.getOperatorId(),
+                            instance,
+                            request.getManagerEvaluationTemplateId(),
+                            request.getManagerEvaluationDueDays()
+                    );
+
             response.setManagerEvaluationSurveyInstanceId(evaluationResult.getSurveyInstanceId());
             response.setManagerEvaluationStatus(evaluationResult.getStatus());
             response.setManagerEvaluationMessage(evaluationResult.getMessage());
         } else {
-            response.setManagerEvaluationStatus("SKIPPED");
-            response.setManagerEvaluationMessage("manager evaluation skipped by request");
+            response.setManagerEvaluationStatus("PENDING");
+            response.setManagerEvaluationMessage("Manager evaluation will be sent later");
         }
 
         return response;
@@ -151,7 +166,28 @@ public class OnboardingInstanceCompleteProcessor extends BaseBizProcessor<BizCon
             return profile.getUserId().trim();
         }
 
+        /*
+         * Compatibility:
+         * Data cũ/demo có thể lưu onboarding_instances.employee_id = users.user_id.
+         */
         return key;
+    }
+
+    private static String resolveManagerEvaluationMode(String rawMode) {
+        if (!StringUtils.hasText(rawMode)) {
+            return MODE_SEND_NOW;
+        }
+
+        String mode = rawMode.trim().toUpperCase();
+
+        if (!MODE_SEND_NOW.equals(mode) && !MODE_SEND_LATER.equals(mode)) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "invalid managerEvaluationMode. Allowed values: SEND_NOW, SEND_LATER"
+            );
+        }
+
+        return mode;
     }
 
     private static void validate(BizContext context, OnboardingInstanceCompleteRequest request) {
