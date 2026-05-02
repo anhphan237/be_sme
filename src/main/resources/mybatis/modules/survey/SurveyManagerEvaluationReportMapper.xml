@@ -6,27 +6,48 @@
 
     <sql id="managerEvaluationWhere">
         st.company_id = #{companyId}
-        and upper(coalesce(st.purpose, 'MANAGER_EVALUATION')) = 'MANAGER_EVALUATION'
+        and upper(coalesce(st.purpose, 'ONBOARDING_FEEDBACK')) = 'MANAGER_EVALUATION'
         and upper(coalesce(st.stage, '')) = 'COMPLETED'
         and upper(coalesce(st.target_role, '')) = 'MANAGER'
+
         <if test="templateId != null and templateId != ''">
             and st.survey_template_id = #{templateId}
         </if>
+
         <if test="managerUserId != null and managerUserId != ''">
             and si.responder_user_id = #{managerUserId}
         </if>
+
         <if test="startDate != null and startDate != ''">
             and date(coalesce(sr.submitted_at, si.sent_at, si.created_at)) &gt;= cast(#{startDate} as date)
         </if>
+
         <if test="endDate != null and endDate != ''">
             and date(coalesce(sr.submitted_at, si.sent_at, si.created_at)) &lt;= cast(#{endDate} as date)
         </if>
+
         <if test="keyword != null and keyword != ''">
             and (
                 lower(coalesce(ep.employee_name, eu.full_name, '')) like concat('%', lower(#{keyword}), '%')
                 or lower(coalesce(ep.employee_email, eu.email, '')) like concat('%', lower(#{keyword}), '%')
                 or lower(coalesce(mu.full_name, '')) like concat('%', lower(#{keyword}), '%')
+                or lower(coalesce(mu.email, '')) like concat('%', lower(#{keyword}), '%')
             )
+        </if>
+
+        <if test="status != null and status != ''">
+            <choose>
+                <when test="status == 'SUBMITTED'">
+                    and sr.survey_response_id is not null
+                </when>
+                <when test="status == 'PENDING'">
+                    and sr.survey_response_id is null
+                    and upper(coalesce(si.status, '')) not in ('EXPIRED', 'CANCELLED')
+                </when>
+                <otherwise>
+                    and upper(coalesce(si.status, '')) = upper(#{status})
+                </otherwise>
+            </choose>
         </if>
     </sql>
 
@@ -40,11 +61,17 @@
             st.name as template_name,
             oi.onboarding_id,
             oi.completed_at,
+
             coalesce(ep.user_id, eu.user_id, oi.employee_id) as employee_user_id,
             coalesce(ep.employee_name, eu.full_name) as employee_name,
             coalesce(ep.employee_email, eu.email) as employee_email,
+            coalesce(ep.job_title, '') as job_title,
+            coalesce(d.name, '') as department_name,
+
             si.responder_user_id as manager_user_id,
             mu.full_name as manager_name,
+            mu.email as manager_email,
+
             sr.survey_response_id,
             sr.overall_score,
             sr.submitted_at
@@ -61,6 +88,9 @@
         left join users eu
           on eu.company_id = si.company_id
          and eu.user_id = coalesce(ep.user_id, oi.employee_id)
+        left join departments d
+          on d.company_id = si.company_id
+         and d.department_id = ep.department_id
         left join users mu
           on mu.company_id = si.company_id
          and mu.user_id = si.responder_user_id

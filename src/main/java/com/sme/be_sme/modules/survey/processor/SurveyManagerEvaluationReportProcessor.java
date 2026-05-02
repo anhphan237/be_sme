@@ -20,17 +20,20 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 public class SurveyManagerEvaluationReportProcessor extends BaseBizProcessor<BizContext> {
+
+    private static final String FIT = "FIT";
+    private static final String FOLLOW_UP = "FOLLOW_UP";
+    private static final String NOT_FIT = "NOT_FIT";
+    private static final String NOT_EVALUATED = "NOT_EVALUATED";
 
     private final ObjectMapper objectMapper;
     private final SurveyManagerEvaluationReportMapper reportMapper;
@@ -41,9 +44,10 @@ public class SurveyManagerEvaluationReportProcessor extends BaseBizProcessor<Biz
             throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
         }
 
-        SurveyManagerEvaluationReportRequest request = payload == null || payload.isNull()
-                ? new SurveyManagerEvaluationReportRequest()
-                : objectMapper.convertValue(payload, SurveyManagerEvaluationReportRequest.class);
+        SurveyManagerEvaluationReportRequest request =
+                payload == null || payload.isNull()
+                        ? new SurveyManagerEvaluationReportRequest()
+                        : objectMapper.convertValue(payload, SurveyManagerEvaluationReportRequest.class);
 
         List<Map<String, Object>> evaluations = reportMapper.selectEvaluationRows(
                 context.getTenantId(),
@@ -51,7 +55,8 @@ public class SurveyManagerEvaluationReportProcessor extends BaseBizProcessor<Biz
                 trim(request.getStartDate()),
                 trim(request.getEndDate()),
                 trim(request.getManagerUserId()),
-                trim(request.getKeyword())
+                trim(request.getKeyword()),
+                upper(trim(request.getStatus()))
         );
 
         List<Map<String, Object>> answers = reportMapper.selectAnswerRows(
@@ -60,230 +65,237 @@ public class SurveyManagerEvaluationReportProcessor extends BaseBizProcessor<Biz
                 trim(request.getStartDate()),
                 trim(request.getEndDate()),
                 trim(request.getManagerUserId()),
-                trim(request.getKeyword())
+                trim(request.getKeyword()),
+                upper(trim(request.getStatus()))
         );
 
-        SurveyManagerEvaluationReportResponse response = new SurveyManagerEvaluationReportResponse();
-        response.setEmployees(buildEmployees(evaluations, answers));
-        response.setSentCount(evaluations.size());
-        response.setSubmittedCount((int) evaluations.stream().filter(this::hasResponse).count());
-        response.setPendingCount(Math.max(response.getSentCount() - response.getSubmittedCount(), 0));
-        response.setResponseRate(percent(response.getSubmittedCount(), response.getSentCount()));
-        response.setAverageScore(avgOverall(evaluations, answers));
-        response.setRecommendationRate(calculateRecommendationRate(answers));
-        response.setDimensionStats(buildDimensionStats(answers));
-        response.setQuestionStats(buildQuestionStats(answers, response.getSubmittedCount()));
-        response.setRiskItems(buildInsights(response.getDimensionStats(), true));
-        response.setStrengthItems(buildInsights(response.getDimensionStats(), false));
+        List<SurveyManagerEvaluationReportResponse.EmployeeEvaluationRow> employees =
+                buildEmployees(evaluations, answers);
 
+        String fitFilter = upper(trim(request.getFitLevel()));
+        if (StringUtils.hasText(fitFilter)) {
+            employees = employees.stream()
+                    .filter(item -> fitFilter.equals(upper(item.getFitLevel())))
+                    .toList();
+        }
+
+        SurveyManagerEvaluationReportResponse response = new SurveyManagerEvaluationReportResponse();
+        response.setEmployees(employees);
+        response.setSummary(buildSummary(employees));
         return response;
+    }
+
+    private SurveyManagerEvaluationReportResponse.Summary buildSummary(
+            List<SurveyManagerEvaluationReportResponse.EmployeeEvaluationRow> employees
+    ) {
+        SurveyManagerEvaluationReportResponse.Summary summary =
+                new SurveyManagerEvaluationReportResponse.Summary();
+
+        int total = employees.size();
+
+        int submitted = (int) employees.stream()
+                .filter(item -> "SUBMITTED".equals(upper(item.getStatus())))
+                .count();
+
+        int pending = Math.max(total - submitted, 0);
+
+        summary.setTotalEmployees(total);
+        summary.setSentCount(total);
+        summary.setSubmittedCount(submitted);
+        summary.setPendingCount(pending);
+        summary.setResponseRate(percent(submitted, total));
+
+
+        summary.setAverageScore(avg(
+                employees.stream()
+                        .filter(item -> "SUBMITTED".equals(upper(item.getStatus())))
+                        .map(SurveyManagerEvaluationReportResponse.EmployeeEvaluationRow::getAverageScore)
+                        .filter(Objects::nonNull)
+                        .filter(score -> score.compareTo(BigDecimal.ZERO) > 0)
+                        .toList()
+        ));
+
+        summary.setFitCount((int) employees.stream()
+                .filter(item -> FIT.equals(item.getFitLevel()))
+                .count());
+
+        summary.setNeedFollowUpCount((int) employees.stream()
+                .filter(item -> FOLLOW_UP.equals(item.getFitLevel()))
+                .count());
+
+        summary.setNotFitCount((int) employees.stream()
+                .filter(item -> NOT_FIT.equals(item.getFitLevel()))
+                .count());
+
+        summary.setNotEvaluatedCount((int) employees.stream()
+                .filter(item -> NOT_EVALUATED.equals(item.getFitLevel()))
+                .count());
+
+        return summary;
     }
 
     private List<SurveyManagerEvaluationReportResponse.EmployeeEvaluationRow> buildEmployees(
             List<Map<String, Object>> evaluations,
             List<Map<String, Object>> answers
     ) {
-        Map<String, String> recommendationByResponseId = extractRecommendationByResponseId(answers);
+        Map<String, List<Map<String, Object>>> answersByResponseId = answers.stream()
+                .filter(row -> StringUtils.hasText(str(row.get("survey_response_id"))))
+                .collect(Collectors.groupingBy(
+                        row -> str(row.get("survey_response_id")),
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
 
         return evaluations.stream().map(row -> {
             SurveyManagerEvaluationReportResponse.EmployeeEvaluationRow item =
                     new SurveyManagerEvaluationReportResponse.EmployeeEvaluationRow();
+
+            String responseId = str(row.get("survey_response_id"));
+            List<Map<String, Object>> responseAnswers =
+                    answersByResponseId.getOrDefault(responseId, List.of());
+
+            BigDecimal averageScore = StringUtils.hasText(responseId)
+                    ? resolveAverageScore(row, responseAnswers)
+                    : null;
+
+            String recommendation = StringUtils.hasText(responseId)
+                    ? extractRecommendation(responseAnswers)
+                    : null;
+
+            String fitLevel = resolveFitLevel(averageScore, recommendation, responseId);
+
             item.setSurveyInstanceId(str(row.get("survey_instance_id")));
-            item.setSurveyResponseId(str(row.get("survey_response_id")));
+            item.setSurveyResponseId(responseId);
             item.setOnboardingId(str(row.get("onboarding_id")));
-            item.setTemplateId(str(row.get("survey_template_id")));
-            item.setTemplateName(str(row.get("template_name")));
             item.setEmployeeUserId(str(row.get("employee_user_id")));
             item.setEmployeeName(str(row.get("employee_name")));
             item.setEmployeeEmail(str(row.get("employee_email")));
+            item.setJobTitle(str(row.get("job_title")));
+            item.setDepartmentName(str(row.get("department_name")));
             item.setManagerUserId(str(row.get("manager_user_id")));
             item.setManagerName(str(row.get("manager_name")));
+            item.setManagerEmail(str(row.get("manager_email")));
+            item.setStatus(resolveStatus(row));
+            item.setAverageScore(averageScore);
+            item.setRecommendation(recommendation);
+            item.setRecommendationLabel(toRecommendationLabel(recommendation));
+            item.setFitLevel(fitLevel);
+            item.setFitLabel(toFitLabel(fitLevel));
             item.setSentAt(date(row.get("sent_at")));
             item.setSubmittedAt(date(row.get("submitted_at")));
             item.setCompletedAt(date(row.get("completed_at")));
-            item.setOverallScore(decimal(row.get("overall_score")));
-            item.setRecommendation(recommendationByResponseId.get(item.getSurveyResponseId()));
-            item.setStatus(resolveStatus(row));
+            item.setDimensionScores(buildDimensionScores(responseAnswers));
+            item.setTextFeedbacks(buildTextFeedbacks(responseAnswers));
+
             return item;
         }).toList();
     }
 
-    private Map<String, String> extractRecommendationByResponseId(List<Map<String, Object>> answers) {
-        Map<String, String> result = new LinkedHashMap<>();
-
-        for (Map<String, Object> row : answers) {
-            String responseId = str(row.get("survey_response_id"));
-            String dimension = upper(str(row.get("dimension_code")));
-
-            if (!StringUtils.hasText(responseId) || !"RECOMMENDATION".equals(dimension)) {
-                continue;
-            }
-
-            String value = firstText(row.get("value_choice"), row.get("value_text"), row.get("value_choices"));
-            if (StringUtils.hasText(value)) {
-                result.putIfAbsent(responseId, value);
-            }
-        }
-
-        return result;
-    }
-
-    private List<SurveyManagerEvaluationReportResponse.DimensionStat> buildDimensionStats(List<Map<String, Object>> answers) {
-        Map<String, List<Map<String, Object>>> groups = answers.stream()
-                .filter(row -> decimal(row.get("value_rating")) != null)
-                .collect(Collectors.groupingBy(
-                        row -> normalizeDimension(str(row.get("dimension_code"))),
-                        LinkedHashMap::new,
-                        Collectors.toList()
-                ));
-
-        List<SurveyManagerEvaluationReportResponse.DimensionStat> result = new ArrayList<>();
-
-        for (Map.Entry<String, List<Map<String, Object>>> entry : groups.entrySet()) {
-            Set<String> questions = entry.getValue().stream()
-                    .map(row -> str(row.get("survey_question_id")))
-                    .filter(StringUtils::hasText)
-                    .collect(Collectors.toCollection(LinkedHashSet::new));
-
-            SurveyManagerEvaluationReportResponse.DimensionStat stat = new SurveyManagerEvaluationReportResponse.DimensionStat();
-            stat.setDimensionCode(entry.getKey());
-            stat.setQuestionCount(questions.size());
-            stat.setResponseCount(entry.getValue().size());
-            stat.setAverageScore(avg(entry.getValue().stream()
-                    .map(row -> decimal(row.get("value_rating")))
-                    .filter(Objects::nonNull)
-                    .toList()));
-            result.add(stat);
-        }
-
-        result.sort(Comparator.comparing(SurveyManagerEvaluationReportResponse.DimensionStat::getAverageScore));
-        return result;
-    }
-
-    private List<SurveyManagerEvaluationReportResponse.QuestionStat> buildQuestionStats(
-            List<Map<String, Object>> answers,
-            int submittedCount
-    ) {
-        Map<String, List<Map<String, Object>>> groups = answers.stream()
-                .filter(row -> StringUtils.hasText(str(row.get("survey_question_id"))))
-                .collect(Collectors.groupingBy(
-                        row -> str(row.get("survey_question_id")),
-                        LinkedHashMap::new,
-                        Collectors.toList()
-                ));
-
-        List<SurveyManagerEvaluationReportResponse.QuestionStat> result = new ArrayList<>();
-
-        for (Map.Entry<String, List<Map<String, Object>>> entry : groups.entrySet()) {
-            List<Map<String, Object>> rows = entry.getValue();
-            Map<String, Object> first = rows.get(0);
-
-            SurveyManagerEvaluationReportResponse.QuestionStat stat = new SurveyManagerEvaluationReportResponse.QuestionStat();
-            stat.setQuestionId(entry.getKey());
-            stat.setContent(str(first.get("question_content")));
-            stat.setType(str(first.get("question_type")));
-            stat.setDimensionCode(normalizeDimension(str(first.get("dimension_code"))));
-            stat.setResponseCount(rows.size());
-            stat.setCompletionRate(percent(rows.size(), submittedCount));
-            stat.setAverageScore(avg(rows.stream()
-                    .map(row -> decimal(row.get("value_rating")))
-                    .filter(Objects::nonNull)
-                    .toList()));
-
-            Map<String, Integer> choices = new LinkedHashMap<>();
-            List<String> texts = new ArrayList<>();
-
-            for (Map<String, Object> row : rows) {
-                String choice = firstText(row.get("value_choice"), row.get("value_choices"));
-                if (StringUtils.hasText(choice)) {
-                    choices.merge(choice, 1, Integer::sum);
-                }
-
-                String text = str(row.get("value_text"));
-                if (StringUtils.hasText(text) && texts.size() < 5) {
-                    texts.add(text);
-                }
-            }
-
-            stat.setChoiceDistribution(choices);
-            stat.setTextAnswerCount(texts.size());
-            stat.setSampleTexts(texts);
-            result.add(stat);
-        }
-
-        return result;
-    }
-
-    private List<SurveyManagerEvaluationReportResponse.InsightItem> buildInsights(
-            List<SurveyManagerEvaluationReportResponse.DimensionStat> dimensions,
-            boolean lowest
-    ) {
-        Comparator<SurveyManagerEvaluationReportResponse.DimensionStat> comparator =
-                Comparator.comparing(SurveyManagerEvaluationReportResponse.DimensionStat::getAverageScore);
-
-        return dimensions.stream()
-                .sorted(lowest ? comparator : comparator.reversed())
-                .limit(3)
-                .map(item -> {
-                    SurveyManagerEvaluationReportResponse.InsightItem insight = new SurveyManagerEvaluationReportResponse.InsightItem();
-                    insight.setLabel(item.getDimensionCode());
-                    insight.setValue(item.getAverageScore());
-                    insight.setSubtext(item.getResponseCount() + " responses");
-                    return insight;
-                })
-                .toList();
-    }
-
-    private BigDecimal avgOverall(List<Map<String, Object>> evaluations, List<Map<String, Object>> answers) {
-        List<BigDecimal> values = evaluations.stream()
-                .map(row -> decimal(row.get("overall_score")))
-                .filter(Objects::nonNull)
-                .toList();
-
-        if (!values.isEmpty()) {
-            return avg(values);
+    private BigDecimal resolveAverageScore(Map<String, Object> row, List<Map<String, Object>> answers) {
+        BigDecimal storedOverall = decimal(row.get("overall_score"));
+        if (storedOverall != null && storedOverall.compareTo(BigDecimal.ZERO) > 0) {
+            return storedOverall;
         }
 
         return avg(answers.stream()
-                .map(row -> decimal(row.get("value_rating")))
+                .map(answer -> decimal(answer.get("value_rating")))
                 .filter(Objects::nonNull)
                 .toList());
     }
 
-    private BigDecimal calculateRecommendationRate(List<Map<String, Object>> answers) {
-        int total = 0;
-        int recommended = 0;
+    private List<SurveyManagerEvaluationReportResponse.DimensionScore> buildDimensionScores(
+            List<Map<String, Object>> answers
+    ) {
+        Map<String, List<BigDecimal>> grouped = new LinkedHashMap<>();
 
+        for (Map<String, Object> row : answers) {
+            BigDecimal rating = decimal(row.get("value_rating"));
+            if (rating == null) continue;
+
+            String dimensionCode = normalizeDimension(str(row.get("dimension_code")));
+            grouped.computeIfAbsent(dimensionCode, ignored -> new ArrayList<>()).add(rating);
+        }
+
+        return grouped.entrySet().stream()
+                .map(entry -> {
+                    SurveyManagerEvaluationReportResponse.DimensionScore score =
+                            new SurveyManagerEvaluationReportResponse.DimensionScore();
+                    score.setDimensionCode(entry.getKey());
+                    score.setDimensionName(toDimensionName(entry.getKey()));
+                    score.setScore(avg(entry.getValue()));
+                    return score;
+                })
+                .sorted(Comparator.comparing(SurveyManagerEvaluationReportResponse.DimensionScore::getDimensionCode))
+                .toList();
+    }
+
+    private List<SurveyManagerEvaluationReportResponse.TextFeedback> buildTextFeedbacks(
+            List<Map<String, Object>> answers
+    ) {
+        List<SurveyManagerEvaluationReportResponse.TextFeedback> result = new ArrayList<>();
+
+        for (Map<String, Object> row : answers) {
+            String text = str(row.get("value_text"));
+            if (!StringUtils.hasText(text)) continue;
+
+            SurveyManagerEvaluationReportResponse.TextFeedback feedback =
+                    new SurveyManagerEvaluationReportResponse.TextFeedback();
+            feedback.setQuestion(str(row.get("question_content")));
+            feedback.setAnswer(text.trim());
+            result.add(feedback);
+        }
+
+        return result;
+    }
+
+    private String extractRecommendation(List<Map<String, Object>> answers) {
         for (Map<String, Object> row : answers) {
             if (!"RECOMMENDATION".equals(normalizeDimension(str(row.get("dimension_code"))))) {
                 continue;
             }
 
             String value = firstText(row.get("value_choice"), row.get("value_text"), row.get("value_choices"));
-            if (!StringUtils.hasText(value)) {
-                BigDecimal rating = decimal(row.get("value_rating"));
-                if (rating == null) continue;
-                total++;
-                if (rating.compareTo(BigDecimal.valueOf(4)) >= 0) recommended++;
-                continue;
-            }
+            if (StringUtils.hasText(value)) return value.trim();
 
-            total++;
-            String lower = value.toLowerCase(Locale.ROOT);
-            if (lower.contains("tiếp tục") || lower.contains("chính thức") || lower.contains("recommend") || lower.contains("yes")) {
-                recommended++;
-            }
+            BigDecimal rating = decimal(row.get("value_rating"));
+            if (rating != null) return rating.toPlainString();
         }
 
-        return percent(recommended, total);
+        return null;
     }
 
-    private boolean hasResponse(Map<String, Object> row) {
-        return StringUtils.hasText(str(row.get("survey_response_id")));
+    private String resolveFitLevel(BigDecimal averageScore, String recommendation, String responseId) {
+        if (!StringUtils.hasText(responseId)) {
+            return NOT_EVALUATED;
+        }
+
+        String rec = lower(recommendation);
+
+        if (rec.contains("không") || rec.contains("not fit") || rec.contains("reject") || rec.contains("không phù hợp")) {
+            return NOT_FIT;
+        }
+
+        if (rec.contains("theo dõi") || rec.contains("follow") || rec.contains("cần thêm")) {
+            return FOLLOW_UP;
+        }
+
+        if (averageScore == null || averageScore.compareTo(BigDecimal.ZERO) == 0) {
+            return FOLLOW_UP;
+        }
+
+        if (averageScore.compareTo(BigDecimal.valueOf(3)) < 0) {
+            return NOT_FIT;
+        }
+
+        if (averageScore.compareTo(BigDecimal.valueOf(4)) < 0) {
+            return FOLLOW_UP;
+        }
+
+        return FIT;
     }
 
     private String resolveStatus(Map<String, Object> row) {
-        if (hasResponse(row)) {
+        if (StringUtils.hasText(str(row.get("survey_response_id")))) {
             return "SUBMITTED";
         }
 
@@ -295,7 +307,61 @@ public class SurveyManagerEvaluationReportProcessor extends BaseBizProcessor<Biz
 
     private static String normalizeDimension(String value) {
         String raw = upper(value);
-        return StringUtils.hasText(raw) ? raw : "OVERALL_COMMENT";
+        if (!StringUtils.hasText(raw)) return "OVERALL_COMMENT";
+
+        return switch (raw) {
+            case "ROLE_FIT",
+                 "WORK_QUALITY",
+                 "LEARNING_ABILITY",
+                 "PROACTIVENESS",
+                 "TEAM_INTEGRATION",
+                 "ATTITUDE_CULTURE",
+                 "RECOMMENDATION",
+                 "OVERALL_COMMENT" -> raw;
+            default -> "OVERALL_COMMENT";
+        };
+    }
+
+    private static String toDimensionName(String dimensionCode) {
+        return switch (normalizeDimension(dimensionCode)) {
+            case "ROLE_FIT" -> "Mức độ phù hợp với vị trí";
+            case "WORK_QUALITY" -> "Chất lượng thực hiện công việc";
+            case "LEARNING_ABILITY" -> "Khả năng tiếp thu và thích nghi";
+            case "PROACTIVENESS" -> "Mức độ chủ động";
+            case "TEAM_INTEGRATION" -> "Khả năng hòa nhập đội nhóm";
+            case "ATTITUDE_CULTURE" -> "Thái độ và phù hợp văn hóa";
+            case "RECOMMENDATION" -> "Đề xuất tiếp tục chính thức";
+            default -> "Nhận xét tổng quan";
+        };
+    }
+
+    private static String toFitLabel(String fitLevel) {
+        return switch (upper(fitLevel)) {
+            case FIT -> "Phù hợp";
+            case FOLLOW_UP -> "Cần theo dõi";
+            case NOT_FIT -> "Không phù hợp";
+            default -> "Chưa đánh giá";
+        };
+    }
+
+    private static String toRecommendationLabel(String recommendation) {
+        if (!StringUtils.hasText(recommendation)) return null;
+
+        String rec = lower(recommendation);
+
+        if (rec.contains("tiếp tục") || rec.contains("chính thức") || rec.contains("continue") || rec.contains("yes")) {
+            return "Đề xuất tiếp tục chính thức";
+        }
+
+        if (rec.contains("theo dõi") || rec.contains("follow")) {
+            return "Cần theo dõi thêm";
+        }
+
+        if (rec.contains("không") || rec.contains("not")) {
+            return "Không phù hợp";
+        }
+
+        return recommendation;
     }
 
     private static BigDecimal avg(List<BigDecimal> values) {
@@ -311,18 +377,13 @@ public class SurveyManagerEvaluationReportProcessor extends BaseBizProcessor<Biz
                 .divide(BigDecimal.valueOf(denominator), 2, RoundingMode.HALF_UP);
     }
 
-    private static String firstText(Object... values) {
-        for (Object value : values) {
-            String text = str(value);
-            if (StringUtils.hasText(text)) return text;
-        }
-        return null;
-    }
-
     private static BigDecimal decimal(Object value) {
         if (value == null) return null;
         if (value instanceof BigDecimal decimal) return decimal;
-        if (value instanceof Number number) return BigDecimal.valueOf(number.doubleValue()).setScale(2, RoundingMode.HALF_UP);
+        if (value instanceof Number number) {
+            return BigDecimal.valueOf(number.doubleValue()).setScale(2, RoundingMode.HALF_UP);
+        }
+
         try {
             return new BigDecimal(String.valueOf(value)).setScale(2, RoundingMode.HALF_UP);
         } catch (Exception ignored) {
@@ -337,6 +398,14 @@ public class SurveyManagerEvaluationReportProcessor extends BaseBizProcessor<Biz
         return null;
     }
 
+    private static String firstText(Object... values) {
+        for (Object value : values) {
+            String text = str(value);
+            if (StringUtils.hasText(text)) return text;
+        }
+        return null;
+    }
+
     private static String str(Object value) {
         return value == null ? null : String.valueOf(value);
     }
@@ -346,6 +415,10 @@ public class SurveyManagerEvaluationReportProcessor extends BaseBizProcessor<Biz
     }
 
     private static String upper(String value) {
-        return StringUtils.hasText(value) ? value.trim().toUpperCase(Locale.ROOT) : null;
+        return StringUtils.hasText(value) ? value.trim().toUpperCase(Locale.ROOT) : "";
+    }
+
+    private static String lower(String value) {
+        return StringUtils.hasText(value) ? value.trim().toLowerCase(Locale.ROOT) : "";
     }
 }
