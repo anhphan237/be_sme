@@ -49,4 +49,9 @@ public interface SurveyTemplateMapperExt {
             @Param("targetRole") String targetRole,
             @Param("excludeTemplateId") String excludeTemplateId
     );
+
+    int deleteQuestionsByCompanyIdAndTemplateId(
+            @Param("companyId") String companyId,
+            @Param("templateId") String templateId
+    );
 }
