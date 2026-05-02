@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sme.be_sme.modules.survey.infrastructure.mapper.SurveyManagerEvaluationReportMapper">
+
+    <sql id="managerEvaluationWhere">
+        st.company_id = #{companyId}
+        and upper(coalesce(st.purpose, 'MANAGER_EVALUATION')) = 'MANAGER_EVALUATION'
+        and upper(coalesce(st.stage, '')) = 'COMPLETED'
+        and upper(coalesce(st.target_role, '')) = 'MANAGER'
+        <if test="templateId != null and templateId != ''">
+            and st.survey_template_id = #{templateId}
+        </if>
+        <if test="managerUserId != null and managerUserId != ''">
+            and si.responder_user_id = #{managerUserId}
+        </if>
+        <if test="startDate != null and startDate != ''">
+            and date(coalesce(sr.submitted_at, si.sent_at, si.created_at)) &gt;= cast(#{startDate} as date)
+        </if>
+        <if test="endDate != null and endDate != ''">
+            and date(coalesce(sr.submitted_at, si.sent_at, si.created_at)) &lt;= cast(#{endDate} as date)
+        </if>
+        <if test="keyword != null and keyword != ''">
+            and (
+                lower(coalesce(ep.employee_name, eu.full_name, '')) like concat('%', lower(#{keyword}), '%')
+                or lower(coalesce(ep.employee_email, eu.email, '')) like concat('%', lower(#{keyword}), '%')
+                or lower(coalesce(mu.full_name, '')) like concat('%', lower(#{keyword}), '%')
+            )
+        </if>
+    </sql>
+
+    <select id="selectEvaluationRows" resultType="java.util.HashMap">
+        select
+            si.survey_instance_id,
+            si.status as survey_status,
+            si.sent_at,
+            si.closed_at,
+            st.survey_template_id,
+            st.name as template_name,
+            oi.onboarding_id,
+            oi.completed_at,
+            coalesce(ep.user_id, eu.user_id, oi.employee_id) as employee_user_id,
+            coalesce(ep.employee_name, eu.full_name) as employee_name,
+            coalesce(ep.employee_email, eu.email) as employee_email,
+            si.responder_user_id as manager_user_id,
+            mu.full_name as manager_name,
+            sr.survey_response_id,
+            sr.overall_score,
+            sr.submitted_at
+        from survey_instances si
+        join survey_templates st
+          on st.company_id = si.company_id
+         and st.survey_template_id = si.survey_template_id
+        join onboarding_instances oi
+          on oi.company_id = si.company_id
+         and oi.onboarding_id = si.onboarding_id
+        left join employee_profiles ep
+          on ep.company_id = si.company_id
+         and (ep.employee_id = oi.employee_id or ep.user_id = oi.employee_id)
+        left join users eu
+          on eu.company_id = si.company_id
+         and eu.user_id = coalesce(ep.user_id, oi.employee_id)
+        left join users mu
+          on mu.company_id = si.company_id
+         and mu.user_id = si.responder_user_id
+        left join survey_responses sr
+          on sr.company_id = si.company_id
+         and sr.survey_instance_id = si.survey_instance_id
+        where <include refid="managerEvaluationWhere" />
+        order by coalesce(sr.submitted_at, si.sent_at, si.created_at) desc
+    </select>
+
+    <select id="selectAnswerRows" resultType="java.util.HashMap">
+        select
+            si.survey_instance_id,
+            sr.survey_response_id,
+            sq.survey_question_id,
+            sq.content as question_content,
+            coalesce(sa.question_type, sq.type) as question_type,
+            coalesce(sa.dimension_code, sq.dimension_code) as dimension_code,
+            sa.value_rating,
+            sa.value_choice,
+            sa.value_choices::text as value_choices,
+            sa.value_text,
+            sr.submitted_at
+        from survey_instances si
+        join survey_templates st
+          on st.company_id = si.company_id
+         and st.survey_template_id = si.survey_template_id
+        join onboarding_instances oi
+          on oi.company_id = si.company_id
+         and oi.onboarding_id = si.onboarding_id
+        left join employee_profiles ep
+          on ep.company_id = si.company_id
+         and (ep.employee_id = oi.employee_id or ep.user_id = oi.employee_id)
+        left join users eu
+          on eu.company_id = si.company_id
+         and eu.user_id = coalesce(ep.user_id, oi.employee_id)
+        left join users mu
+          on mu.company_id = si.company_id
+         and mu.user_id = si.responder_user_id
+        join survey_responses sr
+          on sr.company_id = si.company_id
+         and sr.survey_instance_id = si.survey_instance_id
+        join survey_answers sa
+          on sa.company_id = sr.company_id
+         and sa.survey_response_id = sr.survey_response_id
+        left join survey_questions sq
+          on sq.company_id = sa.company_id
+         and sq.survey_question_id = sa.survey_question_id
+        where <include refid="managerEvaluationWhere" />
+        order by sr.submitted_at desc, sq.sort_order asc
+    </select>
+
+</mapper>
