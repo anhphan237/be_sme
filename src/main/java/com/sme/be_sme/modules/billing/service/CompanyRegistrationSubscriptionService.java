@@ -28,10 +28,11 @@ public class CompanyRegistrationSubscriptionService {
     private final SubscriptionMapper subscriptionMapper;
 
     /**
-     * Create subscription for the newly registered company using the specified plan code.
+     * Create subscription for the newly registered company using the specified global plan code.
+     * Registration uses {@code FREE} only; other flows may pass different codes when applicable.
      *
      * @param companyId the new company id
-     * @param planCode  plan code from registration request (must be a valid global plan)
+     * @param planCode  global plan code (e.g. FREE)
      * @throws AppException if planCode is invalid with message "Plan này không hợp lệ"
      */
     public void createSubscriptionForCompany(String companyId, String planCode) {
