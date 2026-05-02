@@ -18,6 +18,7 @@ public class AnalyticsFacadeImpl extends BaseOperationFacade implements Analytic
     private final CompanyOnboardingFunnelProcessor companyOnboardingFunnelProcessor;
     private final CompanyOnboardingByDepartmentProcessor companyOnboardingByDepartmentProcessor;
     private final CompanyTaskCompletionProcessor companyTaskCompletionProcessor;
+    private final CompanyOnboardingTrendProcessor companyOnboardingTrendProcessor;
     private final CompanyOnboardingTemplateScoreboardProcessor companyOnboardingTemplateScoreboardProcessor;
     private final PlatformSubscriptionMetricsProcessor platformSubscriptionMetricsProcessor;
     private final ManagerTeamSummaryProcessor managerTeamSummaryProcessor;
@@ -41,6 +42,11 @@ public class AnalyticsFacadeImpl extends BaseOperationFacade implements Analytic
     @Override
     public CompanyTaskCompletionResponse getCompanyTaskCompletion(CompanyTaskCompletionRequest request) {
         return call(companyTaskCompletionProcessor, request, CompanyTaskCompletionResponse.class);
+    }
+
+    @Override
+    public CompanyOnboardingTrendResponse getCompanyOnboardingTrend(CompanyOnboardingTrendRequest request) {
+        return call(companyOnboardingTrendProcessor, request, CompanyOnboardingTrendResponse.class);
     }
 
     @Override

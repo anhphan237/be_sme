@@ -19,6 +19,9 @@ public interface AnalyticsFacade extends OperationFacadeProvider {
     @OperationType("com.sme.analytics.company.task.completion")
     CompanyTaskCompletionResponse getCompanyTaskCompletion(CompanyTaskCompletionRequest request);
 
+    @OperationType("com.sme.analytics.company.onboarding.trend")
+    CompanyOnboardingTrendResponse getCompanyOnboardingTrend(CompanyOnboardingTrendRequest request);
+
     @OperationType("com.sme.analytics.onboarding.template.scoreboard")
     CompanyOnboardingTemplateScoreboardResponse getOnboardingTemplateScoreboard(
             CompanyOnboardingTemplateScoreboardRequest request);
