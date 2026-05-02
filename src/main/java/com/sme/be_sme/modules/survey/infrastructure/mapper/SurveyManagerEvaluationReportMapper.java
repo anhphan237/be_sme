@@ -15,7 +15,8 @@ public interface SurveyManagerEvaluationReportMapper {
             @Param("startDate") String startDate,
             @Param("endDate") String endDate,
             @Param("managerUserId") String managerUserId,
-            @Param("keyword") String keyword
+            @Param("keyword") String keyword,
+            @Param("status") String status
     );
 
     List<Map<String, Object>> selectAnswerRows(
@@ -24,6 +25,7 @@ public interface SurveyManagerEvaluationReportMapper {
             @Param("startDate") String startDate,
             @Param("endDate") String endDate,
             @Param("managerUserId") String managerUserId,
-            @Param("keyword") String keyword
+            @Param("keyword") String keyword,
+            @Param("status") String status
     );
 }
