@@ -152,7 +152,23 @@
         order by created_at desc
         limit 1
     </select>
-
+    <select id="findActiveDefaultByCompanyStageAndTargetRole"
+            resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyTemplateEntity">
+        select *
+        from survey_templates
+        where company_id = #{companyId}
+        and upper(stage) = upper(#{stage})
+        and upper(target_role) = upper(#{targetRole})
+        and is_default = true
+        and upper(status) = 'ACTIVE'
+        order by created_at desc
+        limit 1
+    </select>
+    <delete id="deleteQuestionsByCompanyIdAndTemplateId">
+        delete from survey_questions
+        where company_id = #{companyId}
+        and survey_template_id = #{templateId}
+    </delete>
     <update id="clearDefaultByCompanyStageAndTargetRoleExcludingTemplateId">
         update survey_templates
         set is_default = false,
@@ -165,4 +181,5 @@
             and survey_template_id &lt;&gt; #{excludeTemplateId}
         </if>
     </update>
+
 </mapper>
