@@ -3,13 +3,14 @@ package com.sme.be_sme.modules.company.api.request;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Company self-registration. Initial subscription is always the global FREE plan; upgrade via billing after payment.
+ */
 @Getter
 @Setter
 public class CompanyRegisterRequest {
     private CompanyInfo company;
     private AdminInfo admin;
-    /** Plan code for initial subscription (e.g. FREE, BASIC). Must be a valid global plan from plan list. */
-    private String planCode;
 
     @Getter
     @Setter
