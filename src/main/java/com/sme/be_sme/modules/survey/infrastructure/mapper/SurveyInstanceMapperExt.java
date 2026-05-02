@@ -87,4 +87,8 @@ public interface SurveyInstanceMapperExt {
             @Param("purpose") String purpose,
             @Param("subjectUserId") String subjectUserId
     );
+    SurveyInstanceEntity findExistingManagerEvaluationByOnboardingId(
+            @Param("companyId") String companyId,
+            @Param("onboardingId") String onboardingId
+    );
 }
