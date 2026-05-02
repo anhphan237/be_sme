@@ -65,4 +65,9 @@ public interface SurveyFacade extends OperationFacadeProvider {
     SurveyTemplateDeleteResponse deleteSurveyTemplate(SurveyTemplateDeleteRequest request);
     @OperationType("com.sme.survey.analytics.aiSummary")
     SurveyAiSummaryResponse getSurveyAiSummary(SurveyAiSummaryRequest request);
+    @OperationType("com.sme.survey.template.managerEvaluation.create")
+    SurveyTemplateResponse createManagerEvaluationTemplate(SurveyManagerEvaluationTemplateCreateRequest request);
+
+    @OperationType("com.sme.survey.template.managerEvaluation.update")
+    SurveyTemplateResponse updateManagerEvaluationTemplate(SurveyManagerEvaluationTemplateUpdateRequest request);
 }

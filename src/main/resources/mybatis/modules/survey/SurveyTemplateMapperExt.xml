@@ -137,5 +137,32 @@
         st.is_default
         LIMIT 1
     </select>
+    <select id="findActiveDefaultByCompanyStageAndTargetRoleExcludingTemplateId"
+            resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyTemplateEntity">
+        select *
+        from survey_templates
+        where company_id = #{companyId}
+        and upper(stage) = upper(#{stage})
+        and upper(target_role) = upper(#{targetRole})
+        and is_default = true
+        and upper(status) = 'ACTIVE'
+        <if test="excludeTemplateId != null and excludeTemplateId != ''">
+            and survey_template_id &lt;&gt; #{excludeTemplateId}
+        </if>
+        order by created_at desc
+        limit 1
+    </select>
 
+    <update id="clearDefaultByCompanyStageAndTargetRoleExcludingTemplateId">
+        update survey_templates
+        set is_default = false,
+        updated_at = current_timestamp
+        where company_id = #{companyId}
+        and upper(stage) = upper(#{stage})
+        and upper(target_role) = upper(#{targetRole})
+        and is_default = true
+        <if test="excludeTemplateId != null and excludeTemplateId != ''">
+            and survey_template_id &lt;&gt; #{excludeTemplateId}
+        </if>
+    </update>
 </mapper>

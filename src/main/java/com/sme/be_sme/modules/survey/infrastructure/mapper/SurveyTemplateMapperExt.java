@@ -30,4 +30,23 @@ public interface SurveyTemplateMapperExt {
             @Param("surveyTemplateId") String surveyTemplateId
     );
     int countManagerEvaluationTemplates(@Param("companyId") String companyId);
+    SurveyTemplateEntity findActiveDefaultByCompanyStageAndTargetRole(
+            @Param("companyId") String companyId,
+            @Param("stage") String stage,
+            @Param("targetRole") String targetRole
+    );
+
+    SurveyTemplateEntity findActiveDefaultByCompanyStageAndTargetRoleExcludingTemplateId(
+            @Param("companyId") String companyId,
+            @Param("stage") String stage,
+            @Param("targetRole") String targetRole,
+            @Param("excludeTemplateId") String excludeTemplateId
+    );
+
+    int clearDefaultByCompanyStageAndTargetRoleExcludingTemplateId(
+            @Param("companyId") String companyId,
+            @Param("stage") String stage,
+            @Param("targetRole") String targetRole,
+            @Param("excludeTemplateId") String excludeTemplateId
+    );
 }
