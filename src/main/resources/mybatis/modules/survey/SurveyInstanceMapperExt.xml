@@ -232,4 +232,19 @@
         #{subjectUserId}
         )
     </insert>
+    <select id="findExistingManagerEvaluationByOnboardingId"
+            resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.entity.SurveyInstanceEntity">
+        select si.*
+        from survey_instances si
+        join survey_templates st
+        on st.survey_template_id = si.survey_template_id
+        and st.company_id = si.company_id
+        where si.company_id = #{companyId}
+        and si.onboarding_id = #{onboardingId}
+        and upper(coalesce(st.stage, '')) = 'COMPLETED'
+        and upper(coalesce(st.target_role, '')) = 'MANAGER'
+        and upper(coalesce(st.status, '')) = 'ACTIVE'
+        order by si.created_at desc
+        limit 1
+    </select>
 </mapper>
