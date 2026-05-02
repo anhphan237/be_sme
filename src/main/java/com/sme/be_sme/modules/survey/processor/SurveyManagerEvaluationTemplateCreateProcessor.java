@@ -73,6 +73,7 @@ public class SurveyManagerEvaluationTemplateCreateProcessor extends BaseBizProce
         entity.setCompanyId(companyId);
         entity.setName(request.getName().trim());
         entity.setDescription(request.getDescription());
+        entity.setPurpose("MANAGER_EVALUATION");
         entity.setStage(STAGE_COMPLETED);
         entity.setTargetRole(TARGET_ROLE_MANAGER);
         entity.setManagerOnly(Boolean.TRUE);
