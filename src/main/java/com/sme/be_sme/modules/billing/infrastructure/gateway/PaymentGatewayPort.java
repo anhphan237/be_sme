@@ -13,6 +13,7 @@ public interface PaymentGatewayPort {
 
     /**
      * Create a payment intent for the given invoice amount.
+     * Default idempotency key is derived from {@code invoiceId} so duplicate FE calls do not create extra Stripe PaymentIntents.
      *
      * @param companyId   tenant id
      * @param invoiceId   invoice id (for idempotency / reference)
@@ -20,7 +21,15 @@ public interface PaymentGatewayPort {
      * @param currency    currency code (e.g. VND, USD)
      * @return result with paymentIntentId and clientSecret for frontend
      */
-    CreateIntentResult createIntent(String companyId, String invoiceId, Integer amountMinor, String currency);
+    default CreateIntentResult createIntent(String companyId, String invoiceId, Integer amountMinor, String currency) {
+        String key = "payment-intent-" + (invoiceId != null ? invoiceId.trim() : "unknown");
+        return createIntent(companyId, invoiceId, amountMinor, currency, key);
+    }
+
+    /**
+     * @param idempotencyKey stable per invoice (max 255 for Stripe); passed as Idempotency-Key header for Stripe
+     */
+    CreateIntentResult createIntent(String companyId, String invoiceId, Integer amountMinor, String currency, String idempotencyKey);
 
     @Getter
     @Builder

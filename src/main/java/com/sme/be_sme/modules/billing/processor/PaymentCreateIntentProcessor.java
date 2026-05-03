@@ -9,6 +9,7 @@ import com.sme.be_sme.modules.billing.api.response.PaymentCreateIntentResponse;
 import com.sme.be_sme.modules.billing.infrastructure.gateway.PaymentGatewayPort;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PaymentTransactionMapper;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.PaymentTransactionMapperExt;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.InvoiceEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PaymentTransactionEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -29,6 +30,7 @@ public class PaymentCreateIntentProcessor extends BaseBizProcessor<BizContext> {
     private final ObjectMapper objectMapper;
     private final InvoiceMapper invoiceMapper;
     private final PaymentTransactionMapper paymentTransactionMapper;
+    private final PaymentTransactionMapperExt paymentTransactionMapperExt;
     private final PaymentGatewayPort paymentGateway;
 
     @Override
@@ -58,6 +60,21 @@ public class PaymentCreateIntentProcessor extends BaseBizProcessor<BizContext> {
 
         PaymentGatewayPort.CreateIntentResult result = paymentGateway.createIntent(companyId, invoiceId, amount, currency);
 
+        PaymentTransactionEntity existingForPi = paymentTransactionMapperExt.selectByProviderTxnId(result.getPaymentIntentId());
+        if (existingForPi != null
+                && companyId.equals(existingForPi.getCompanyId())
+                && invoiceId.equals(existingForPi.getInvoiceId())) {
+            return buildResponse(
+                    existingForPi.getPaymentTransactionId(),
+                    invoiceId,
+                    result.getPaymentIntentId(),
+                    result.getClientSecret(),
+                    result.getGatewayName(),
+                    amount,
+                    currency,
+                    result.getStatus());
+        }
+
         String txnId = UuidGenerator.generate();
         Date now = new Date();
         PaymentTransactionEntity txn = new PaymentTransactionEntity();
@@ -74,14 +91,33 @@ public class PaymentCreateIntentProcessor extends BaseBizProcessor<BizContext> {
         txn.setCreatedAt(now);
         paymentTransactionMapper.insert(txn);
 
+        return buildResponse(
+                txnId,
+                invoiceId,
+                result.getPaymentIntentId(),
+                result.getClientSecret(),
+                result.getGatewayName(),
+                amount,
+                currency,
+                result.getStatus());
+    }
+
+    private static PaymentCreateIntentResponse buildResponse(String paymentTransactionId,
+                                                             String invoiceId,
+                                                             String paymentIntentId,
+                                                             String clientSecret,
+                                                             String gatewayName,
+                                                             Integer amount,
+                                                             String currency,
+                                                             String status) {
         PaymentCreateIntentResponse response = new PaymentCreateIntentResponse();
-        response.setPaymentTransactionId(txnId);
-        response.setPaymentIntentId(result.getPaymentIntentId());
-        response.setClientSecret(result.getClientSecret());
-        response.setGateway(result.getGatewayName());
+        response.setPaymentTransactionId(paymentTransactionId);
+        response.setPaymentIntentId(paymentIntentId);
+        response.setClientSecret(clientSecret);
+        response.setGateway(gatewayName);
         response.setAmount(amount);
         response.setCurrency(currency);
-        response.setStatus(result.getStatus());
+        response.setStatus(status);
         response.setInvoiceId(invoiceId);
         return response;
     }

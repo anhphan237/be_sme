@@ -13,8 +13,13 @@ import static com.sme.be_sme.modules.billing.infrastructure.gateway.PaymentGatew
 public class MockPaymentGatewayAdapter implements PaymentGatewayPort {
 
     @Override
-    public CreateIntentResult createIntent(String companyId, String invoiceId, Integer amountMinor, String currency) {
-        String fakeId = "pi_mock_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 24);
+    public CreateIntentResult createIntent(String companyId, String invoiceId, Integer amountMinor, String currency,
+                                           String idempotencyKey) {
+        String safeInvoice = invoiceId != null && !invoiceId.isBlank() ? invoiceId.trim() : "unknown";
+        String fakeId = "pi_mock_" + safeInvoice;
+        if (fakeId.length() > 100) {
+            fakeId = fakeId.substring(0, 100);
+        }
         String clientSecret = "mock_secret_" + fakeId;
         return CreateIntentResult.builder()
                 .gatewayName(PaymentGatewayPort.GATEWAY_MOCK)
