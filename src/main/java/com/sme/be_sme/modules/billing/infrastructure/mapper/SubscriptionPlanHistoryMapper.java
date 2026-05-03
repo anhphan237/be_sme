@@ -16,12 +16,21 @@ public interface SubscriptionPlanHistoryMapper {
                                 @Param("effectiveTo") Date effectiveTo);
 
     int countByCompanyAndPeriod(@Param("companyId") String companyId,
+                                @Param("subscriptionId") String subscriptionId,
                                 @Param("fromTs") Date fromTs,
                                 @Param("toTs") Date toTs);
 
     List<SubscriptionPlanHistoryEntity> selectByCompanyAndPeriod(@Param("companyId") String companyId,
+                                                                 @Param("subscriptionId") String subscriptionId,
                                                                  @Param("fromTs") Date fromTs,
                                                                  @Param("toTs") Date toTs,
                                                                  @Param("limit") int limit,
                                                                  @Param("offset") int offset);
+
+    List<SubscriptionPlanHistoryEntity> selectPlanTimelineByCompany(@Param("companyId") String companyId,
+                                                                  @Param("subscriptionId") String subscriptionId,
+                                                                  @Param("fromTs") Date fromTs,
+                                                                  @Param("toTs") Date toTs,
+                                                                  @Param("limit") int limit,
+                                                                  @Param("offset") int offset);
 }

@@ -31,6 +31,7 @@ import com.sme.be_sme.modules.billing.api.response.PlanGetResponse;
 import com.sme.be_sme.modules.billing.api.response.PlanListResponse;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionCurrentResponse;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionHistoryResponse;
+import com.sme.be_sme.modules.billing.api.response.SubscriptionPlanTimelineResponse;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionResponse;
 import com.sme.be_sme.modules.billing.api.response.UsageCheckResponse;
 import com.sme.be_sme.modules.billing.api.response.UsageSummaryResponse;
@@ -51,6 +52,9 @@ public interface BillingFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.billing.subscription.history")
     SubscriptionHistoryResponse getSubscriptionHistory(SubscriptionHistoryRequest request);
+
+    @OperationType("com.sme.billing.subscription.planTimeline")
+    SubscriptionPlanTimelineResponse getSubscriptionPlanTimeline(SubscriptionHistoryRequest request);
 
     @OperationType("com.sme.billing.usage.track")
     UsageTrackResponse trackUsage(UsageTrackRequest request);

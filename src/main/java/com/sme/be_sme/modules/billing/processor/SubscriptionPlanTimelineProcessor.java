@@ -3,7 +3,7 @@ package com.sme.be_sme.modules.billing.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.billing.api.request.SubscriptionHistoryRequest;
-import com.sme.be_sme.modules.billing.api.response.SubscriptionHistoryResponse;
+import com.sme.be_sme.modules.billing.api.response.SubscriptionPlanTimelineResponse;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionPlanHistoryMapper;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
@@ -27,10 +27,11 @@ import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
-public class SubscriptionHistoryProcessor extends BaseBizProcessor<BizContext> {
+public class SubscriptionPlanTimelineProcessor extends BaseBizProcessor<BizContext> {
+
     private static final int DEFAULT_PAGE = 0;
-    private static final int DEFAULT_SIZE = 20;
-    private static final int MAX_SIZE = 100;
+    private static final int DEFAULT_SIZE = 50;
+    private static final int MAX_SIZE = 500;
 
     private final ObjectMapper objectMapper;
     private final SubscriptionPlanHistoryMapper subscriptionPlanHistoryMapper;
@@ -42,12 +43,12 @@ public class SubscriptionHistoryProcessor extends BaseBizProcessor<BizContext> {
         validate(context, request);
 
         String companyId = context.getTenantId().trim();
-        int page = request.getPage() == null ? DEFAULT_PAGE : Math.max(request.getPage(), 0);
-        int size = request.getSize() == null ? DEFAULT_SIZE : Math.min(Math.max(request.getSize(), 1), MAX_SIZE);
+        int page = request == null || request.getPage() == null ? DEFAULT_PAGE : Math.max(request.getPage(), 0);
+        int size = request == null || request.getSize() == null ? DEFAULT_SIZE : Math.min(Math.max(request.getSize(), 1), MAX_SIZE);
         int offset = page * size;
 
-        Date fromTs = parseStartOfDay(request.getFromDate(), "fromDate");
-        Date toTs = parseEndOfDay(request.getToDate(), "toDate");
+        Date fromTs = parseStartOfDay(request != null ? request.getFromDate() : null, "fromDate");
+        Date toTs = parseEndOfDay(request != null ? request.getToDate() : null, "toDate");
         if (fromTs != null && toTs != null && fromTs.after(toTs)) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "fromDate must be before or equal to toDate");
         }
@@ -57,17 +58,17 @@ public class SubscriptionHistoryProcessor extends BaseBizProcessor<BizContext> {
 
         int total = subscriptionPlanHistoryMapper.countByCompanyAndPeriod(companyId, subscriptionId, fromTs, toTs);
         List<SubscriptionPlanHistoryEntity> rows = subscriptionPlanHistoryMapper
-                .selectByCompanyAndPeriod(companyId, subscriptionId, fromTs, toTs, size, offset);
+                .selectPlanTimelineByCompany(companyId, subscriptionId, fromTs, toTs, size, offset);
 
-        Map<String, String> planCodeById = loadPlanCodeMap(companyId);
+        Map<String, PlanEntity> planById = loadPlanMap(companyId);
 
-        List<SubscriptionHistoryResponse.Item> items = rows.stream()
+        List<SubscriptionPlanTimelineResponse.Segment> segments = rows.stream()
                 .filter(Objects::nonNull)
-                .map(row -> toItem(row, planCodeById))
+                .map(row -> toSegment(row, planById))
                 .toList();
 
-        SubscriptionHistoryResponse response = new SubscriptionHistoryResponse();
-        response.setItems(items);
+        SubscriptionPlanTimelineResponse response = new SubscriptionPlanTimelineResponse();
+        response.setSegments(segments);
         response.setTotal(total);
         return response;
     }
@@ -85,38 +86,37 @@ public class SubscriptionHistoryProcessor extends BaseBizProcessor<BizContext> {
         }
     }
 
-    private Map<String, String> loadPlanCodeMap(String companyId) {
-        Map<String, String> map = new HashMap<>();
+    private Map<String, PlanEntity> loadPlanMap(String companyId) {
+        Map<String, PlanEntity> map = new HashMap<>();
         for (PlanEntity plan : planMapper.selectAll()) {
             if (plan == null || !StringUtils.hasText(plan.getPlanId())) {
                 continue;
             }
             if (companyId.equals(plan.getCompanyId()) || plan.getCompanyId() == null) {
-                map.put(plan.getPlanId(), plan.getCode());
+                map.put(plan.getPlanId(), plan);
             }
         }
         return map;
     }
 
-    private static SubscriptionHistoryResponse.Item toItem(SubscriptionPlanHistoryEntity row, Map<String, String> planCodeById) {
-        SubscriptionHistoryResponse.Item item = new SubscriptionHistoryResponse.Item();
-        item.setHistoryId(row.getSubscriptionPlanHistoryId());
-        item.setSubscriptionId(row.getSubscriptionId());
-        item.setOldPlanCode(resolvePlanCode(planCodeById, row.getOldPlanId()));
-        item.setNewPlanCode(resolvePlanCode(planCodeById, row.getNewPlanId()));
-        item.setBillingCycle(row.getBillingCycle());
-        item.setChangedBy(row.getChangedBy());
-        item.setChangedAt(row.getChangedAt());
-        item.setEffectiveFrom(row.getEffectiveFrom());
-        item.setEffectiveTo(row.getEffectiveTo());
-        return item;
-    }
+    private static SubscriptionPlanTimelineResponse.Segment toSegment(SubscriptionPlanHistoryEntity row,
+                                                                        Map<String, PlanEntity> planById) {
+        SubscriptionPlanTimelineResponse.Segment seg = new SubscriptionPlanTimelineResponse.Segment();
+        seg.setHistoryId(row.getSubscriptionPlanHistoryId());
+        seg.setSubscriptionId(row.getSubscriptionId());
+        seg.setPlanId(row.getNewPlanId());
+        seg.setBillingCycle(row.getBillingCycle());
 
-    private static String resolvePlanCode(Map<String, String> planCodeById, String planId) {
-        if (!StringUtils.hasText(planId)) {
-            return null;
+        Date start = row.getEffectiveFrom() != null ? row.getEffectiveFrom() : row.getChangedAt();
+        seg.setEffectiveFrom(start);
+        seg.setEffectiveTo(row.getEffectiveTo());
+
+        PlanEntity plan = StringUtils.hasText(row.getNewPlanId()) ? planById.get(row.getNewPlanId()) : null;
+        if (plan != null) {
+            seg.setPlanCode(plan.getCode());
+            seg.setPlanName(plan.getName());
         }
-        return planCodeById.get(planId);
+        return seg;
     }
 
     private static Date parseStartOfDay(String value, String fieldName) {
