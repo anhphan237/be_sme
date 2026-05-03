@@ -27,7 +27,10 @@ public class SubscriptionHistoryResponse {
         private String oldPlanCode;
         private String newPlanCode;
         private String billingCycle;
+        /** User id who initiated the plan change (may be system/stripe — no display name) */
         private String changedBy;
+        /** Resolved full name for {@link #changedBy} within the tenant; null if unknown */
+        private String changedByName;
         private Date changedAt;
         private Date effectiveFrom;
         private Date effectiveTo;

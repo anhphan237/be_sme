@@ -6,6 +6,8 @@ import com.sme.be_sme.modules.billing.api.request.SubscriptionHistoryRequest;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionPlanTimelineResponse;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
 import com.sme.be_sme.modules.billing.support.SubscriptionHistoryQuerySupport;
+import com.sme.be_sme.modules.billing.support.SubscriptionPlanHistoryActorNames;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionPlanHistoryMapper;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionPlanHistoryEntity;
@@ -34,6 +36,7 @@ public class SubscriptionPlanTimelineProcessor extends BaseBizProcessor<BizConte
     private final ObjectMapper objectMapper;
     private final SubscriptionPlanHistoryMapper subscriptionPlanHistoryMapper;
     private final PlanMapper planMapper;
+    private final UserMapperExt userMapperExt;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -57,10 +60,12 @@ public class SubscriptionPlanTimelineProcessor extends BaseBizProcessor<BizConte
                 .selectPlanTimelineByCompany(companyId, subscriptionId, fromTs, toTs, size, offset);
 
         Map<String, PlanEntity> planById = loadPlanMap(companyId);
+        Map<String, String> changedByDisplayNames =
+                SubscriptionPlanHistoryActorNames.loadDisplayNamesByChangedBy(companyId, rows, userMapperExt);
 
         List<SubscriptionPlanTimelineResponse.Segment> segments = rows.stream()
                 .filter(Objects::nonNull)
-                .map(row -> toSegment(row, planById))
+                .map(row -> toSegment(row, planById, changedByDisplayNames))
                 .toList();
 
         SubscriptionPlanTimelineResponse response = new SubscriptionPlanTimelineResponse();
@@ -106,7 +111,8 @@ public class SubscriptionPlanTimelineProcessor extends BaseBizProcessor<BizConte
     }
 
     private static SubscriptionPlanTimelineResponse.Segment toSegment(SubscriptionPlanHistoryEntity row,
-                                                                        Map<String, PlanEntity> planById) {
+                                                                        Map<String, PlanEntity> planById,
+                                                                        Map<String, String> changedByDisplayNames) {
         SubscriptionPlanTimelineResponse.Segment seg = new SubscriptionPlanTimelineResponse.Segment();
         seg.setHistoryId(row.getSubscriptionPlanHistoryId());
         seg.setSubscriptionId(row.getSubscriptionId());
@@ -116,6 +122,12 @@ public class SubscriptionPlanTimelineProcessor extends BaseBizProcessor<BizConte
         Date start = row.getEffectiveFrom() != null ? row.getEffectiveFrom() : row.getChangedAt();
         seg.setEffectiveFrom(start);
         seg.setEffectiveTo(row.getEffectiveTo());
+        seg.setChangedAt(row.getChangedAt());
+        String changedBy = row.getChangedBy();
+        seg.setChangedBy(changedBy);
+        if (StringUtils.hasText(changedBy)) {
+            seg.setChangedByName(changedByDisplayNames.get(changedBy.trim()));
+        }
 
         PlanEntity plan = StringUtils.hasText(row.getNewPlanId()) ? planById.get(row.getNewPlanId()) : null;
         if (plan != null) {

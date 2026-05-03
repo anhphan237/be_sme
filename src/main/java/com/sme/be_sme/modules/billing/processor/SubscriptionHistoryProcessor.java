@@ -6,9 +6,11 @@ import com.sme.be_sme.modules.billing.api.request.SubscriptionHistoryRequest;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionHistoryResponse;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
 import com.sme.be_sme.modules.billing.support.SubscriptionHistoryQuerySupport;
+import com.sme.be_sme.modules.billing.support.SubscriptionPlanHistoryActorNames;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionPlanHistoryMapper;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionPlanHistoryEntity;
+import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapperExt;
 import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
@@ -33,6 +35,7 @@ public class SubscriptionHistoryProcessor extends BaseBizProcessor<BizContext> {
     private final ObjectMapper objectMapper;
     private final SubscriptionPlanHistoryMapper subscriptionPlanHistoryMapper;
     private final PlanMapper planMapper;
+    private final UserMapperExt userMapperExt;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -56,10 +59,12 @@ public class SubscriptionHistoryProcessor extends BaseBizProcessor<BizContext> {
                 .selectByCompanyAndPeriod(companyId, subscriptionId, fromTs, toTs, size, offset);
 
         Map<String, String> planCodeById = loadPlanCodeMap(companyId);
+        Map<String, String> changedByDisplayNames =
+                SubscriptionPlanHistoryActorNames.loadDisplayNamesByChangedBy(companyId, rows, userMapperExt);
 
         List<SubscriptionHistoryResponse.Item> items = rows.stream()
                 .filter(Objects::nonNull)
-                .map(row -> toItem(row, planCodeById))
+                .map(row -> toItem(row, planCodeById, changedByDisplayNames))
                 .toList();
 
         SubscriptionHistoryResponse response = new SubscriptionHistoryResponse();
@@ -104,14 +109,20 @@ public class SubscriptionHistoryProcessor extends BaseBizProcessor<BizContext> {
         return map;
     }
 
-    private static SubscriptionHistoryResponse.Item toItem(SubscriptionPlanHistoryEntity row, Map<String, String> planCodeById) {
+    private static SubscriptionHistoryResponse.Item toItem(SubscriptionPlanHistoryEntity row,
+                                                           Map<String, String> planCodeById,
+                                                           Map<String, String> changedByDisplayNames) {
         SubscriptionHistoryResponse.Item item = new SubscriptionHistoryResponse.Item();
         item.setHistoryId(row.getSubscriptionPlanHistoryId());
         item.setSubscriptionId(row.getSubscriptionId());
         item.setOldPlanCode(resolvePlanCode(planCodeById, row.getOldPlanId()));
         item.setNewPlanCode(resolvePlanCode(planCodeById, row.getNewPlanId()));
         item.setBillingCycle(row.getBillingCycle());
-        item.setChangedBy(row.getChangedBy());
+        String changedBy = row.getChangedBy();
+        item.setChangedBy(changedBy);
+        if (StringUtils.hasText(changedBy)) {
+            item.setChangedByName(changedByDisplayNames.get(changedBy.trim()));
+        }
         item.setChangedAt(row.getChangedAt());
         item.setEffectiveFrom(row.getEffectiveFrom());
         item.setEffectiveTo(row.getEffectiveTo());
