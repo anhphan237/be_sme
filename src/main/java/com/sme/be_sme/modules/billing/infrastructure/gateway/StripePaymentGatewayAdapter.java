@@ -39,7 +39,8 @@ public class StripePaymentGatewayAdapter implements PaymentGatewayPort {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public CreateIntentResult createIntent(String companyId, String invoiceId, Integer amountMinor, String currency) {
+    public CreateIntentResult createIntent(String companyId, String invoiceId, Integer amountMinor, String currency,
+                                           String idempotencyKey) {
         if (!StringUtils.hasText(secretKey)) {
             log.error("Stripe secret key not set - cannot create payment intent. Set STRIPE_SECRET_KEY env var.");
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "Stripe is not configured. Set STRIPE_SECRET_KEY.");
@@ -57,6 +58,13 @@ public class StripePaymentGatewayAdapter implements PaymentGatewayPort {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
             headers.setBearerAuth(secretKey.trim());
+            if (StringUtils.hasText(idempotencyKey)) {
+                String key = idempotencyKey.trim();
+                if (key.length() > 255) {
+                    key = key.substring(0, 255);
+                }
+                headers.add("Idempotency-Key", key);
+            }
 
             MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
             body.add("amount", String.valueOf(amount));
