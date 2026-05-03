@@ -4,39 +4,86 @@
 
     <select id="selectByCompanyIdAndFilters"
             resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyResponseFilterRow">
-        select
-        sr.survey_response_id as surveyResponseId,
-        sr.survey_instance_id as surveyInstanceId,
-        si.survey_template_id as surveyTemplateId,
-        st.name as templateName,
-        si.responder_user_id as responderUserId,
-        u.full_name as employeeName,
-        sr.overall_score as overallScore,
-        sr.submitted_at as submittedAt,
-        st.stage as stage
-        from survey_responses sr
-        join survey_instances si
-        on si.survey_instance_id = sr.survey_instance_id
-        and si.company_id = sr.company_id
-        join survey_templates st
-        on st.survey_template_id = si.survey_template_id
-        and st.company_id = si.company_id
-        left join users u
-        on u.user_id = si.responder_user_id
-        where sr.company_id = #{companyId,jdbcType=VARCHAR}
-        <if test="startDate != null">
-            and sr.submitted_at &gt;= #{startDate,jdbcType=TIMESTAMP}
-        </if>
-        <if test="endDate != null">
-            and sr.submitted_at &lt;= #{endDate,jdbcType=TIMESTAMP}
-        </if>
+
+        SELECT
+        sr.survey_response_id AS surveyResponseId,
+        sr.survey_instance_id AS surveyInstanceId,
+
+        si.survey_template_id AS surveyTemplateId,
+        si.onboarding_id AS onboardingId,
+        si.status AS instanceStatus,
+        si.scheduled_at AS scheduledAt,
+        si.sent_at AS sentAt,
+        si.closed_at AS closedAt,
+
+        st.name AS templateName,
+        st.stage AS stage,
+
+        oi.employee_id AS employeeId,
+
+        ep.user_id AS employeeUserId,
+        COALESCE(NULLIF(ep.employee_name, ''), eu.full_name) AS employeeName,
+        COALESCE(NULLIF(ep.employee_email, ''), eu.email) AS employeeEmail,
+        ep.job_title AS jobTitle,
+
+        d.name AS departmentName,
+
+        COALESCE(oi.manager_user_id, ep.manager_user_id) AS managerUserId,
+        mu.full_name AS managerName,
+
+        sr.overall_score AS overallScore,
+        sr.submitted_at AS submittedAt
+
+        FROM survey_responses sr
+
+        INNER JOIN survey_instances si
+        ON si.survey_instance_id = sr.survey_instance_id
+        AND si.company_id = sr.company_id
+
+        INNER JOIN survey_templates st
+        ON st.survey_template_id = si.survey_template_id
+        AND st.company_id = sr.company_id
+
+        LEFT JOIN onboarding_instances oi
+        ON oi.onboarding_id = si.onboarding_id
+        AND oi.company_id = sr.company_id
+
+        LEFT JOIN employee_profiles ep
+        ON ep.employee_id = oi.employee_id
+        AND ep.company_id = sr.company_id
+
+        LEFT JOIN users eu
+        ON eu.user_id = ep.user_id
+        AND eu.company_id = sr.company_id
+
+        LEFT JOIN departments d
+        ON d.department_id = ep.department_id
+        AND d.company_id = sr.company_id
+
+        LEFT JOIN users mu
+        ON mu.user_id = COALESCE(oi.manager_user_id, ep.manager_user_id)
+        AND mu.company_id = sr.company_id
+
+        WHERE sr.company_id = #{companyId}
+
         <if test="templateId != null and templateId != ''">
-            and si.survey_template_id = #{templateId,jdbcType=VARCHAR}
+            AND si.survey_template_id = #{templateId}
         </if>
+
         <if test="stage != null and stage != ''">
-            and st.stage = #{stage,jdbcType=VARCHAR}
+            AND UPPER(st.stage) = UPPER(#{stage})
         </if>
-        order by sr.submitted_at desc
+
+        <if test="startDate != null">
+            AND sr.submitted_at &gt;= #{startDate}
+        </if>
+
+        <if test="endDate != null">
+            AND sr.submitted_at &lt;= #{endDate}
+        </if>
+
+        ORDER BY sr.submitted_at DESC
+
     </select>
     <select id="selectLatestByInstanceId"
             resultType="com.sme.be_sme.modules.survey.infrastructure.persistence.model.SurveyResponseRow">
