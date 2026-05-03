@@ -7,7 +7,8 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Plan usage timeline: each segment is the period when {@link Segment#getPlanCode()} was active
+ * Plan segments ordered by DB {@code created_at} descending (newest history row first).
+ * Each segment is the period when {@link Segment#getPlanCode()} was active
  * (after a subscription created / plan change), from {@code effectiveFrom} to {@code effectiveTo}
  * (null end means still active).
  */
