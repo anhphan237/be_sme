@@ -33,5 +33,11 @@ public class SubscriptionPlanTimelineResponse {
         /** null = ongoing (current plan segment) */
         private Date effectiveTo;
         private String historyId;
+        /** User id who caused this segment (same as subscription_plan_history.changed_by) */
+        private String changedBy;
+        /** Display name for {@link #changedBy}; null if not a tenant user or unknown */
+        private String changedByName;
+        /** When the plan change was recorded */
+        private Date changedAt;
     }
 }
