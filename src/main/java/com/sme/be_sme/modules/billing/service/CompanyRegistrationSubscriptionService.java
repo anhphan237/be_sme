@@ -28,15 +28,29 @@ public class CompanyRegistrationSubscriptionService {
     private final SubscriptionMapper subscriptionMapper;
 
     /**
-     * Create subscription for the newly registered company using the specified global plan code.
-     * Registration uses {@code FREE} only; other flows may pass different codes when applicable.
+     * Creates an ACTIVE FREE global subscription after company registration (until paid upgrade applies).
      *
-     * @param companyId the new company id
-     * @param planCode  global plan code (e.g. FREE)
-     * @throws AppException if planCode is invalid with message "Plan này không hợp lệ"
+     * @param billingCycleOrNull MONTHLY or YEARLY; defaults to MONTHLY
+     * @return subscriptionId
+     */
+    public String createFreeSubscriptionReturningId(String companyId, String billingCycleOrNull) {
+        return insertGlobalPlanSubscriptionForCompany(companyId, "FREE", billingCycleOrNull);
+    }
+
+    /**
+     * Create subscription using a global ACTIVE plan code (typically {@code FREE} from onboarding.company.setup).
      */
     public void createSubscriptionForCompany(String companyId, String planCode) {
-        if (!StringUtils.hasText(companyId)) return;
+        insertGlobalPlanSubscriptionForCompany(companyId, planCode, "MONTHLY");
+    }
+
+    /**
+     * @return subscription id
+     */
+    private String insertGlobalPlanSubscriptionForCompany(String companyId, String planCode, String billingCycleOrNull) {
+        if (!StringUtils.hasText(companyId)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "companyId is required");
+        }
         if (!StringUtils.hasText(planCode)) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "planCode is required");
         }
@@ -46,15 +60,21 @@ public class CompanyRegistrationSubscriptionService {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "Plan này không hợp lệ");
         }
 
+        String cycle = normalizeBillingCycle(billingCycleOrNull);
+
         Date now = new Date();
         SubscriptionEntity sub = new SubscriptionEntity();
         sub.setSubscriptionId(UuidGenerator.generate());
         sub.setCompanyId(companyId.trim());
         sub.setPlanId(plan.getPlanId());
-        sub.setBillingCycle("MONTHLY");
+        sub.setBillingCycle(cycle);
         sub.setStatus("ACTIVE");
         sub.setCurrentPeriodStart(toDate(LocalDate.now()));
-        sub.setCurrentPeriodEnd(toDate(LocalDate.now().plusMonths(1)));
+        if ("YEARLY".equalsIgnoreCase(cycle)) {
+            sub.setCurrentPeriodEnd(toDate(LocalDate.now().plusYears(1)));
+        } else {
+            sub.setCurrentPeriodEnd(toDate(LocalDate.now().plusMonths(1)));
+        }
         sub.setAutoRenew(false);
         sub.setCreatedAt(now);
         sub.setUpdatedAt(now);
@@ -63,7 +83,19 @@ public class CompanyRegistrationSubscriptionService {
         if (inserted != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create subscription failed");
         }
-        log.info("Created subscription {} for company {} with plan {}", sub.getSubscriptionId(), companyId, planCode);
+        log.info("Created subscription {} for company {} with plan {} cycle {}", sub.getSubscriptionId(), companyId, planCode, cycle);
+        return sub.getSubscriptionId();
+    }
+
+    private static String normalizeBillingCycle(String billingCycleOrNull) {
+        if (!StringUtils.hasText(billingCycleOrNull)) {
+            return "MONTHLY";
+        }
+        String c = billingCycleOrNull.trim().toUpperCase();
+        if ("YEARLY".equals(c)) {
+            return "YEARLY";
+        }
+        return "MONTHLY";
     }
 
     private PlanEntity findValidGlobalPlan(String planCode) {

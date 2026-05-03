@@ -81,7 +81,7 @@ public class RecurringInvoiceJob {
         }
 
         InvoiceEntity invoice = invoiceGenerateCoreService.generateForPeriod(
-                companyId, subscriptionId, periodStart, periodEnd);
+                companyId, subscriptionId, periodStart, periodEnd, false);
 
         if (eInvoicePort != null) {
             EInvoicePort.SubmitResult result = eInvoicePort.submit(
