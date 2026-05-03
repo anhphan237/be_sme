@@ -10,7 +10,14 @@ import java.util.List;
 @Setter
 public class SubscriptionHistoryResponse {
     private List<Item> items;
+    /** total rows matching filter (all pages) */
     private Integer total;
+    /** current page index, 0-based */
+    private Integer page;
+    /** page size */
+    private Integer size;
+    /** total pages; 0 if total is 0 */
+    private Integer totalPages;
 
     @Getter
     @Setter
