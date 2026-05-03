@@ -7,6 +7,7 @@ import com.sme.be_sme.modules.company.api.response.CompanyRegisterResponse;
 import com.sme.be_sme.modules.company.context.CompanyRegisterContext;
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterAssignAdminRoleCoreProcessor;
 import com.sme.be_sme.modules.billing.service.CompanyRegistrationSubscriptionService;
+import com.sme.be_sme.modules.billing.service.SubscriptionPendingPlanPaymentService;
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterCheckDupCoreProcessor;
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterCreateAdminUserCoreProcessor;
 import com.sme.be_sme.modules.company.processor.registration.CompanyRegisterCreateCompanyCoreProcessor;
@@ -44,6 +45,7 @@ public class CompanyRegisterProcessor extends BaseCoreProcessor<CompanyRegisterC
     private final CompanyRegisterSeedRolePermissionsCoreProcessor seedRolePermissions;
     private final CompanyRegisterAssignAdminRoleCoreProcessor assignAdminRole;
     private final CompanyRegistrationSubscriptionService subscriptionService;
+    private final SubscriptionPendingPlanPaymentService pendingPlanPaymentService;
     private final NotificationService notificationService;
 
     @Override
@@ -63,11 +65,19 @@ public class CompanyRegisterProcessor extends BaseCoreProcessor<CompanyRegisterC
         validate.processWith(ctx);
         checkDup.processWith(ctx);
         createCompany.processWith(ctx);
-        subscriptionService.createSubscriptionForCompany(ctx.getCompanyId(), "FREE");
         createAdminUser.processWith(ctx);
         createDefaultRoles.processWith(ctx);
         seedRolePermissions.processWith(ctx);
         assignAdminRole.processWith(ctx);
+
+        String billingCycleOrNull = ctx.getRequest().getBillingCycle();
+        String subscriptionId = subscriptionService.createFreeSubscriptionReturningId(ctx.getCompanyId(), billingCycleOrNull);
+        pendingPlanPaymentService.enqueuePaidPlanIntentAfterRegistration(
+                ctx.getCompanyId(),
+                subscriptionId,
+                ctx.getAdminUser().getUserId(),
+                ctx.getRequest().getPlanCode(),
+                billingCycleOrNull);
 
         String companyId = ctx.getCompany().getCompanyId();
         String adminUserId = ctx.getAdminUser().getUserId();

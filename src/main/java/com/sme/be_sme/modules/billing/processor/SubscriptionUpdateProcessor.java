@@ -4,16 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.billing.api.request.SubscriptionUpdateRequest;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionResponse;
-import com.sme.be_sme.modules.billing.enums.InvoiceStatus;
-import com.sme.be_sme.modules.billing.enums.SubscriptionChangeRequestStatus;
-import com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper;
-import com.sme.be_sme.modules.billing.infrastructure.mapper.OnboardingUsageMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
-import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionChangeRequestMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapperExt;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionPlanHistoryMapper;
-import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.InvoiceEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionChangeRequestEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
@@ -22,6 +16,7 @@ import com.sme.be_sme.shared.constant.ErrorCodes;
 import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import com.sme.be_sme.modules.billing.service.SubscriptionPendingPlanPaymentService;
 import com.sme.be_sme.shared.util.UuidGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,10 +24,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 @Component
@@ -44,10 +35,8 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
     private final SubscriptionMapper subscriptionMapper;
     private final SubscriptionMapperExt subscriptionMapperExt;
     private final SubscriptionPlanHistoryMapper subscriptionPlanHistoryMapper;
-    private final SubscriptionChangeRequestMapper subscriptionChangeRequestMapper;
-    private final InvoiceMapper invoiceMapper;
     private final PlanMapper planMapper;
-    private final OnboardingUsageMapper onboardingUsageMapper;
+    private final SubscriptionPendingPlanPaymentService pendingPlanPaymentService;
 
     @Override
     @Transactional
@@ -73,7 +62,7 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
             String targetPlanId = entity.getPlanId();
             PlanEntity targetPlan = oldPlan;
             if (StringUtils.hasText(request.getPlanCode())) {
-                targetPlan = findPlanByCode(context.getTenantId().trim(), request.getPlanCode().trim());
+                targetPlan = pendingPlanPaymentService.findPlanByCode(context.getTenantId().trim(), request.getPlanCode().trim());
                 if (targetPlan == null) {
                     throw AppException.of(ErrorCodes.NOT_FOUND, "plan not found: " + request.getPlanCode());
                 }
@@ -87,12 +76,12 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
             boolean planChanged = !equalsTrimmed(oldPlanId, targetPlanId);
             boolean cycleChanged = !equalsTrimmed(oldBillingCycle, targetBillingCycle);
 
-            int oldPrice = resolvePlanPrice(oldPlan, targetBillingCycle);
-            int newPrice = resolvePlanPrice(targetPlan, targetBillingCycle);
+            int oldPrice = pendingPlanPaymentService.calculatePlanChangeCharge(oldPlan, targetBillingCycle);
+            int newPrice = pendingPlanPaymentService.calculatePlanChangeCharge(targetPlan, targetBillingCycle);
             int chargeAmount = 0;
             if (planChanged || cycleChanged) {
-                validateDowngradeActiveOnboardingLimit(context.getTenantId().trim(), oldPrice, newPrice, targetPlan);
-                chargeAmount = calculatePlanChangeCharge(targetPlan, targetBillingCycle);
+                pendingPlanPaymentService.validateDowngradeActiveOnboardingLimit(context.getTenantId().trim(), oldPrice, newPrice, targetPlan);
+                chargeAmount = pendingPlanPaymentService.calculatePlanChangeCharge(targetPlan, targetBillingCycle);
             }
 
             Date updatedAt = new Date();
@@ -106,8 +95,14 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
             }
 
             if ((planChanged || cycleChanged) && chargeAmount > 0) {
-                SubscriptionChangeRequestEntity pending = getOrCreatePendingChangeRequest(
-                        context, entity, oldPlanId, targetPlanId, targetBillingCycle, chargeAmount, updatedAt
+                SubscriptionChangeRequestEntity pending = pendingPlanPaymentService.getOrCreatePendingChangeRequest(
+                        entity,
+                        oldPlanId,
+                        targetPlanId,
+                        targetBillingCycle,
+                        chargeAmount,
+                        updatedAt,
+                        context.getOperatorId()
                 );
                 return buildPendingResponse(entity, targetPlan, targetBillingCycle, pending, chargeAmount);
             }
@@ -244,124 +239,6 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
         return cycle;
     }
 
-    private int calculatePlanChangeCharge(PlanEntity newPlan,
-                                          String targetBillingCycle) {
-        if (newPlan == null) return 0;
-        return resolvePlanPrice(newPlan, targetBillingCycle);
-    }
-
-    private int resolvePlanPrice(PlanEntity plan, String billingCycle) {
-        if (plan == null) return 0;
-        if ("YEARLY".equalsIgnoreCase(billingCycle)) {
-            return plan.getPriceVndYearly() == null ? 0 : Math.max(0, plan.getPriceVndYearly());
-        }
-        return plan.getPriceVndMonthly() == null ? 0 : Math.max(0, plan.getPriceVndMonthly());
-    }
-
-    private void validateDowngradeActiveOnboardingLimit(String companyId,
-                                                        int oldPrice,
-                                                        int newPrice,
-                                                        PlanEntity targetPlan) {
-        if (newPrice >= oldPrice) {
-            return;
-        }
-        if (targetPlan == null || targetPlan.getEmployeeLimitPerMonth() == null) {
-            return;
-        }
-        int targetLimit = Math.max(0, targetPlan.getEmployeeLimitPerMonth());
-        int activeCount = onboardingUsageMapper.countActiveOnboardingInstancesByCompanyId(companyId);
-        if (activeCount > targetLimit) {
-            throw AppException.of(
-                    ErrorCodes.BAD_REQUEST,
-                    "Cannot downgrade: ACTIVE onboarding count (" + activeCount
-                            + ") exceeds target plan limit (" + targetLimit + ")"
-            );
-        }
-    }
-
-    private SubscriptionChangeRequestEntity getOrCreatePendingChangeRequest(BizContext context,
-                                                                            SubscriptionEntity current,
-                                                                            String oldPlanId,
-                                                                            String newPlanId,
-                                                                            String billingCycle,
-                                                                            int chargeAmount,
-                                                                            Date now) {
-        SubscriptionChangeRequestEntity existing = subscriptionChangeRequestMapper.selectOpenBySubscriptionId(
-                current.getCompanyId(), current.getSubscriptionId()
-        );
-        if (existing != null) {
-            if (isSamePendingTarget(existing, newPlanId, billingCycle)) {
-                return existing;
-            }
-            throw AppException.of(
-                    ErrorCodes.BAD_REQUEST,
-                    "A different subscription change is already pending payment (invoiceId=" + existing.getInvoiceId() + ")"
-            );
-        }
-
-        InvoiceEntity invoice = createPlanChangeInvoice(current, chargeAmount, billingCycle, now);
-        return createPendingChangeRequest(context, current, oldPlanId, newPlanId, billingCycle, invoice.getInvoiceId(), now);
-    }
-
-    private InvoiceEntity createPlanChangeInvoice(SubscriptionEntity current,
-                                                  int chargeAmount,
-                                                  String billingCycle,
-                                                  Date now) {
-        InvoiceEntity invoice = new InvoiceEntity();
-        String invoiceId = UuidGenerator.generate();
-        invoice.setInvoiceId(invoiceId);
-        invoice.setCompanyId(current.getCompanyId());
-        invoice.setSubscriptionId(current.getSubscriptionId());
-        invoice.setInvoiceNo(buildInvoiceNo(invoiceId));
-        invoice.setAmountTotal(chargeAmount);
-        invoice.setCurrency("VND");
-        invoice.setStatus(InvoiceStatus.ISSUED.getCode());
-        invoice.setIssuedAt(now);
-        invoice.setDueAt(resolveDueAt(now, billingCycle));
-        invoice.setCreatedAt(now);
-        int inserted = invoiceMapper.insert(invoice);
-        if (inserted != 1) {
-            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "failed to create payment invoice for plan change");
-        }
-        return invoice;
-    }
-
-    private SubscriptionChangeRequestEntity createPendingChangeRequest(BizContext context,
-                                                                       SubscriptionEntity current,
-                                                                       String oldPlanId,
-                                                                       String newPlanId,
-                                                                       String billingCycle,
-                                                                       String invoiceId,
-                                                                       Date now) {
-        SubscriptionChangeRequestEntity req = new SubscriptionChangeRequestEntity();
-        req.setSubscriptionChangeRequestId(UuidGenerator.generate());
-        req.setCompanyId(current.getCompanyId());
-        req.setSubscriptionId(current.getSubscriptionId());
-        req.setOldPlanId(oldPlanId);
-        req.setNewPlanId(newPlanId);
-        req.setBillingCycle(billingCycle);
-        req.setInvoiceId(invoiceId);
-        req.setStatus(SubscriptionChangeRequestStatus.PENDING_PAYMENT.getCode());
-        req.setRequestedBy(context.getOperatorId());
-        req.setRequestedAt(now);
-        req.setCreatedAt(now);
-        req.setUpdatedAt(now);
-        int inserted = subscriptionChangeRequestMapper.insert(req);
-        if (inserted != 1) {
-            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "failed to create pending subscription change");
-        }
-        return req;
-    }
-
-    private PlanEntity findPlanByCode(String companyId, String planCode) {
-        return planMapper.selectAll().stream()
-                .filter(plan -> plan != null)
-                .filter(plan -> planCode.equalsIgnoreCase(plan.getCode()))
-                .filter(plan -> companyId.equals(plan.getCompanyId()) || plan.getCompanyId() == null)
-                .findFirst()
-                .orElse(null);
-    }
-
     private String resolvePlanCode(String planId) {
         if (!StringUtils.hasText(planId)) {
             return null;
@@ -386,11 +263,6 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
             return r == null;
         }
         return l.equals(r);
-    }
-
-    private static boolean isSamePendingTarget(SubscriptionChangeRequestEntity existing, String newPlanId, String billingCycle) {
-        return equalsTrimmed(existing.getNewPlanId(), newPlanId)
-                && equalsTrimmed(existing.getBillingCycle(), billingCycle);
     }
 
     private static boolean isCancelAtPeriodEndRequest(String status) {
@@ -447,19 +319,5 @@ public class SubscriptionUpdateProcessor extends BaseBizProcessor<BizContext> {
         history.setEffectiveTo(null);
         history.setCreatedAt(changeTime);
         subscriptionPlanHistoryMapper.insert(history);
-    }
-
-    private static String buildInvoiceNo(String invoiceId) {
-        String suffix = invoiceId.length() > 6 ? invoiceId.substring(invoiceId.length() - 6) : invoiceId;
-        String today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
-        return "INV-" + today + "-" + suffix;
-    }
-
-    private static Date resolveDueAt(Date issuedAt, String billingCycle) {
-        ZonedDateTime issuedTime = issuedAt.toInstant().atZone(ZoneId.systemDefault());
-        ZonedDateTime dueTime = "YEARLY".equalsIgnoreCase(billingCycle)
-                ? issuedTime.plusYears(1)
-                : issuedTime.plusMonths(1);
-        return Date.from(dueTime.toInstant());
     }
 }

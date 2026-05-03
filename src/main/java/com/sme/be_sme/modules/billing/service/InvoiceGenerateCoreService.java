@@ -3,10 +3,12 @@ package com.sme.be_sme.modules.billing.service;
 import com.sme.be_sme.modules.billing.enums.InvoiceStatus;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionChangeRequestMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.UsageMonthlyMapper;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.InvoiceEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
+import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionChangeRequestEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.UsageMonthlyEntity;
 import com.sme.be_sme.shared.constant.ErrorCodes;
@@ -39,6 +41,7 @@ public class InvoiceGenerateCoreService {
     private final SubscriptionMapper subscriptionMapper;
     private final PlanMapper planMapper;
     private final UsageMonthlyMapper usageMonthlyMapper;
+    private final SubscriptionChangeRequestMapper subscriptionChangeRequestMapper;
 
     /**
      * Generate invoice for the given subscription and period. Caller is responsible for e-invoice submit and update.
@@ -57,6 +60,21 @@ public class InvoiceGenerateCoreService {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "periodEnd must be >= periodStart");
         }
 
+        return generateForPeriod(companyId, subscriptionId, periodStart, periodEnd, true);
+    }
+
+    /**
+     * @param reusePendingSignupInvoice when true (gateway FE), unpaid upgrade invoice for a FREE subscription is returned instead of billing FREE at ₫0 (idempotent signup flow). Cron jobs should pass false.
+     */
+    public InvoiceEntity generateForPeriod(String companyId, String subscriptionId, LocalDate periodStart, LocalDate periodEnd,
+                                          boolean reusePendingSignupInvoice) {
+        if (!StringUtils.hasText(companyId) || !StringUtils.hasText(subscriptionId)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "companyId and subscriptionId are required");
+        }
+        if (periodEnd.isBefore(periodStart)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "periodEnd must be >= periodStart");
+        }
+
         SubscriptionEntity subscription = subscriptionMapper.selectByPrimaryKey(subscriptionId.trim());
         if (subscription == null || !companyId.trim().equals(subscription.getCompanyId())) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "subscription not found");
@@ -65,6 +83,21 @@ public class InvoiceGenerateCoreService {
         PlanEntity plan = planMapper.selectByPrimaryKey(subscription.getPlanId());
         if (plan == null) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "plan not found");
+        }
+
+        if (reusePendingSignupInvoice
+                && plan.getCode() != null
+                && "FREE".equalsIgnoreCase(plan.getCode())) {
+            SubscriptionChangeRequestEntity pending = subscriptionChangeRequestMapper.selectOpenBySubscriptionId(
+                    companyId.trim(),
+                    subscription.getSubscriptionId());
+            if (pending != null && StringUtils.hasText(pending.getInvoiceId())) {
+                InvoiceEntity signupInvoice = invoiceMapper.selectByPrimaryKey(pending.getInvoiceId());
+                if (signupInvoice != null
+                        && !InvoiceStatus.PAID.getCode().equalsIgnoreCase(signupInvoice.getStatus())) {
+                    return signupInvoice;
+                }
+            }
         }
 
         int amountTotal = calculateAmount(subscription, plan, periodStart);

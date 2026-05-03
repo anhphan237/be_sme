@@ -52,7 +52,26 @@ public class CompanyRegisterValidateCoreProcessor extends BaseCoreProcessor<Comp
         if (isBlank(admin.getPhone())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "admin.phone is required");
         }
+
+        req.setPlanCode(trimToNull(req.getPlanCode()));
+        req.setBillingCycle(trimToNull(req.getBillingCycle()));
+        if (!isBlank(req.getBillingCycle())) {
+            String bc = req.getBillingCycle().toUpperCase();
+            if (!"MONTHLY".equals(bc) && !"YEARLY".equals(bc)) {
+                throw AppException.of(ErrorCodes.BAD_REQUEST, "billingCycle must be MONTHLY or YEARLY");
+            }
+            req.setBillingCycle(bc);
+        }
+
         return null;
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private boolean isBlank(String value) {
