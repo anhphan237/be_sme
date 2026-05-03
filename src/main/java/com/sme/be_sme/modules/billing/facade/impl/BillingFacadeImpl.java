@@ -31,6 +31,7 @@ import com.sme.be_sme.modules.billing.api.response.PlanGetResponse;
 import com.sme.be_sme.modules.billing.api.response.PlanListResponse;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionCurrentResponse;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionHistoryResponse;
+import com.sme.be_sme.modules.billing.api.response.SubscriptionPlanTimelineResponse;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionResponse;
 import com.sme.be_sme.modules.billing.api.response.UsageCheckResponse;
 import com.sme.be_sme.modules.billing.api.response.UsageSummaryResponse;
@@ -50,6 +51,7 @@ import com.sme.be_sme.modules.billing.processor.PlanListProcessor;
 import com.sme.be_sme.modules.billing.processor.SubscriptionCreateProcessor;
 import com.sme.be_sme.modules.billing.processor.SubscriptionGetCurrentProcessor;
 import com.sme.be_sme.modules.billing.processor.SubscriptionHistoryProcessor;
+import com.sme.be_sme.modules.billing.processor.SubscriptionPlanTimelineProcessor;
 import com.sme.be_sme.modules.billing.processor.SubscriptionUpdateProcessor;
 import com.sme.be_sme.modules.billing.processor.UsageCheckProcessor;
 import com.sme.be_sme.modules.billing.processor.UsageSummaryProcessor;
@@ -66,6 +68,7 @@ public class BillingFacadeImpl extends BaseOperationFacade implements BillingFac
     private final SubscriptionUpdateProcessor subscriptionUpdateProcessor;
     private final SubscriptionGetCurrentProcessor subscriptionGetCurrentProcessor;
     private final SubscriptionHistoryProcessor subscriptionHistoryProcessor;
+    private final SubscriptionPlanTimelineProcessor subscriptionPlanTimelineProcessor;
     private final UsageTrackProcessor usageTrackProcessor;
     private final UsageCheckProcessor usageCheckProcessor;
     private final UsageSummaryProcessor usageSummaryProcessor;
@@ -99,6 +102,11 @@ public class BillingFacadeImpl extends BaseOperationFacade implements BillingFac
     @Override
     public SubscriptionHistoryResponse getSubscriptionHistory(SubscriptionHistoryRequest request) {
         return call(subscriptionHistoryProcessor, request, SubscriptionHistoryResponse.class);
+    }
+
+    @Override
+    public SubscriptionPlanTimelineResponse getSubscriptionPlanTimeline(SubscriptionHistoryRequest request) {
+        return call(subscriptionPlanTimelineProcessor, request, SubscriptionPlanTimelineResponse.class);
     }
 
     @Override

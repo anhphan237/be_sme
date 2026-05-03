@@ -52,16 +52,30 @@
           and effective_to is null
     </update>
 
+    <!-- Overlap: segment [coalesce(effective_from, changed_at), effective_to] with query window [fromTs, toTs] -->
+    <sql id="companySubscriptionOverlapWhere">
+        where company_id = #{companyId,jdbcType=VARCHAR}
+        <if test="subscriptionId != null and subscriptionId != ''">
+            and subscription_id = #{subscriptionId,jdbcType=VARCHAR}
+        </if>
+        <choose>
+            <when test="fromTs != null and toTs != null">
+                and coalesce(effective_from, changed_at) &lt;= #{toTs,jdbcType=TIMESTAMP}
+                and (effective_to is null or effective_to &gt;= #{fromTs,jdbcType=TIMESTAMP})
+            </when>
+            <when test="fromTs != null">
+                and (effective_to is null or effective_to &gt;= #{fromTs,jdbcType=TIMESTAMP})
+            </when>
+            <when test="toTs != null">
+                and coalesce(effective_from, changed_at) &lt;= #{toTs,jdbcType=TIMESTAMP}
+            </when>
+        </choose>
+    </sql>
+
     <select id="countByCompanyAndPeriod" resultType="int">
         select count(1)
         from subscription_plan_history
-        where company_id = #{companyId,jdbcType=VARCHAR}
-        <if test="fromTs != null">
-            and changed_at &gt;= #{fromTs,jdbcType=TIMESTAMP}
-        </if>
-        <if test="toTs != null">
-            and changed_at &lt;= #{toTs,jdbcType=TIMESTAMP}
-        </if>
+        <include refid="companySubscriptionOverlapWhere"/>
     </select>
 
     <select id="selectByCompanyAndPeriod" resultMap="BaseResultMap">
@@ -78,14 +92,28 @@
             effective_to,
             created_at
         from subscription_plan_history
-        where company_id = #{companyId,jdbcType=VARCHAR}
-        <if test="fromTs != null">
-            and changed_at &gt;= #{fromTs,jdbcType=TIMESTAMP}
-        </if>
-        <if test="toTs != null">
-            and changed_at &lt;= #{toTs,jdbcType=TIMESTAMP}
-        </if>
+        <include refid="companySubscriptionOverlapWhere"/>
         order by changed_at desc, created_at desc
+        limit #{limit}
+        offset #{offset}
+    </select>
+
+    <select id="selectPlanTimelineByCompany" resultMap="BaseResultMap">
+        select
+            subscription_plan_history_id,
+            company_id,
+            subscription_id,
+            old_plan_id,
+            new_plan_id,
+            billing_cycle,
+            changed_by,
+            changed_at,
+            effective_from,
+            effective_to,
+            created_at
+        from subscription_plan_history
+        <include refid="companySubscriptionOverlapWhere"/>
+        order by coalesce(effective_from, changed_at) asc, created_at asc
         limit #{limit}
         offset #{offset}
     </select>
