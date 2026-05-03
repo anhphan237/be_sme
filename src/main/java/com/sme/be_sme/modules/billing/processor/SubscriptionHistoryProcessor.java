@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.billing.api.request.SubscriptionHistoryRequest;
 import com.sme.be_sme.modules.billing.api.response.SubscriptionHistoryResponse;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PlanMapper;
+import com.sme.be_sme.modules.billing.support.SubscriptionHistoryQuerySupport;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionPlanHistoryMapper;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.PlanEntity;
 import com.sme.be_sme.modules.billing.infrastructure.persistence.entity.SubscriptionPlanHistoryEntity;
@@ -16,9 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -38,19 +36,17 @@ public class SubscriptionHistoryProcessor extends BaseBizProcessor<BizContext> {
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
-        SubscriptionHistoryRequest request = objectMapper.convertValue(payload, SubscriptionHistoryRequest.class);
+        SubscriptionHistoryRequest request = SubscriptionHistoryQuerySupport.parseRequest(payload, objectMapper);
         validate(context, request);
 
         String companyId = context.getTenantId().trim();
-        int page = request.getPage() == null ? DEFAULT_PAGE : Math.max(request.getPage(), 0);
-        int size = request.getSize() == null ? DEFAULT_SIZE : Math.min(Math.max(request.getSize(), 1), MAX_SIZE);
+        int page = request == null || request.getPage() == null ? DEFAULT_PAGE : Math.max(request.getPage(), 0);
+        int size = request == null || request.getSize() == null ? DEFAULT_SIZE : Math.min(Math.max(request.getSize(), 1), MAX_SIZE);
         int offset = page * size;
 
-        Date fromTs = parseStartOfDay(request.getFromDate(), "fromDate");
-        Date toTs = parseEndOfDay(request.getToDate(), "toDate");
-        if (fromTs != null && toTs != null && fromTs.after(toTs)) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "fromDate must be before or equal to toDate");
-        }
+        SubscriptionHistoryQuerySupport.DateRange range = SubscriptionHistoryQuerySupport.resolve(request);
+        Date fromTs = range.fromTs();
+        Date toTs = range.toTs();
 
         String subscriptionId = request != null && StringUtils.hasText(request.getSubscriptionId())
                 ? request.getSubscriptionId().trim() : null;
@@ -69,7 +65,17 @@ public class SubscriptionHistoryProcessor extends BaseBizProcessor<BizContext> {
         SubscriptionHistoryResponse response = new SubscriptionHistoryResponse();
         response.setItems(items);
         response.setTotal(total);
+        response.setPage(page);
+        response.setSize(size);
+        response.setTotalPages(totalPages(total, size));
         return response;
+    }
+
+    private static int totalPages(int total, int size) {
+        if (total <= 0 || size <= 0) {
+            return 0;
+        }
+        return (total + size - 1) / size;
     }
 
     private static void validate(BizContext context, SubscriptionHistoryRequest request) {
@@ -117,29 +123,5 @@ public class SubscriptionHistoryProcessor extends BaseBizProcessor<BizContext> {
             return null;
         }
         return planCodeById.get(planId);
-    }
-
-    private static Date parseStartOfDay(String value, String fieldName) {
-        if (!StringUtils.hasText(value)) {
-            return null;
-        }
-        try {
-            LocalDate date = LocalDate.parse(value.trim());
-            return Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant());
-        } catch (DateTimeParseException e) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, fieldName + " must be yyyy-MM-dd");
-        }
-    }
-
-    private static Date parseEndOfDay(String value, String fieldName) {
-        if (!StringUtils.hasText(value)) {
-            return null;
-        }
-        try {
-            LocalDate date = LocalDate.parse(value.trim()).plusDays(1);
-            return Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant().minusMillis(1));
-        } catch (DateTimeParseException e) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, fieldName + " must be yyyy-MM-dd");
-        }
     }
 }

@@ -15,7 +15,11 @@ import java.util.List;
 @Setter
 public class SubscriptionPlanTimelineResponse {
     private List<Segment> segments;
+    /** total segments matching filter (all pages) */
     private Integer total;
+    private Integer page;
+    private Integer size;
+    private Integer totalPages;
 
     @Getter
     @Setter
