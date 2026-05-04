@@ -75,6 +75,7 @@ public class DocumentVersionCompareProcessor extends BaseBizProcessor<BizContext
         response.setToVersionNo(vTo.getVersionNo());
         response.setSummary(summary);
         response.setChanges(DocumentVersionJsonDiff.buildChanges(objectMapper, vFrom.getContentJson(), vTo.getContentJson()));
+        response.setBlockChanges(DocumentVersionJsonDiff.buildBlockChanges(objectMapper, vFrom.getContentJson(), vTo.getContentJson()));
         return response;
     }
 }
