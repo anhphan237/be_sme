@@ -21,4 +21,9 @@ public class DocumentVersionCompareResponse {
      * Shape: [{type,path,fromValue,toValue}]
      */
     private JsonNode changes;
+    /**
+     * Block-aware diffs (line-by-line equivalent where one line = one top-level block).
+     * Shape: [{type,fromBlockIndex,toBlockIndex,blockType,path,fromPreview,toPreview,fromValue,toValue}]
+     */
+    private JsonNode blockChanges;
 }
