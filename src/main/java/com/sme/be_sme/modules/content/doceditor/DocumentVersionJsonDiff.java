@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.util.StringUtils;
 
-import java.util.Iterator;
 import java.util.TreeSet;
 
 /**
@@ -68,6 +67,20 @@ public final class DocumentVersionJsonDiff {
         return out;
     }
 
+    /**
+     * Detailed compare result for FE visual diff.
+     * Output items: {type,path,fromValue,toValue}
+     * - type: ADD | REMOVE | UPDATE
+     * - path: JSON-like path with root '$' and array indexes, e.g. $.blocks[1].text
+     */
+    public static ArrayNode buildChanges(ObjectMapper om, String rawA, String rawB) {
+        JsonNode a = parseNodeOrEmptyObject(om, rawA);
+        JsonNode b = parseNodeOrEmptyObject(om, rawB);
+        ArrayNode out = om.createArrayNode();
+        collectChanges(out, "$", a, b, 1);
+        return out;
+    }
+
     private static void collectChangedPaths(ArrayNode out, String path,
                                             JsonNode na, JsonNode nb, int depth) {
         if (out.size() >= DocumentEditorConstants.VERSION_COMPARE_MAX_PATHS) {
@@ -114,5 +127,79 @@ public final class DocumentVersionJsonDiff {
         } catch (Exception e) {
             return om.createObjectNode();
         }
+    }
+
+    private static JsonNode parseNodeOrEmptyObject(ObjectMapper om, String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return om.createObjectNode();
+        }
+        try {
+            JsonNode n = om.readTree(raw);
+            return n != null ? n : om.createObjectNode();
+        } catch (Exception e) {
+            return om.createObjectNode();
+        }
+    }
+
+    private static void collectChanges(ArrayNode out, String path, JsonNode a, JsonNode b, int depth) {
+        if (out.size() >= DocumentEditorConstants.VERSION_COMPARE_MAX_PATHS) {
+            return;
+        }
+        if (a == null && b == null) {
+            return;
+        }
+        if (a == null) {
+            addChange(out, "ADD", path, null, b);
+            return;
+        }
+        if (b == null) {
+            addChange(out, "REMOVE", path, a, null);
+            return;
+        }
+        if (a.equals(b)) {
+            return;
+        }
+        if (depth >= DocumentEditorConstants.VERSION_COMPARE_MAX_DEPTH) {
+            addChange(out, "UPDATE", path, a, b);
+            return;
+        }
+        if (a.isObject() && b.isObject()) {
+            TreeSet<String> keys = new TreeSet<>();
+            a.fieldNames().forEachRemaining(keys::add);
+            b.fieldNames().forEachRemaining(keys::add);
+            for (String key : keys) {
+                if (out.size() >= DocumentEditorConstants.VERSION_COMPARE_MAX_PATHS) {
+                    return;
+                }
+                JsonNode ca = a.get(key);
+                JsonNode cb = b.get(key);
+                collectChanges(out, path + "." + key, ca, cb, depth + 1);
+            }
+            return;
+        }
+        if (a.isArray() && b.isArray()) {
+            int max = Math.max(a.size(), b.size());
+            for (int i = 0; i < max; i++) {
+                if (out.size() >= DocumentEditorConstants.VERSION_COMPARE_MAX_PATHS) {
+                    return;
+                }
+                JsonNode ca = i < a.size() ? a.get(i) : null;
+                JsonNode cb = i < b.size() ? b.get(i) : null;
+                collectChanges(out, path + "[" + i + "]", ca, cb, depth + 1);
+            }
+            return;
+        }
+        addChange(out, "UPDATE", path, a, b);
+    }
+
+    private static void addChange(ArrayNode out, String type, String path, JsonNode fromValue, JsonNode toValue) {
+        if (out.size() >= DocumentEditorConstants.VERSION_COMPARE_MAX_PATHS) {
+            return;
+        }
+        ObjectNode row = out.addObject();
+        row.put("type", type);
+        row.put("path", path);
+        row.set("fromValue", fromValue);
+        row.set("toValue", toValue);
     }
 }

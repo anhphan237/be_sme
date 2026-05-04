@@ -15,4 +15,10 @@ public class DocumentVersionCompareResponse {
     private Integer toVersionNo;
     /** Metadata only: top-level key deltas and limited changedPaths */
     private JsonNode summary;
+    /**
+     * Detailed diffs for FE rendering (GitHub-style hints), limited by
+     * {@code DocumentEditorConstants.VERSION_COMPARE_MAX_PATHS}.
+     * Shape: [{type,path,fromValue,toValue}]
+     */
+    private JsonNode changes;
 }
