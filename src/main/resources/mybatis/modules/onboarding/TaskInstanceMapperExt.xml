@@ -164,8 +164,10 @@
            t.schedule_no_show_reason
     FROM task_instances t
     INNER JOIN checklist_instances c ON t.checklist_id = c.checklist_id AND t.company_id = c.company_id
+    INNER JOIN onboarding_instances oi ON c.onboarding_id = oi.onboarding_id AND c.company_id = oi.company_id
     WHERE t.company_id = #{companyId,jdbcType=VARCHAR}
       AND t.assigned_user_id = #{assigneeUserId,jdbcType=VARCHAR}
+      AND upper(coalesce(trim(oi.status), '')) IN ('DRAFT', 'ACTIVE')
       <if test="status != null and status != ''">
         AND t.status = #{status}
       </if>
@@ -192,8 +194,11 @@
   <select id="countByCompanyIdAndAssignee" resultType="java.lang.Integer">
     SELECT COUNT(*)
     FROM task_instances t
+    INNER JOIN checklist_instances c ON t.checklist_id = c.checklist_id AND t.company_id = c.company_id
+    INNER JOIN onboarding_instances oi ON c.onboarding_id = oi.onboarding_id AND c.company_id = oi.company_id
     WHERE t.company_id = #{companyId,jdbcType=VARCHAR}
       AND t.assigned_user_id = #{assigneeUserId,jdbcType=VARCHAR}
+      AND upper(coalesce(trim(oi.status), '')) IN ('DRAFT', 'ACTIVE')
       <if test="status != null and status != ''">
         AND t.status = #{status}
       </if>
@@ -207,8 +212,10 @@
            t.schedule_no_show_reason
     FROM task_instances t
     INNER JOIN checklist_instances c ON t.checklist_id = c.checklist_id AND t.company_id = c.company_id
+    INNER JOIN onboarding_instances oi ON c.onboarding_id = oi.onboarding_id AND c.company_id = oi.company_id
     WHERE t.company_id = #{companyId,jdbcType=VARCHAR}
       AND t.assigned_user_id = #{assigneeUserId,jdbcType=VARCHAR}
+      AND upper(coalesce(trim(oi.status), '')) IN ('DRAFT', 'ACTIVE')
       <if test="fromTime != null">
         AND coalesce(t.scheduled_start_at, t.due_date::timestamp, t.created_at) <![CDATA[ >= ]]> #{fromTime,jdbcType=TIMESTAMP}
       </if>
@@ -222,8 +229,11 @@
   <select id="countScheduledCalendarByCompanyAndUser" resultType="java.lang.Integer">
     SELECT COUNT(*)
     FROM task_instances t
+    INNER JOIN checklist_instances c ON t.checklist_id = c.checklist_id AND t.company_id = c.company_id
+    INNER JOIN onboarding_instances oi ON c.onboarding_id = oi.onboarding_id AND c.company_id = oi.company_id
     WHERE t.company_id = #{companyId,jdbcType=VARCHAR}
       AND t.assigned_user_id = #{assigneeUserId,jdbcType=VARCHAR}
+      AND upper(coalesce(trim(oi.status), '')) IN ('DRAFT', 'ACTIVE')
       <if test="fromTime != null">
         AND coalesce(t.scheduled_start_at, t.due_date::timestamp, t.created_at) <![CDATA[ >= ]]> #{fromTime,jdbcType=TIMESTAMP}
       </if>
