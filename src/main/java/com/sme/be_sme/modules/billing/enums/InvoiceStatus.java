@@ -13,6 +13,8 @@ public enum InvoiceStatus {
 
     ISSUED("ISSUED", "Issued, awaiting payment"),
     PAID("PAID", "Payment successful"),
+    FAILED("FAILED", "Payment failed"),
+    EXPIRED("EXPIRED", "Invoice expired"),
     VOID("VOID", "Voided / cancelled");
 
     private final String code;

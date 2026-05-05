@@ -48,8 +48,8 @@ public class PaymentCreateIntentProcessor extends BaseBizProcessor<BizContext> {
         if (!companyId.equals(invoice.getCompanyId())) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "invoice does not belong to tenant");
         }
-        if (InvoiceStatus.PAID.getCode().equalsIgnoreCase(invoice.getStatus())) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "invoice already paid");
+        if (!InvoiceStatus.ISSUED.getCode().equalsIgnoreCase(invoice.getStatus())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "invoice is not payable");
         }
 
         Integer amount = invoice.getAmountTotal() != null ? invoice.getAmountTotal() : 0;
