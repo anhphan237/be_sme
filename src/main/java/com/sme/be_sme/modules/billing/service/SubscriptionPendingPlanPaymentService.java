@@ -207,7 +207,9 @@ public class SubscriptionPendingPlanPaymentService {
         invoice.setCurrency("VND");
         invoice.setStatus(InvoiceStatus.ISSUED.getCode());
         invoice.setIssuedAt(now);
-        invoice.setDueAt(resolveDueAt(now, billingCycle));
+        Date dueAt = resolveDueAt(now, billingCycle);
+        invoice.setDueAt(dueAt);
+        invoice.setExpiredAt(dueAt);
         invoice.setCreatedAt(now);
         int inserted = invoiceMapper.insert(invoice);
         if (inserted != 1) {

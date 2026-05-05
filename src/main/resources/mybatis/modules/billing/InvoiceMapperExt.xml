@@ -4,7 +4,7 @@
 
     <select id="selectLatestUnpaidBySubscriptionId" resultMap="com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper.BaseResultMap">
         select invoice_id, company_id, subscription_id, invoice_no, amount_total, currency,
-               status, issued_at, due_at, e_invoice_url, created_at
+               status, issued_at, due_at, expired_at, e_invoice_url, created_at
         from invoices
         where company_id = #{companyId,jdbcType=VARCHAR}
           and subscription_id = #{subscriptionId,jdbcType=VARCHAR}
@@ -15,7 +15,7 @@
 
     <select id="selectLatestIssuedBySubscriptionId" resultMap="com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper.BaseResultMap">
         select invoice_id, company_id, subscription_id, invoice_no, amount_total, currency,
-               status, issued_at, due_at, e_invoice_url, created_at
+               status, issued_at, due_at, expired_at, e_invoice_url, created_at
         from invoices
         where company_id = #{companyId,jdbcType=VARCHAR}
           and subscription_id = #{subscriptionId,jdbcType=VARCHAR}
@@ -26,7 +26,7 @@
 
     <select id="selectBySubscriptionIdAndIssuedBetween" resultMap="com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper.BaseResultMap">
         select invoice_id, company_id, subscription_id, invoice_no, amount_total, currency,
-               status, issued_at, due_at, e_invoice_url, created_at
+               status, issued_at, due_at, expired_at, e_invoice_url, created_at
         from invoices
         where company_id = #{companyId,jdbcType=VARCHAR}
           and subscription_id = #{subscriptionId,jdbcType=VARCHAR}
@@ -38,11 +38,39 @@
 
     <select id="selectDueBetweenAndStatusIssued" resultMap="com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper.BaseResultMap">
         select invoice_id, company_id, subscription_id, invoice_no, amount_total, currency,
-               status, issued_at, due_at, e_invoice_url, created_at
+               status, issued_at, due_at, expired_at, e_invoice_url, created_at
         from invoices
         where due_at &gt;= #{fromDate,jdbcType=TIMESTAMP}
           and due_at &lt;= #{toDate,jdbcType=TIMESTAMP}
           and (status is null or upper(trim(status)) = 'ISSUED')
         order by due_at asc
     </select>
+
+    <update id="updateStatusIfCurrentIn">
+        update invoices
+        set status = #{newStatus,jdbcType=VARCHAR}
+        where invoice_id = #{invoiceId,jdbcType=VARCHAR}
+          and upper(trim(status)) in (
+              upper(trim(#{allowedStatus1,jdbcType=VARCHAR})),
+              upper(trim(#{allowedStatus2,jdbcType=VARCHAR}))
+          )
+    </update>
+
+    <select id="selectIssuedExpiredBefore" resultMap="com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper.BaseResultMap">
+        select invoice_id, company_id, subscription_id, invoice_no, amount_total, currency,
+               status, issued_at, due_at, expired_at, e_invoice_url, created_at
+        from invoices
+        where upper(trim(status)) = 'ISSUED'
+          and expired_at is not null
+          and expired_at &lt; #{now,jdbcType=TIMESTAMP}
+        order by expired_at asc
+    </select>
+
+    <update id="markExpiredByInvoiceId">
+        update invoices
+        set status = 'EXPIRED',
+            expired_at = #{expiredAt,jdbcType=TIMESTAMP}
+        where invoice_id = #{invoiceId,jdbcType=VARCHAR}
+          and upper(trim(status)) = 'ISSUED'
+    </update>
 </mapper>
