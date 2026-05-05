@@ -16,6 +16,7 @@
     <result column="status" jdbcType="VARCHAR" property="status" />
     <result column="issued_at" jdbcType="TIMESTAMP" property="issuedAt" />
     <result column="due_at" jdbcType="TIMESTAMP" property="dueAt" />
+    <result column="expired_at" jdbcType="TIMESTAMP" property="expiredAt" />
     <result column="e_invoice_url" jdbcType="VARCHAR" property="eInvoiceUrl" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
   </resultMap>
@@ -36,11 +37,11 @@
     -->
     insert into invoices (invoice_id, company_id, subscription_id, 
       invoice_no, amount_total, currency, 
-      status, issued_at, due_at, 
+      status, issued_at, due_at, expired_at,
       e_invoice_url, created_at)
     values (#{invoiceId,jdbcType=VARCHAR}, #{companyId,jdbcType=VARCHAR}, #{subscriptionId,jdbcType=VARCHAR}, 
       #{invoiceNo,jdbcType=VARCHAR}, #{amountTotal,jdbcType=INTEGER}, #{currency,jdbcType=VARCHAR}, 
-      #{status,jdbcType=VARCHAR}, #{issuedAt,jdbcType=TIMESTAMP}, #{dueAt,jdbcType=TIMESTAMP}, 
+      #{status,jdbcType=VARCHAR}, #{issuedAt,jdbcType=TIMESTAMP}, #{dueAt,jdbcType=TIMESTAMP}, #{expiredAt,jdbcType=TIMESTAMP},
       #{eInvoiceUrl,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP})
   </insert>
   <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.billing.infrastructure.persistence.entity.InvoiceEntity">
@@ -58,6 +59,7 @@
       status = #{status,jdbcType=VARCHAR},
       issued_at = #{issuedAt,jdbcType=TIMESTAMP},
       due_at = #{dueAt,jdbcType=TIMESTAMP},
+      expired_at = #{expiredAt,jdbcType=TIMESTAMP},
       e_invoice_url = #{eInvoiceUrl,jdbcType=VARCHAR},
       created_at = #{createdAt,jdbcType=TIMESTAMP}
     where invoice_id = #{invoiceId,jdbcType=VARCHAR}
@@ -69,7 +71,7 @@
       This element was generated on Thu Jan 22 16:08:37 ICT 2026.
     -->
     select invoice_id, company_id, subscription_id, invoice_no, amount_total, currency, 
-    status, issued_at, due_at, e_invoice_url, created_at
+    status, issued_at, due_at, expired_at, e_invoice_url, created_at
     from invoices
     where invoice_id = #{invoiceId,jdbcType=VARCHAR}
   </select>
@@ -80,7 +82,7 @@
       This element was generated on Thu Jan 22 16:08:37 ICT 2026.
     -->
     select invoice_id, company_id, subscription_id, invoice_no, amount_total, currency, 
-    status, issued_at, due_at, e_invoice_url, created_at
+    status, issued_at, due_at, expired_at, e_invoice_url, created_at
     from invoices
   </select>
 </mapper>

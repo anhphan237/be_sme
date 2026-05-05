@@ -43,4 +43,14 @@ public interface InvoiceMapperExt {
             @Param("fromDate") Date fromDate,
             @Param("toDate") Date toDate
     );
+
+    int updateStatusIfCurrentIn(@Param("invoiceId") String invoiceId,
+                                @Param("newStatus") String newStatus,
+                                @Param("allowedStatus1") String allowedStatus1,
+                                @Param("allowedStatus2") String allowedStatus2);
+
+    List<InvoiceEntity> selectIssuedExpiredBefore(@Param("now") Date now);
+
+    int markExpiredByInvoiceId(@Param("invoiceId") String invoiceId,
+                               @Param("expiredAt") Date expiredAt);
 }

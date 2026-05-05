@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.be_sme.modules.billing.enums.InvoiceStatus;
 import com.sme.be_sme.modules.billing.enums.PaymentTransactionStatus;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapper;
+import com.sme.be_sme.modules.billing.infrastructure.mapper.InvoiceMapperExt;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.PaymentTransactionMapperExt;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionChangeRequestMapper;
 import com.sme.be_sme.modules.billing.infrastructure.mapper.SubscriptionMapper;
@@ -54,6 +55,7 @@ public class StripeWebhookController {
     private final ObjectMapper objectMapper;
     private final PaymentTransactionMapperExt paymentTransactionMapperExt;
     private final InvoiceMapper invoiceMapper;
+    private final InvoiceMapperExt invoiceMapperExt;
     private final SubscriptionChangeRequestMapper subscriptionChangeRequestMapper;
     private final SubscriptionMapper subscriptionMapper;
     private final SubscriptionMapperExt subscriptionMapperExt;
@@ -231,8 +233,21 @@ public class StripeWebhookController {
         txn.setStatus(PaymentTransactionStatus.FAILED.getCode());
         txn.setFailureReason(failureMessage.length() > 255 ? failureMessage.substring(0, 255) : failureMessage);
         updateTransaction(txn);
+        markInvoiceFailedIfPayable(txn);
         markPendingPlanChangeFailed(txn, failureMessage);
         log.warn("PaymentIntent {} failed: {}", paymentIntentId, failureMessage);
+    }
+
+    private void markInvoiceFailedIfPayable(PaymentTransactionEntity txn) {
+        if (txn == null || !StringUtils.hasText(txn.getInvoiceId())) {
+            return;
+        }
+        invoiceMapperExt.updateStatusIfCurrentIn(
+                txn.getInvoiceId().trim(),
+                InvoiceStatus.FAILED.getCode(),
+                InvoiceStatus.ISSUED.getCode(),
+                InvoiceStatus.FAILED.getCode()
+        );
     }
 
     @Transactional
@@ -328,21 +343,14 @@ public class StripeWebhookController {
     }
 
     private void updateTransaction(PaymentTransactionEntity txn) {
-        try {
-            // PaymentTransactionMapper.updateByPrimaryKey is the generated method
-            // We access it via the ext mapper's session; alternatively inject base mapper.
-            // For simplicity, use a direct JDBC-style approach via the mapper ext.
-            // Since PaymentTransactionMapperExt doesn't have update, we use the base mapper
-            // injected separately. But to avoid adding another dependency here,
-            // we can add updateStatus to ext mapper.
-            paymentTransactionMapperExt.updateStatusByProviderTxnId(
-                    txn.getProviderTxnId(),
-                    txn.getStatus(),
-                    txn.getFailureReason(),
-                    txn.getPaidAt()
-            );
-        } catch (Exception e) {
-            log.error("Failed to update transaction {}: {}", txn.getPaymentTransactionId(), e.getMessage());
+        int updated = paymentTransactionMapperExt.updateStatusByProviderTxnId(
+                txn.getProviderTxnId(),
+                txn.getStatus(),
+                txn.getFailureReason(),
+                txn.getPaidAt()
+        );
+        if (updated <= 0) {
+            throw new IllegalStateException("Failed to update transaction " + txn.getPaymentTransactionId());
         }
     }
 
