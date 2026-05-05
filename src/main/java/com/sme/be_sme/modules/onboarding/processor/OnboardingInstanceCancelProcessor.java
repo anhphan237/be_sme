@@ -34,6 +34,9 @@ public class OnboardingInstanceCancelProcessor extends BaseBizProcessor<BizConte
         if (!context.getTenantId().equals(instance.getCompanyId())) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "instance does not belong to tenant");
         }
+        if (isDoneStatus(instance.getStatus())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "cannot cancel completed onboarding");
+        }
 
         Date now = new Date();
         if (!"CANCELLED".equalsIgnoreCase(instance.getStatus())) {
@@ -63,5 +66,9 @@ public class OnboardingInstanceCancelProcessor extends BaseBizProcessor<BizConte
         if (!StringUtils.hasText(request.getInstanceId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "instanceId is required");
         }
+    }
+
+    private static boolean isDoneStatus(String status) {
+        return "DONE".equalsIgnoreCase(status) || "COMPLETED".equalsIgnoreCase(status);
     }
 }

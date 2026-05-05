@@ -80,6 +80,12 @@ public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizCon
         if (!companyId.equals(instance.getCompanyId())) {
             throw AppException.of(ErrorCodes.FORBIDDEN, "instance does not belong to tenant");
         }
+        if (isDoneStatus(instance.getStatus())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "cannot activate completed onboarding");
+        }
+        if (isCancelledStatus(instance.getStatus())) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "cannot activate cancelled onboarding");
+        }
 
         if (StringUtils.hasText(request.getManagerUserId())) {
             instance.setManagerUserId(request.getManagerUserId().trim());
@@ -186,5 +192,13 @@ public class OnboardingInstanceActivateProcessor extends BaseBizProcessor<BizCon
         if (!StringUtils.hasText(request.getInstanceId()) && !StringUtils.hasText(request.getRequestNo())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "instanceId or requestNo is required");
         }
+    }
+
+    private static boolean isDoneStatus(String status) {
+        return "DONE".equalsIgnoreCase(status) || "COMPLETED".equalsIgnoreCase(status);
+    }
+
+    private static boolean isCancelledStatus(String status) {
+        return "CANCELLED".equalsIgnoreCase(status) || "CANCELED".equalsIgnoreCase(status);
     }
 }
