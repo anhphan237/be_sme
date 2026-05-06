@@ -52,6 +52,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
     private static final String SOURCE_TYPE_DEPARTMENT = "DEPARTMENT";
     private static final String SOURCE_TYPE_USER_LIST = "USER_LIST";
     private static final String SOURCE_TYPE_DEPARTMENT_PLUS_USERS = "DEPARTMENT_PLUS_USERS";
+    private static final String EMPLOYEE_STATUS_OFFICIAL = "OFFICIAL";
 
     private final ObjectMapper objectMapper;
     private final EventTemplateMapper eventTemplateMapper;
@@ -70,19 +71,24 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         validate(context, request);
 
         String companyId = context.getTenantId().trim();
+
         EventTemplateEntity template =
                 eventTemplateMapper.selectByCompanyIdAndTemplateId(companyId, request.getEventTemplateId().trim());
+
         if (template == null) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "event template not found");
         }
+
         if ("INACTIVE".equalsIgnoreCase(template.getStatus())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "event template is inactive");
         }
 
         List<String> departmentIds = normalizeIds(request.getDepartmentIds());
         List<String> userIds = normalizeIds(request.getUserIds());
+
         boolean hasDepartments = !departmentIds.isEmpty();
         boolean hasUsers = !userIds.isEmpty();
+
         if (!hasDepartments && !hasUsers) {
             throw AppException.of(
                     ErrorCodes.BAD_REQUEST,
@@ -91,27 +97,43 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
 
         List<String> participantUserIds;
         String sourceType;
+
         List<String> departmentUserIds = List.of();
+
         if (hasDepartments) {
             assertDepartments(companyId, departmentIds);
-            departmentUserIds = resolveUsersFromDepartments(companyId, departmentIds);
+
+            // Lấy user theo phòng ban rồi lọc employee đã OFFICIAL ra khỏi danh sách mời.
+            departmentUserIds = filterOutOfficialEmployees(
+                    companyId,
+                    resolveUsersFromDepartments(companyId, departmentIds)
+            );
         }
+
         if (hasUsers) {
             assertActiveUsers(companyId, userIds);
+
+            // Lọc cả user được HR chọn thủ công.
+            userIds = filterOutOfficialEmployees(companyId, userIds);
         }
+
         if (hasDepartments && hasUsers) {
             Set<String> departmentUserSet = new LinkedHashSet<>(departmentUserIds);
+
             List<String> duplicateUserIds = userIds.stream()
                     .filter(departmentUserSet::contains)
                     .toList();
+
             if (!duplicateUserIds.isEmpty()) {
                 throw AppException.of(
                         ErrorCodes.BAD_REQUEST,
                         "specified userIds already belong to selected departments, please reassign: "
                                 + String.join(", ", duplicateUserIds));
             }
+
             LinkedHashSet<String> merged = new LinkedHashSet<>(departmentUserIds);
             merged.addAll(userIds);
+
             participantUserIds = new ArrayList<>(merged);
             sourceType = SOURCE_TYPE_DEPARTMENT_PLUS_USERS;
         } else if (hasDepartments) {
@@ -121,18 +143,25 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
             participantUserIds = userIds;
             sourceType = SOURCE_TYPE_USER_LIST;
         }
+
         if (participantUserIds.isEmpty()) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "no participants found for this event");
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "no eligible participants found for this event");
         }
 
         Date now = new Date();
         Date eventEndAt = request.getEventEndAt() != null ? request.getEventEndAt() : request.getEventAt();
+
         String eventInstanceId = UuidGenerator.generate();
+
         EventInstanceEntity instance = new EventInstanceEntity();
         instance.setEventInstanceId(eventInstanceId);
         instance.setCompanyId(companyId);
         instance.setEventTemplateId(template.getEventTemplateId());
-        instance.setCoverImageUrl(StringUtils.hasText(request.getCoverImageUrl()) ? request.getCoverImageUrl().trim() : null);
+        instance.setCoverImageUrl(
+                StringUtils.hasText(request.getCoverImageUrl()) ? request.getCoverImageUrl().trim() : null
+        );
         instance.setEventAt(request.getEventAt());
         instance.setEventEndAt(eventEndAt);
         instance.setSourceType(sourceType);
@@ -143,11 +172,13 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         instance.setCreatedBy(context.getOperatorId());
         instance.setCreatedAt(now);
         instance.setUpdatedAt(now);
+
         if (eventInstanceMapper.insert(instance) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "publish event failed");
         }
 
         String checklistId = UuidGenerator.generate();
+
         ChecklistInstanceEntity checklist = new ChecklistInstanceEntity();
         checklist.setChecklistId(checklistId);
         checklist.setCompanyId(companyId);
@@ -160,12 +191,17 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         checklist.setDeadlineAt(eventEndAt);
         checklist.setCreatedAt(now);
         checklist.setUpdatedAt(now);
+
         if (checklistInstanceMapper.insert(checklist) != 1) {
             throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create event checklist failed");
         }
 
-        String operatorId = StringUtils.hasText(context.getOperatorId()) ? context.getOperatorId().trim() : "system";
+        String operatorId = StringUtils.hasText(context.getOperatorId())
+                ? context.getOperatorId().trim()
+                : "system";
+
         String taskDescription = buildTaskDescription(template);
+
         for (String participantUserId : participantUserIds) {
             TaskInstanceEntity task = new TaskInstanceEntity();
             task.setTaskId(UuidGenerator.generate());
@@ -189,9 +225,11 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
             task.setScheduledStartAt(request.getEventAt());
             task.setScheduledEndAt(eventEndAt);
             task.setScheduleStatus(OnboardingTaskWorkflow.SCHEDULE_CONFIRMED);
+
             if (taskInstanceMapper.insert(task) != 1) {
                 throw AppException.of(ErrorCodes.INTERNAL_ERROR, "create event task failed");
             }
+
             notifyTaskAssigned(task, template.getName());
         }
 
@@ -203,6 +241,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         response.setEventEndAt(eventEndAt);
         response.setTaskCount(participantUserIds.size());
         response.setParticipantUserIds(participantUserIds);
+
         return response;
     }
 
@@ -210,15 +249,19 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         if (context == null || !StringUtils.hasText(context.getTenantId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
         }
+
         if (request == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "payload is required");
         }
+
         if (!StringUtils.hasText(request.getEventTemplateId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "eventTemplateId is required");
         }
+
         if (request.getEventAt() == null) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "eventAt is required");
         }
+
         if (request.getEventEndAt() != null && request.getEventEndAt().before(request.getEventAt())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "eventEndAt must be after or equal to eventAt");
         }
@@ -227,9 +270,11 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
     private void assertDepartments(String companyId, List<String> departmentIds) {
         for (String departmentId : departmentIds) {
             DepartmentEntity department = departmentMapper.selectByPrimaryKey(departmentId);
+
             if (department == null || !companyId.equals(department.getCompanyId())) {
                 throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid departmentId: " + departmentId);
             }
+
             if (!"ACTIVE".equalsIgnoreCase(department.getStatus())) {
                 throw AppException.of(ErrorCodes.BAD_REQUEST, "inactive departmentId: " + departmentId);
             }
@@ -240,32 +285,68 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         if (CollectionUtils.isEmpty(departmentIds)) {
             return List.of();
         }
+
         List<String> users = employeeProfileMapperExt.selectActiveUserIdsByDepartmentIds(companyId, departmentIds);
+
         if (CollectionUtils.isEmpty(users)) {
             return List.of();
         }
+
         return normalizeIds(users);
     }
 
     private void assertActiveUsers(String companyId, List<String> userIds) {
         for (String userId : userIds) {
             int count = userMapperExt.countActiveByCompanyIdAndUserId(companyId, userId);
+
             if (count <= 0) {
                 throw AppException.of(ErrorCodes.BAD_REQUEST, "invalid active userId: " + userId);
             }
         }
     }
 
+    private List<String> filterOutOfficialEmployees(String companyId, List<String> userIds) {
+        if (CollectionUtils.isEmpty(userIds)) {
+            return List.of();
+        }
+
+        List<String> normalizedUserIds = normalizeIds(userIds);
+
+        if (normalizedUserIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> officialUserIds =
+                employeeProfileMapperExt.selectUserIdsByCompanyIdAndUserIdsAndStatus(
+                        companyId,
+                        normalizedUserIds,
+                        EMPLOYEE_STATUS_OFFICIAL
+                );
+
+        if (CollectionUtils.isEmpty(officialUserIds)) {
+            return normalizedUserIds;
+        }
+
+        Set<String> officialUserIdSet = new LinkedHashSet<>(normalizeIds(officialUserIds));
+
+        return normalizedUserIds.stream()
+                .filter(userId -> !officialUserIdSet.contains(userId))
+                .toList();
+    }
+
     private static List<String> normalizeIds(List<String> ids) {
         if (CollectionUtils.isEmpty(ids)) {
             return List.of();
         }
+
         Set<String> normalized = new LinkedHashSet<>();
+
         for (String id : ids) {
             if (StringUtils.hasText(id)) {
                 normalized.add(id.trim());
             }
         }
+
         return new ArrayList<>(normalized);
     }
 
@@ -280,12 +361,15 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
     private static String buildTaskDescription(EventTemplateEntity template) {
         String description = StringUtils.hasText(template.getDescription()) ? template.getDescription().trim() : "";
         String content = StringUtils.hasText(template.getContent()) ? template.getContent().trim() : "";
+
         if (!StringUtils.hasText(description)) {
             return content;
         }
+
         if (!StringUtils.hasText(content)) {
             return description;
         }
+
         return description + "\n\n" + content;
     }
 
@@ -293,17 +377,22 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
         if (task == null || !StringUtils.hasText(task.getAssignedUserId())) {
             return;
         }
+
         String taskTitle = StringUtils.hasText(task.getTitle()) ? task.getTitle().trim() : "Event task";
+
         String dueStr = task.getDueDate() != null
                 ? Instant.ofEpochMilli(task.getDueDate().getTime())
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDate()
-                        .format(DATE_FMT)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .format(DATE_FMT)
                 : "";
+
         String eventText = StringUtils.hasText(eventName) ? eventName.trim() : taskTitle;
+
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("taskTitle", taskTitle);
         placeholders.put("dueDate", dueStr);
+
         NotificationCreateParams params = NotificationCreateParams.builder()
                 .companyId(task.getCompanyId())
                 .userId(task.getAssignedUserId())
@@ -316,6 +405,7 @@ public class EventPublishProcessor extends BaseBizProcessor<BizContext> {
                 .emailTemplate(TEMPLATE_TASK_ASSIGNED)
                 .emailPlaceholders(placeholders)
                 .build();
+
         try {
             notificationService.create(params);
         } catch (Exception e) {

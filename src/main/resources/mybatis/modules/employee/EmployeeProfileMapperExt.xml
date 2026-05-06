@@ -96,4 +96,14 @@
               #{departmentId}
           </foreach>
     </select>
+    <select id="selectUserIdsByCompanyIdAndUserIdsAndStatus" resultType="java.lang.String">
+        SELECT DISTINCT ep.user_id
+        FROM employee_profiles ep
+        WHERE ep.company_id = #{companyId}
+        AND ep.user_id IN
+        <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+            #{userId}
+        </foreach>
+        AND UPPER(ep.status) = UPPER(#{status})
+    </select>
 </mapper>
