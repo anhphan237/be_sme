@@ -29,6 +29,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class EventAttendanceConfirmProcessor extends BaseBizProcessor<BizContext> {
     private static final TypeReference<List<String>> STRING_LIST_TYPE = new TypeReference<>() {};
+    private static final String STATUS_COMPLETED = "COMPLETED";
+    private static final String STATUS_CANCELLED = "CANCELLED";
 
     private final ObjectMapper objectMapper;
     private final EventInstanceMapper eventInstanceMapper;
@@ -40,16 +42,34 @@ public class EventAttendanceConfirmProcessor extends BaseBizProcessor<BizContext
         EventAttendanceConfirmRequest request =
                 objectMapper.convertValue(payload, EventAttendanceConfirmRequest.class);
 
-        validate(context, request);
-
-        if (!canConfirmAttendance(context)) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "only HR can confirm event attendance");
-        }
+        validateBasic(context, request);
 
         String companyId = context.getTenantId().trim();
         String eventInstanceId = request.getEventInstanceId().trim();
-        String userId = request.getUserId().trim();
-        boolean attended = Boolean.TRUE.equals(request.getAttended());
+
+        boolean highPrivilege = canManageEventConfirmation(context);
+        String operatorId = StringUtils.hasText(context.getOperatorId())
+                ? context.getOperatorId().trim()
+                : null;
+
+        String targetUserId = StringUtils.hasText(request.getUserId())
+                ? request.getUserId().trim()
+                : operatorId;
+
+        if (!StringUtils.hasText(targetUserId)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "userId is required");
+        }
+
+        // Nếu FE không truyền attended thì mặc định là xác nhận tham gia.
+        boolean attended = request.getAttended() == null || Boolean.TRUE.equals(request.getAttended());
+
+        // Employee/Manager chỉ được xác nhận cho chính mình.
+        if (!highPrivilege && !targetUserId.equals(operatorId)) {
+            throw AppException.of(
+                    ErrorCodes.BAD_REQUEST,
+                    "normal users can only confirm their own event participation"
+            );
+        }
 
         EventInstanceEntity event =
                 eventInstanceMapper.selectByCompanyIdAndEventInstanceId(companyId, eventInstanceId);
@@ -58,12 +78,22 @@ public class EventAttendanceConfirmProcessor extends BaseBizProcessor<BizContext
             throw AppException.of(ErrorCodes.NOT_FOUND, "event instance not found");
         }
 
+        String eventStatus = normalizeStatus(event.getStatus());
+
+        if (STATUS_CANCELLED.equals(eventStatus)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "cancelled event cannot be updated");
+        }
+
+        if (STATUS_COMPLETED.equals(eventStatus)) {
+            throw AppException.of(ErrorCodes.BAD_REQUEST, "completed event cannot be updated");
+        }
+
         List<String> participantUserIds = parseJsonArray(event.getParticipantUserIds());
 
         boolean isParticipant = participantUserIds.stream()
                 .filter(StringUtils::hasText)
                 .map(String::trim)
-                .anyMatch(userId::equals);
+                .anyMatch(targetUserId::equals);
 
         if (!isParticipant) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "user is not a participant of this event");
@@ -79,7 +109,7 @@ public class EventAttendanceConfirmProcessor extends BaseBizProcessor<BizContext
         int updatedCount = taskInstanceMapper.updateEventAttendanceByAssignedUser(
                 companyId,
                 eventInstanceId,
-                userId,
+                targetUserId,
                 nextTaskStatus,
                 completedAt,
                 now
@@ -91,7 +121,7 @@ public class EventAttendanceConfirmProcessor extends BaseBizProcessor<BizContext
 
         EventAttendanceConfirmResponse response = new EventAttendanceConfirmResponse();
         response.setEventInstanceId(eventInstanceId);
-        response.setUserId(userId);
+        response.setUserId(targetUserId);
         response.setAttended(attended);
         response.setTaskStatus(nextTaskStatus);
         response.setUpdatedTaskCount(updatedCount);
@@ -99,7 +129,7 @@ public class EventAttendanceConfirmProcessor extends BaseBizProcessor<BizContext
         return response;
     }
 
-    private static void validate(BizContext context, EventAttendanceConfirmRequest request) {
+    private static void validateBasic(BizContext context, EventAttendanceConfirmRequest request) {
         if (context == null || !StringUtils.hasText(context.getTenantId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
         }
@@ -111,17 +141,9 @@ public class EventAttendanceConfirmProcessor extends BaseBizProcessor<BizContext
         if (!StringUtils.hasText(request.getEventInstanceId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "eventInstanceId is required");
         }
-
-        if (!StringUtils.hasText(request.getUserId())) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "userId is required");
-        }
-
-        if (request.getAttended() == null) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "attended is required");
-        }
     }
 
-    private static boolean canConfirmAttendance(BizContext context) {
+    private static boolean canManageEventConfirmation(BizContext context) {
         Set<String> roles = context.getRoles() == null
                 ? Collections.emptySet()
                 : context.getRoles();
@@ -136,6 +158,10 @@ public class EventAttendanceConfirmProcessor extends BaseBizProcessor<BizContext
                 || rolesUpper.contains("COMPANY_ADMIN")
                 || rolesUpper.contains("HR")
                 || rolesUpper.contains("HR_ADMIN");
+    }
+
+    private static String normalizeStatus(String status) {
+        return status == null ? "" : status.trim().toUpperCase(Locale.ROOT);
     }
 
     private List<String> parseJsonArray(String value) {
