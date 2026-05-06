@@ -71,6 +71,7 @@ import java.util.stream.Collectors;
                     || "com.sme.onboarding.task.reject".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.event.list".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.event.detail".equalsIgnoreCase(perm)
+                    || "com.sme.onboarding.event.attendance.confirm".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.instance.list".equalsIgnoreCase(perm)
                     || "com.sme.onboarding.instance.get".equalsIgnoreCase(perm)
                     || "com.sme.notification.list".equalsIgnoreCase(perm)
