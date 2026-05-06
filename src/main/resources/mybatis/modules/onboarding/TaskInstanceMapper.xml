@@ -161,4 +161,19 @@
     where ti.company_id = #{companyId,jdbcType=VARCHAR}
       and ci.onboarding_id = #{onboardingId,jdbcType=VARCHAR}
   </select>
+  <update id="updateEventAttendanceByAssignedUser">
+    UPDATE task_instances
+    SET status = #{status},
+    completed_at = #{completedAt},
+    updated_at = #{updatedAt}
+    WHERE company_id = #{companyId}
+    AND assigned_user_id = #{userId}
+    AND checklist_id IN (
+    SELECT checklist_id
+    FROM checklist_instances
+    WHERE company_id = #{companyId}
+    AND onboarding_id = #{eventInstanceId}
+    AND stage = 'EVENT'
+    )
+  </update>
 </mapper>

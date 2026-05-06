@@ -27,7 +27,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -57,16 +59,6 @@ public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
             throw AppException.of(ErrorCodes.NOT_FOUND, "event instance not found");
         }
 
-        EventTemplateEntity template = eventTemplateMapper.selectByCompanyIdAndTemplateId(
-                tenantId,
-                event.getEventTemplateId()
-        );
-
-        List<ChecklistInstanceEntity> checklists =
-                checklistInstanceMapper.selectByCompanyIdAndOnboardingId(tenantId, eventInstanceId);
-
-        ChecklistInstanceEntity checklist = checklists.isEmpty() ? null : checklists.get(0);
-
         List<String> rawParticipantUserIds = parseJsonArray(event.getParticipantUserIds());
 
         List<TaskInstanceEntity> rawTasks = shouldIncludeTasks(request)
@@ -83,6 +75,20 @@ public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
                 rawParticipantUserIds,
                 officialUserIdSet
         );
+
+        if (!canViewAllEvents(context) && !isCurrentUserParticipant(context, participantUserIds)) {
+            throw AppException.of(ErrorCodes.NOT_FOUND, "event instance not found");
+        }
+
+        EventTemplateEntity template = eventTemplateMapper.selectByCompanyIdAndTemplateId(
+                tenantId,
+                event.getEventTemplateId()
+        );
+
+        List<ChecklistInstanceEntity> checklists =
+                checklistInstanceMapper.selectByCompanyIdAndOnboardingId(tenantId, eventInstanceId);
+
+        ChecklistInstanceEntity checklist = checklists.isEmpty() ? null : checklists.get(0);
 
         List<String> sourceUserIds = filterOutOfficialUserIds(
                 parseJsonArray(event.getSourceUserIds()),
@@ -127,6 +133,37 @@ public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
 
     private static boolean shouldIncludeTasks(EventDetailRequest request) {
         return request.getIncludeTasks() == null || request.getIncludeTasks();
+    }
+
+    private static boolean isCurrentUserParticipant(
+            BizContext context,
+            List<String> participantUserIds
+    ) {
+        if (context == null || !StringUtils.hasText(context.getOperatorId())) {
+            return false;
+        }
+
+        String currentUserId = context.getOperatorId().trim();
+
+        return normalizeIds(participantUserIds).stream()
+                .anyMatch(currentUserId::equals);
+    }
+
+    private static boolean canViewAllEvents(BizContext context) {
+        Set<String> roles = context.getRoles() == null
+                ? Collections.emptySet()
+                : context.getRoles();
+
+        Set<String> rolesUpper = roles.stream()
+                .filter(StringUtils::hasText)
+                .map(role -> role.trim().toUpperCase(Locale.ROOT))
+                .collect(Collectors.toSet());
+
+        return rolesUpper.contains("ADMIN")
+                || rolesUpper.contains("PLATFORM_ADMIN")
+                || rolesUpper.contains("COMPANY_ADMIN")
+                || rolesUpper.contains("HR")
+                || rolesUpper.contains("HR_ADMIN");
     }
 
     private Set<String> resolveOfficialUserIds(
