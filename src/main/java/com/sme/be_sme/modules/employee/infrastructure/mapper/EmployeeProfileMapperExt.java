@@ -34,5 +34,11 @@ public interface EmployeeProfileMapperExt {
             @Param("companyId") String companyId,
             @Param("departmentIds") List<String> departmentIds
     );
+
+    List<String> selectUserIdsByCompanyIdAndUserIdsAndStatus(
+            @Param("companyId") String companyId,
+            @Param("userIds") List<String> userIds,
+            @Param("status") String status
+    );
 }
 
