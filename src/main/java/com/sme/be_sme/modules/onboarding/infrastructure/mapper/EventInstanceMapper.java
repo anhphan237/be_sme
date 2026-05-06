@@ -30,4 +30,10 @@ public interface EventInstanceMapper {
             @Param("eventInstanceId") String eventInstanceId,
             @Param("updatedAt") Date updatedAt
     );
+    int updateStatusByCompanyIdAndEventInstanceId(
+            @Param("companyId") String companyId,
+            @Param("eventInstanceId") String eventInstanceId,
+            @Param("status") String status,
+            @Param("updatedAt") Date updatedAt
+    );
 }

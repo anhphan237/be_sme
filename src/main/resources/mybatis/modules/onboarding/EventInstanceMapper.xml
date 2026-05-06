@@ -92,4 +92,11 @@
     where event_instance_id = #{eventInstanceId,jdbcType=VARCHAR}
       and notified_at is null
   </update>
+  <update id="updateStatusByCompanyIdAndEventInstanceId">
+    UPDATE event_instances
+    SET status = #{status},
+        updated_at = #{updatedAt}
+    WHERE company_id = #{companyId}
+      AND event_instance_id = #{eventInstanceId}
+  </update>
 </mapper>

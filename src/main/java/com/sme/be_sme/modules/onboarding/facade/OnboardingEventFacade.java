@@ -30,4 +30,6 @@ public interface OnboardingEventFacade extends OperationFacadeProvider {
 
     @OperationType("com.sme.onboarding.event.attendance.confirm")
     EventAttendanceConfirmResponse confirmEventAttendance(EventAttendanceConfirmRequest request);
+    @OperationType("com.sme.onboarding.event.complete")
+    EventCompleteResponse completeEvent(EventCompleteRequest request);
 }
