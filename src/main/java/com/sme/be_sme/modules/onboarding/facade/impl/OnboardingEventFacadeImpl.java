@@ -20,6 +20,7 @@ public class OnboardingEventFacadeImpl extends BaseOperationFacade implements On
     private final EventInstanceListProcessor eventInstanceListProcessor;
     private final EventAttendanceSummaryProcessor eventAttendanceSummaryProcessor;
     private final EventAttendanceConfirmProcessor eventAttendanceConfirmProcessor;
+    private final EventCompleteProcessor eventCompleteProcessor;
 
     @Override
     public EventTemplateCreateResponse createEventTemplate(EventTemplateCreateRequest request) {
@@ -59,6 +60,11 @@ public class OnboardingEventFacadeImpl extends BaseOperationFacade implements On
     @Override
     public EventAttendanceConfirmResponse confirmEventAttendance(EventAttendanceConfirmRequest request) {
         return call(eventAttendanceConfirmProcessor, request, EventAttendanceConfirmResponse.class);
+    }
+
+    @Override
+    public EventCompleteResponse completeEvent(EventCompleteRequest request) {
+        return call(eventCompleteProcessor, request, EventCompleteResponse.class);
     }
 
 }
