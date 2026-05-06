@@ -3,6 +3,7 @@ package com.sme.be_sme.modules.onboarding.processor;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sme.be_sme.modules.employee.infrastructure.mapper.EmployeeProfileMapperExt;
 import com.sme.be_sme.modules.onboarding.api.request.EventDetailRequest;
 import com.sme.be_sme.modules.onboarding.api.response.EventDetailResponse;
 import com.sme.be_sme.modules.onboarding.infrastructure.mapper.ChecklistInstanceMapper;
@@ -19,21 +20,27 @@ import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
 public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
     private static final TypeReference<List<String>> STRING_LIST_TYPE = new TypeReference<>() {};
+    private static final String EMPLOYEE_STATUS_OFFICIAL = "OFFICIAL";
 
     private final ObjectMapper objectMapper;
     private final EventInstanceMapper eventInstanceMapper;
     private final EventTemplateMapper eventTemplateMapper;
     private final ChecklistInstanceMapper checklistInstanceMapper;
     private final TaskInstanceMapper taskInstanceMapper;
+    private final EmployeeProfileMapperExt employeeProfileMapperExt;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -42,7 +49,10 @@ public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
 
         String tenantId = context.getTenantId().trim();
         String eventInstanceId = request.getEventInstanceId().trim();
-        EventInstanceEntity event = eventInstanceMapper.selectByCompanyIdAndEventInstanceId(tenantId, eventInstanceId);
+
+        EventInstanceEntity event =
+                eventInstanceMapper.selectByCompanyIdAndEventInstanceId(tenantId, eventInstanceId);
+
         if (event == null) {
             throw AppException.of(ErrorCodes.NOT_FOUND, "event instance not found");
         }
@@ -51,13 +61,37 @@ public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
                 tenantId,
                 event.getEventTemplateId()
         );
+
         List<ChecklistInstanceEntity> checklists =
                 checklistInstanceMapper.selectByCompanyIdAndOnboardingId(tenantId, eventInstanceId);
+
         ChecklistInstanceEntity checklist = checklists.isEmpty() ? null : checklists.get(0);
 
-        List<TaskInstanceEntity> tasks = shouldIncludeTasks(request)
+        List<String> rawParticipantUserIds = parseJsonArray(event.getParticipantUserIds());
+
+        List<TaskInstanceEntity> rawTasks = shouldIncludeTasks(request)
                 ? taskInstanceMapper.selectByCompanyIdAndOnboardingId(tenantId, eventInstanceId)
                 : Collections.emptyList();
+
+        Set<String> officialUserIdSet = resolveOfficialUserIds(
+                tenantId,
+                rawParticipantUserIds,
+                rawTasks
+        );
+
+        List<String> participantUserIds = filterOutOfficialUserIds(
+                rawParticipantUserIds,
+                officialUserIdSet
+        );
+
+        List<String> sourceUserIds = filterOutOfficialUserIds(
+                parseJsonArray(event.getSourceUserIds()),
+                officialUserIdSet
+        );
+
+        List<TaskInstanceEntity> tasks = rawTasks.stream()
+                .filter(task -> !isOfficialAssignedUser(task, officialUserIdSet))
+                .toList();
 
         EventDetailResponse response = new EventDetailResponse();
         response.setEventInstanceId(event.getEventInstanceId());
@@ -67,8 +101,8 @@ public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
         response.setEventEndAt(event.getEventEndAt());
         response.setSourceType(event.getSourceType());
         response.setSourceDepartmentIds(parseJsonArray(event.getSourceDepartmentIds()));
-        response.setSourceUserIds(parseJsonArray(event.getSourceUserIds()));
-        response.setParticipantUserIds(parseJsonArray(event.getParticipantUserIds()));
+        response.setSourceUserIds(sourceUserIds);
+        response.setParticipantUserIds(participantUserIds);
         response.setStatus(event.getStatus());
         response.setNotifiedAt(event.getNotifiedAt());
         response.setCreatedBy(event.getCreatedBy());
@@ -77,6 +111,7 @@ public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
         response.setEventTemplate(toTemplateInfo(template));
         response.setChecklist(toChecklistInfo(checklist));
         response.setTasks(tasks.stream().map(this::toTaskItem).toList());
+
         return response;
     }
 
@@ -84,6 +119,7 @@ public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
         if (context == null || !StringUtils.hasText(context.getTenantId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "tenantId is required");
         }
+
         if (request == null || !StringUtils.hasText(request.getEventInstanceId())) {
             throw AppException.of(ErrorCodes.BAD_REQUEST, "eventInstanceId is required");
         }
@@ -93,16 +129,99 @@ public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
         return request.getIncludeTasks() == null || request.getIncludeTasks();
     }
 
+    private Set<String> resolveOfficialUserIds(
+            String companyId,
+            List<String> participantUserIds,
+            List<TaskInstanceEntity> tasks
+    ) {
+        LinkedHashSet<String> candidateUserIds = new LinkedHashSet<>();
+
+        for (String userId : normalizeIds(participantUserIds)) {
+            candidateUserIds.add(userId);
+        }
+
+        if (!CollectionUtils.isEmpty(tasks)) {
+            for (TaskInstanceEntity task : tasks) {
+                if (task != null && StringUtils.hasText(task.getAssignedUserId())) {
+                    candidateUserIds.add(task.getAssignedUserId().trim());
+                }
+            }
+        }
+
+        if (candidateUserIds.isEmpty()) {
+            return Set.of();
+        }
+
+        List<String> officialUserIds =
+                employeeProfileMapperExt.selectUserIdsByCompanyIdAndUserIdsAndStatus(
+                        companyId,
+                        new ArrayList<>(candidateUserIds),
+                        EMPLOYEE_STATUS_OFFICIAL
+                );
+
+        if (CollectionUtils.isEmpty(officialUserIds)) {
+            return Set.of();
+        }
+
+        return new LinkedHashSet<>(normalizeIds(officialUserIds));
+    }
+
+    private static boolean isOfficialAssignedUser(
+            TaskInstanceEntity task,
+            Set<String> officialUserIdSet
+    ) {
+        if (task == null || !StringUtils.hasText(task.getAssignedUserId())) {
+            return false;
+        }
+
+        return officialUserIdSet.contains(task.getAssignedUserId().trim());
+    }
+
+    private static List<String> filterOutOfficialUserIds(
+            List<String> userIds,
+            Set<String> officialUserIdSet
+    ) {
+        if (CollectionUtils.isEmpty(userIds)) {
+            return List.of();
+        }
+
+        if (CollectionUtils.isEmpty(officialUserIdSet)) {
+            return normalizeIds(userIds);
+        }
+
+        return normalizeIds(userIds).stream()
+                .filter(userId -> !officialUserIdSet.contains(userId))
+                .toList();
+    }
+
+    private static List<String> normalizeIds(List<String> ids) {
+        if (CollectionUtils.isEmpty(ids)) {
+            return List.of();
+        }
+
+        LinkedHashSet<String> normalized = new LinkedHashSet<>();
+
+        for (String id : ids) {
+            if (StringUtils.hasText(id)) {
+                normalized.add(id.trim());
+            }
+        }
+
+        return new ArrayList<>(normalized);
+    }
+
     private EventDetailResponse.EventTemplateInfo toTemplateInfo(EventTemplateEntity template) {
         if (template == null) {
             return null;
         }
+
         EventDetailResponse.EventTemplateInfo item = new EventDetailResponse.EventTemplateInfo();
         item.setEventTemplateId(template.getEventTemplateId());
         item.setName(template.getName());
         item.setDescription(template.getDescription());
         item.setContent(template.getContent());
         item.setStatus(template.getStatus());
+
         return item;
     }
 
@@ -110,6 +229,7 @@ public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
         if (checklist == null) {
             return null;
         }
+
         EventDetailResponse.ChecklistInfo item = new EventDetailResponse.ChecklistInfo();
         item.setChecklistId(checklist.getChecklistId());
         item.setName(checklist.getName());
@@ -118,6 +238,7 @@ public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
         item.setProgressPercent(checklist.getProgressPercent());
         item.setOpenAt(checklist.getOpenAt());
         item.setDeadlineAt(checklist.getDeadlineAt());
+
         return item;
     }
 
@@ -137,6 +258,7 @@ public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
         item.setScheduledStartAt(task.getScheduledStartAt());
         item.setScheduledEndAt(task.getScheduledEndAt());
         item.setScheduleStatus(task.getScheduleStatus());
+
         return item;
     }
 
@@ -144,6 +266,7 @@ public class EventDetailProcessor extends BaseBizProcessor<BizContext> {
         if (!StringUtils.hasText(value)) {
             return List.of();
         }
+
         try {
             return objectMapper.readValue(value, STRING_LIST_TYPE);
         } catch (Exception e) {
