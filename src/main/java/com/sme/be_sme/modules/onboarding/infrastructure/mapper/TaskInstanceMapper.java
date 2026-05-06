@@ -4,6 +4,7 @@ import com.sme.be_sme.modules.onboarding.infrastructure.persistence.entity.TaskI
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Date;
 import java.util.List;
 
 @Mapper
@@ -51,5 +52,13 @@ public interface TaskInstanceMapper {
     List<TaskInstanceEntity> selectByCompanyIdAndOnboardingId(
             @Param("companyId") String companyId,
             @Param("onboardingId") String onboardingId
+    );
+    int updateEventAttendanceByAssignedUser(
+            @Param("companyId") String companyId,
+            @Param("eventInstanceId") String eventInstanceId,
+            @Param("userId") String userId,
+            @Param("status") String status,
+            @Param("completedAt") Date completedAt,
+            @Param("updatedAt") Date updatedAt
     );
 }
