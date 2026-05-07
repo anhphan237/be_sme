@@ -53,7 +53,10 @@ import java.util.stream.Collectors;
         if ("com.sme.survey.response.submit".equals(requiredPerm) && !rolesUpper.isEmpty()) {
             return true;
         }
-
+        // System feedback submit: any authenticated role can submit feedback
+        if ("com.sme.feedback.submit".equalsIgnoreCase(requiredPerm) && !rolesUpper.isEmpty()) {
+            return true;
+        }
         // EMPLOYEE: task page, onboarding view, notifications, documents, own profile
         if (rolesUpper.contains("EMPLOYEE") && requiredPerm != null) {
             String perm = requiredPerm.trim();
