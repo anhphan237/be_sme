@@ -54,7 +54,7 @@ import java.util.stream.Collectors;
             return true;
         }
         // System feedback submit: any authenticated role can submit feedback
-        if ("com.sme.platform.feedback.submit".equalsIgnoreCase(requiredPerm) && !rolesUpper.isEmpty()) {
+        if ("com.sme.feedback.submit".equalsIgnoreCase(requiredPerm) && !rolesUpper.isEmpty()) {
             return true;
         }
         // EMPLOYEE: task page, onboarding view, notifications, documents, own profile
