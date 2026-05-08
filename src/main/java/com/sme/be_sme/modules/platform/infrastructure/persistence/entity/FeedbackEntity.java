@@ -13,7 +13,7 @@ public class FeedbackEntity {
     private String resolvedBy;
     private Date createdAt;
     private Date updatedAt;
-
+    private String resolutionNote;
     public String getFeedbackId() {
         return feedbackId;
     }
@@ -92,5 +92,13 @@ public class FeedbackEntity {
 
     public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getResolutionNote() {
+        return resolutionNote;
+    }
+
+    public void setResolutionNote(String resolutionNote) {
+        this.resolutionNote = resolutionNote;
     }
 }

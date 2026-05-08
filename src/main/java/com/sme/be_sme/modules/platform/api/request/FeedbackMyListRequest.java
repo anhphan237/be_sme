@@ -3,12 +3,11 @@ package com.sme.be_sme.modules.platform.api.request;
 import lombok.Data;
 
 @Data
-public class PlatformFeedbackListRequest {
+public class FeedbackMyListRequest {
+
     private Integer page;
     private Integer size;
 
-    private String companyId;
-    private String userId;
     private String status;
     private String keyword;
 }
