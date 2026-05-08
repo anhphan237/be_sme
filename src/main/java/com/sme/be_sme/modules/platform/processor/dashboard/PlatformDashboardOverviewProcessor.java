@@ -62,8 +62,8 @@ public class PlatformDashboardOverviewProcessor extends BaseBizProcessor<BizCont
 
         int totalCompanies = countCompanies(companies, current.start, current.end);
         int previousCompanies = countCompanies(companies, previous.start, previous.end);
-        double mrr = calculateMrr(subscriptions, plansById, current.end);
-        double previousMrr = calculateMrr(subscriptions, plansById, previous.end);
+        double mrr = calculateMrr(subscriptions, plansById, current.start, current.end);
+        double previousMrr = calculateMrr(subscriptions, plansById, previous.start, previous.end);
         int activeOnboardings = countActiveOnboardings(onboardings, current.start, current.end);
         int previousActiveOnboardings = countActiveOnboardings(onboardings, previous.start, previous.end);
         int riskOnboardings = countRiskOnboardings(onboardings, current.start, current.end);
@@ -99,13 +99,16 @@ public class PlatformDashboardOverviewProcessor extends BaseBizProcessor<BizCont
         return count;
     }
 
-    private double calculateMrr(List<SubscriptionEntity> subscriptions, Map<String, PlanEntity> plansById, java.util.Date endExclusive) {
+    private double calculateMrr(List<SubscriptionEntity> subscriptions,
+                                Map<String, PlanEntity> plansById,
+                                java.util.Date startInclusive,
+                                java.util.Date endExclusive) {
         double total = 0.0;
         for (SubscriptionEntity sub : subscriptions) {
             if (sub == null || !"ACTIVE".equalsIgnoreCase(sub.getStatus())) {
                 continue;
             }
-            if (endExclusive != null && sub.getCreatedAt() != null && !sub.getCreatedAt().before(endExclusive)) {
+            if (!PlatformAnalyticsSupport.inRange(sub.getCreatedAt(), startInclusive, endExclusive)) {
                 continue;
             }
             PlanEntity plan = plansById.get(sub.getPlanId());

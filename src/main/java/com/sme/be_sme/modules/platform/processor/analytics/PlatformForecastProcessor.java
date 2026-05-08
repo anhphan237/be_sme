@@ -32,7 +32,10 @@ public class PlatformForecastProcessor extends BaseBizProcessor<BizContext> {
         PlatformForecastRequest request = objectMapper.convertValue(payload, PlatformForecastRequest.class);
         String metric = request.getMetric() != null ? request.getMetric().toUpperCase() : "COMPANY";
         String groupBy = PlatformAnalyticsSupport.normalizeGroupBy(request.getGroupBy());
-        int forecastPoints = request.getForecastPoints() != null && request.getForecastPoints() > 0 ? request.getForecastPoints() : 3;
+        int defaultForecastPoints = "REVENUE".equals(metric) ? 12 : 3;
+        int forecastPoints = request.getForecastPoints() != null && request.getForecastPoints() > 0
+                ? request.getForecastPoints()
+                : defaultForecastPoints;
 
         LocalDate start = PlatformAnalyticsSupport.parseLocalDate(request.getStartDate(), LocalDate.now().minusMonths(11));
         LocalDate end = PlatformAnalyticsSupport.parseLocalDate(request.getEndDate(), LocalDate.now());
