@@ -2,10 +2,10 @@ package com.sme.be_sme.modules.platform.processor.feedback;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sme.be_sme.modules.platform.api.request.PlatformFeedbackListRequest;
-import com.sme.be_sme.modules.platform.api.response.PlatformFeedbackListResponse;
-import com.sme.be_sme.modules.platform.api.response.PlatformFeedbackListResponse.FeedbackItem;
-import com.sme.be_sme.modules.platform.infrastructure.dto.PlatformFeedbackRow;
+import com.sme.be_sme.modules.platform.api.request.FeedbackMyListRequest;
+import com.sme.be_sme.modules.platform.api.response.FeedbackMyListResponse;
+import com.sme.be_sme.modules.platform.api.response.FeedbackMyListResponse.FeedbackItem;
+import com.sme.be_sme.modules.platform.infrastructure.dto.FeedbackViewRow;
 import com.sme.be_sme.modules.platform.infrastructure.mapper.FeedbackMapper;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
@@ -17,21 +17,32 @@ import org.springframework.util.StringUtils;
 
 @Component
 @RequiredArgsConstructor
-public class PlatformFeedbackListProcessor extends BaseBizProcessor<BizContext> {
+public class FeedbackMyListProcessor extends BaseBizProcessor<BizContext> {
 
     private static final int DEFAULT_PAGE = 1;
-    private static final int DEFAULT_SIZE = 20;
-    private static final int MAX_SIZE = 100;
+    private static final int DEFAULT_SIZE = 10;
+    private static final int MAX_SIZE = 50;
 
     private final ObjectMapper objectMapper;
     private final FeedbackMapper feedbackMapper;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
-        PlatformFeedbackListRequest request =
+        FeedbackMyListRequest request =
                 payload == null || payload.isNull()
-                        ? new PlatformFeedbackListRequest()
-                        : objectMapper.convertValue(payload, PlatformFeedbackListRequest.class);
+                        ? new FeedbackMyListRequest()
+                        : objectMapper.convertValue(payload, FeedbackMyListRequest.class);
+
+        String companyId = context.getTenantId();
+        String userId = context.getOperatorId();
+
+        if (!StringUtils.hasText(companyId)) {
+            throw new IllegalArgumentException("companyId is required");
+        }
+
+        if (!StringUtils.hasText(userId)) {
+            throw new IllegalArgumentException("userId is required");
+        }
 
         int page = request.getPage() != null && request.getPage() > 0
                 ? request.getPage()
@@ -43,12 +54,10 @@ public class PlatformFeedbackListProcessor extends BaseBizProcessor<BizContext> 
 
         int offset = (page - 1) * size;
 
-        String companyId = normalize(request.getCompanyId());
-        String userId = normalize(request.getUserId());
         String status = normalizeStatus(request.getStatus());
         String keyword = normalize(request.getKeyword());
 
-        List<PlatformFeedbackRow> rows = feedbackMapper.selectPlatformFeedbackPage(
+        List<FeedbackViewRow> rows = feedbackMapper.selectMyFeedbackPage(
                 companyId,
                 userId,
                 status,
@@ -57,14 +66,14 @@ public class PlatformFeedbackListProcessor extends BaseBizProcessor<BizContext> 
                 offset
         );
 
-        long total = feedbackMapper.countPlatformFeedback(
+        long total = feedbackMapper.countMyFeedback(
                 companyId,
                 userId,
                 status,
                 keyword
         );
 
-        PlatformFeedbackListResponse response = new PlatformFeedbackListResponse();
+        FeedbackMyListResponse response = new FeedbackMyListResponse();
         response.setItems(mapItems(rows));
         response.setTotal(total);
         response.setPage(page);
@@ -73,24 +82,17 @@ public class PlatformFeedbackListProcessor extends BaseBizProcessor<BizContext> 
         return response;
     }
 
-    private List<FeedbackItem> mapItems(List<PlatformFeedbackRow> rows) {
+    private List<FeedbackItem> mapItems(List<FeedbackViewRow> rows) {
         List<FeedbackItem> items = new ArrayList<>();
 
         if (rows == null || rows.isEmpty()) {
             return items;
         }
 
-        for (PlatformFeedbackRow row : rows) {
+        for (FeedbackViewRow row : rows) {
             FeedbackItem item = new FeedbackItem();
 
             item.setFeedbackId(row.getFeedbackId());
-
-            item.setCompanyId(row.getCompanyId());
-            item.setCompanyName(row.getCompanyName());
-
-            item.setUserId(row.getUserId());
-            item.setUserName(row.getUserName());
-            item.setUserEmail(row.getUserEmail());
 
             item.setSubject(row.getSubject());
             item.setContent(row.getContent());

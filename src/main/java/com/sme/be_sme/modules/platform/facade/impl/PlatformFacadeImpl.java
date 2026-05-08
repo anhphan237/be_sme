@@ -9,10 +9,7 @@ import com.sme.be_sme.modules.platform.processor.company.*;
 import com.sme.be_sme.modules.platform.processor.dashboard.PlatformDashboardOverviewProcessor;
 import com.sme.be_sme.modules.platform.processor.dashboard.PlatformFinancialDashboardProcessor;
 import com.sme.be_sme.modules.platform.processor.dashboard.PlatformRiskDashboardProcessor;
-import com.sme.be_sme.modules.platform.processor.feedback.FeedbackSubmitProcessor;
-import com.sme.be_sme.modules.platform.processor.feedback.PlatformFeedbackDetailProcessor;
-import com.sme.be_sme.modules.platform.processor.feedback.PlatformFeedbackListProcessor;
-import com.sme.be_sme.modules.platform.processor.feedback.PlatformFeedbackResolveProcessor;
+import com.sme.be_sme.modules.platform.processor.feedback.*;
 import com.sme.be_sme.modules.platform.processor.monitoring.PlatformActivityLogListProcessor;
 import com.sme.be_sme.modules.platform.processor.monitoring.PlatformErrorLogListProcessor;
 import com.sme.be_sme.modules.platform.processor.monitoring.PlatformMonitoringMetricsProcessor;
@@ -81,6 +78,7 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     private final PlatformActivateTemplateProcessor platformActivateTemplateProcessor;
     private final PlatformDeactivateTemplateProcessor platformDeactivateTemplateProcessor;
     private final PlatformDeleteTemplateProcessor platformDeleteTemplateProcessor;
+    private final FeedbackMyListProcessor feedbackMyListProcessor;
 
     @Override
     public PlatformCompanyListResponse listCompanies(PlatformCompanyListRequest request) {
@@ -190,6 +188,11 @@ public class PlatformFacadeImpl extends BaseOperationFacade implements PlatformF
     @Override
     public FeedbackSubmitResponse submitFeedback(FeedbackSubmitRequest request) {
         return call(feedbackSubmitProcessor, request, FeedbackSubmitResponse.class);
+    }
+
+    @Override
+    public FeedbackMyListResponse listMyFeedback(FeedbackMyListRequest request) {
+        return call(feedbackMyListProcessor, request, FeedbackMyListResponse.class);
     }
 
     @Override

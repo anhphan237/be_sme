@@ -2,19 +2,14 @@ package com.sme.be_sme.modules.platform.processor.feedback;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sme.be_sme.modules.identity.infrastructure.mapper.UserMapper;
-import com.sme.be_sme.modules.identity.infrastructure.persistence.entity.UserEntity;
-import com.sme.be_sme.modules.notification.service.NotificationCreateParams;
-import com.sme.be_sme.modules.notification.service.NotificationService;
 import com.sme.be_sme.modules.platform.api.request.PlatformFeedbackResolveRequest;
 import com.sme.be_sme.modules.platform.api.response.PlatformFeedbackResolveResponse;
 import com.sme.be_sme.modules.platform.infrastructure.mapper.FeedbackMapper;
 import com.sme.be_sme.modules.platform.infrastructure.persistence.entity.FeedbackEntity;
-import com.sme.be_sme.shared.constant.ErrorCodes;
-import com.sme.be_sme.shared.exception.AppException;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
-import java.util.Date;
+import java.time.OffsetDateTime;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -23,69 +18,88 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class PlatformFeedbackResolveProcessor extends BaseBizProcessor<BizContext> {
 
+    private static final Set<String> ALLOWED_STATUS = Set.of(
+            "OPEN",
+            "IN_PROGRESS",
+            "RESOLVED",
+            "CLOSED"
+    );
+
     private final ObjectMapper objectMapper;
     private final FeedbackMapper feedbackMapper;
-    private final NotificationService notificationService;
-    private final UserMapper userMapper;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
-        PlatformFeedbackResolveRequest request = objectMapper.convertValue(payload, PlatformFeedbackResolveRequest.class);
+        PlatformFeedbackResolveRequest request =
+                objectMapper.convertValue(payload, PlatformFeedbackResolveRequest.class);
+
+        if (request == null) {
+            throw new IllegalArgumentException("Request is required");
+        }
 
         if (!StringUtils.hasText(request.getFeedbackId())) {
-            throw AppException.of(ErrorCodes.BAD_REQUEST, "feedbackId is required");
+            throw new IllegalArgumentException("feedbackId is required");
         }
 
-        FeedbackEntity feedback = feedbackMapper.selectByPrimaryKey(request.getFeedbackId().trim());
+        String operatorId = context.getOperatorId();
+
+        if (!StringUtils.hasText(operatorId)) {
+            throw new IllegalArgumentException("operatorId is required");
+        }
+
+        FeedbackEntity feedback = feedbackMapper.selectById(request.getFeedbackId());
+
         if (feedback == null) {
-            throw AppException.of(ErrorCodes.NOT_FOUND, "Feedback not found");
+            throw new IllegalArgumentException("Feedback not found");
         }
 
-        Date now = new Date();
-        feedback.setStatus("RESOLVED");
-        feedback.setResolvedAt(now);
-        feedback.setResolvedBy(context.getOperatorId());
-        feedback.setUpdatedAt(now);
+        String status = normalizeStatus(request.getStatus());
 
-        int updated = feedbackMapper.updateByPrimaryKey(feedback);
-        if (updated != 1) {
-            throw AppException.of(ErrorCodes.INTERNAL_ERROR, "resolve feedback failed");
+        if (!ALLOWED_STATUS.contains(status)) {
+            throw new IllegalArgumentException("Invalid feedback status");
         }
 
-        notifyFeedbackSubmitter(feedback);
+        String resolutionNote = normalize(request.getResolutionNote());
+
+        OffsetDateTime resolvedAt = null;
+        String resolvedBy = null;
+
+        if ("RESOLVED".equals(status) || "CLOSED".equals(status)) {
+            resolvedAt = OffsetDateTime.now();
+            resolvedBy = operatorId;
+        }
+
+        int updated = feedbackMapper.resolveFeedback(
+                request.getFeedbackId(),
+                status,
+                resolvedAt,
+                resolvedBy,
+                resolutionNote
+        );
+
+        if (updated <= 0) {
+            throw new IllegalStateException("Feedback update failed");
+        }
 
         PlatformFeedbackResolveResponse response = new PlatformFeedbackResolveResponse();
-        response.setFeedbackId(feedback.getFeedbackId());
-        response.setStatus(feedback.getStatus());
+        response.setFeedbackId(request.getFeedbackId());
+        response.setStatus(status);
+        response.setResolvedAt(resolvedAt);
+        response.setResolvedBy(resolvedBy);
+        response.setResolutionNote(resolutionNote);
+
         return response;
     }
 
-    private void notifyFeedbackSubmitter(FeedbackEntity feedback) {
-        if (!StringUtils.hasText(feedback.getUserId())) {
-            return;
+    private String normalizeStatus(String status) {
+        if (!StringUtils.hasText(status)) {
+            return "RESOLVED";
         }
 
-        String resolverName = "Platform admin";
-        if (StringUtils.hasText(feedback.getResolvedBy())) {
-            UserEntity resolver = userMapper.selectByPrimaryKey(feedback.getResolvedBy());
-            if (resolver != null && StringUtils.hasText(resolver.getFullName())) {
-                resolverName = resolver.getFullName();
-            }
-        }
+        return status.trim().toUpperCase();
+    }
 
-        String subject = StringUtils.hasText(feedback.getSubject()) ? feedback.getSubject().trim() : "Feedback";
-
-        NotificationCreateParams params = NotificationCreateParams.builder()
-                .companyId(feedback.getCompanyId())
-                .userId(feedback.getUserId())
-                .type("PLATFORM_FEEDBACK_RESOLVED")
-                .title("Feedback resolved")
-                .content(resolverName + " resolved your feedback: " + subject)
-                .refType("FEEDBACK")
-                .refId(feedback.getFeedbackId())
-                .sendEmail(false)
-                .build();
-
-        notificationService.create(params);
+    private String normalize(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
     }
 }

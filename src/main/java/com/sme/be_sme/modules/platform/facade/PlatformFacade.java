@@ -73,6 +73,9 @@ public interface PlatformFacade extends OperationFacadeProvider {
     @OperationType("com.sme.feedback.submit")
     FeedbackSubmitResponse submitFeedback(FeedbackSubmitRequest request);
 
+    @OperationType("com.sme.feedback.my.list")
+    FeedbackMyListResponse listMyFeedback(FeedbackMyListRequest request);
+
     @OperationType("com.sme.platform.analytics.revenue")
     PlatformRevenueAnalyticsResponse getRevenueAnalytics(PlatformRevenueAnalyticsRequest request);
 
