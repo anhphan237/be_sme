@@ -10,15 +10,20 @@ import com.sme.be_sme.modules.platform.api.request.PlatformForecastRequest;
 import com.sme.be_sme.modules.platform.api.response.PlatformForecastResponse;
 import com.sme.be_sme.shared.gateway.core.BaseBizProcessor;
 import com.sme.be_sme.shared.gateway.core.BizContext;
+import dev.langchain4j.model.chat.ChatLanguageModel;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class PlatformForecastProcessor extends BaseBizProcessor<BizContext> {
 
     private final ObjectMapper objectMapper;
@@ -26,6 +31,7 @@ public class PlatformForecastProcessor extends BaseBizProcessor<BizContext> {
     private final InvoiceMapper invoiceMapper;
     private final OnboardingInstanceMapper onboardingInstanceMapper;
     private final UserMapper userMapper;
+    private final ChatLanguageModel chatModel;
 
     @Override
     protected Object doProcess(BizContext context, JsonNode payload) {
@@ -103,9 +109,20 @@ public class PlatformForecastProcessor extends BaseBizProcessor<BizContext> {
 
         List<PlatformForecastResponse.PointItem> forecast = new ArrayList<>();
         LocalDate cursor = PlatformAnalyticsSupport.alignStart(end, groupBy);
-        List<Double> forecastValues = "REVENUE".equals(metric)
-                ? holtLinearForecast(y, forecastPoints)
-                : linearRegressionForecast(intercept, slope, n, forecastPoints);
+        String method = "LINEAR_REGRESSION";
+        List<Double> forecastValues;
+        if ("REVENUE".equals(metric)) {
+            List<Double> aiForecastValues = geminiRevenueForecast(y, buckets, groupBy, forecastPoints);
+            if (!aiForecastValues.isEmpty()) {
+                forecastValues = aiForecastValues;
+                method = "GEMINI_TREND";
+            } else {
+                forecastValues = holtLinearForecast(y, forecastPoints);
+                method = "HOLT_LINEAR";
+            }
+        } else {
+            forecastValues = linearRegressionForecast(intercept, slope, n, forecastPoints);
+        }
         for (int i = 1; i <= forecastPoints; i++) {
             cursor = PlatformAnalyticsSupport.step(cursor, groupBy, 1);
             PlatformForecastResponse.PointItem point = new PlatformForecastResponse.PointItem();
@@ -117,11 +134,73 @@ public class PlatformForecastProcessor extends BaseBizProcessor<BizContext> {
         PlatformForecastResponse response = new PlatformForecastResponse();
         response.setMetric(metric);
         response.setGroupBy(groupBy);
-        response.setMethod("REVENUE".equals(metric) ? "HOLT_LINEAR" : "LINEAR_REGRESSION");
+        response.setMethod(method);
         response.setConfidenceNote("Forecast is directional and based on historical trend only.");
         response.setHistorical(historical);
         response.setForecast(forecast);
         return response;
+    }
+
+    private List<Double> geminiRevenueForecast(List<Double> series, List<String> buckets, String groupBy, int forecastPoints) {
+        if (series == null || series.isEmpty()) {
+            return Collections.emptyList();
+        }
+        try {
+            String prompt = buildRevenueForecastPrompt(series, buckets, groupBy, forecastPoints);
+            String raw = chatModel.generate(prompt);
+            return parseForecastValues(raw, forecastPoints);
+        } catch (Exception ex) {
+            log.warn("Gemini revenue forecast failed, fallback to Holt. reason={}", ex.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    private String buildRevenueForecastPrompt(List<Double> series, List<String> buckets, String groupBy, int forecastPoints) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("You are a revenue forecasting assistant.\n");
+        sb.append("Task: forecast next ").append(forecastPoints).append(" ").append(groupBy).append(" points from historical revenue trend.\n");
+        sb.append("Historical buckets: ").append(buckets).append("\n");
+        sb.append("Historical values: ").append(series).append("\n");
+        sb.append("Rules:\n");
+        sb.append("- Return ONLY a JSON array of ").append(forecastPoints).append(" non-negative numbers.\n");
+        sb.append("- No markdown, no explanation, no extra keys.\n");
+        sb.append("- Keep trend realistic and continuous from recent points.\n");
+        return sb.toString();
+    }
+
+    private List<Double> parseForecastValues(String raw, int forecastPoints) {
+        if (!StringUtils.hasText(raw)) {
+            return Collections.emptyList();
+        }
+        String text = raw.trim();
+        int start = text.indexOf('[');
+        int end = text.lastIndexOf(']');
+        if (start < 0 || end <= start) {
+            return Collections.emptyList();
+        }
+        String arrayText = text.substring(start, end + 1);
+        List<Double> parsed = new ArrayList<>();
+        try {
+            JsonNode array = objectMapper.readTree(arrayText);
+            if (!array.isArray()) {
+                return Collections.emptyList();
+            }
+            for (JsonNode item : array) {
+                if (!item.isNumber()) {
+                    continue;
+                }
+                parsed.add(Math.max(0.0, item.asDouble()));
+                if (parsed.size() == forecastPoints) {
+                    break;
+                }
+            }
+        } catch (Exception ex) {
+            return Collections.emptyList();
+        }
+        if (parsed.size() != forecastPoints) {
+            return Collections.emptyList();
+        }
+        return parsed;
     }
 
     private List<Double> linearRegressionForecast(double intercept, double slope, int historicalSize, int forecastPoints) {
