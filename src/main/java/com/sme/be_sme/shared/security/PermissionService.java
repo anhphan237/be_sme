@@ -119,7 +119,8 @@ import java.util.stream.Collectors;
                     || "com.sme.ai.assistant.ask".equalsIgnoreCase(perm)
                     || "com.sme.chat.session.create".equalsIgnoreCase(perm)
                     || "com.sme.chat.session.list".equalsIgnoreCase(perm)
-                    || "com.sme.chat.message.list".equalsIgnoreCase(perm)){
+                    || "com.sme.chat.message.list".equalsIgnoreCase(perm)
+                    || "com.sme.feedback.my.list".equalsIgnoreCase(perm)){
                 return true;
             }
         }
