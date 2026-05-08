@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -22,6 +23,7 @@ import org.springframework.util.StringUtils;
 public final class PlatformAnalyticsSupport {
 
     static final String GROUP_BY_DAY = "DAY";
+    static final String GROUP_BY_WEEK = "WEEK";
     static final String GROUP_BY_MONTH = "MONTH";
     static final String GROUP_BY_YEAR = "YEAR";
 
@@ -64,7 +66,10 @@ public final class PlatformAnalyticsSupport {
             return GROUP_BY_MONTH;
         }
         String normalized = groupBy.trim().toUpperCase(Locale.ROOT);
-        if (GROUP_BY_DAY.equals(normalized) || GROUP_BY_MONTH.equals(normalized) || GROUP_BY_YEAR.equals(normalized)) {
+        if (GROUP_BY_DAY.equals(normalized)
+                || GROUP_BY_WEEK.equals(normalized)
+                || GROUP_BY_MONTH.equals(normalized)
+                || GROUP_BY_YEAR.equals(normalized)) {
             return normalized;
         }
         return GROUP_BY_MONTH;
@@ -81,6 +86,10 @@ public final class PlatformAnalyticsSupport {
         while (!cursor.isAfter(boundary)) {
             buckets.add(formatBucket(cursor, groupBy));
             cursor = step(cursor, groupBy, 1);
+        }
+        // Dashboard weekly trends are expected as 4 points.
+        if (GROUP_BY_WEEK.equals(groupBy) && buckets.size() > 4) {
+            return new ArrayList<>(buckets.subList(buckets.size() - 4, buckets.size()));
         }
         return buckets;
     }
@@ -107,6 +116,12 @@ public final class PlatformAnalyticsSupport {
         if (GROUP_BY_DAY.equals(groupBy)) {
             return date.format(DateTimeFormatter.ISO_LOCAL_DATE);
         }
+        if (GROUP_BY_WEEK.equals(groupBy)) {
+            WeekFields weekFields = WeekFields.ISO;
+            int year = date.get(weekFields.weekBasedYear());
+            int week = date.get(weekFields.weekOfWeekBasedYear());
+            return year + "-W" + String.format("%02d", week);
+        }
         if (GROUP_BY_YEAR.equals(groupBy)) {
             return String.valueOf(date.getYear());
         }
@@ -117,6 +132,14 @@ public final class PlatformAnalyticsSupport {
         groupBy = normalizeGroupBy(groupBy);
         if (GROUP_BY_DAY.equals(groupBy)) {
             return LocalDate.parse(bucket, DateTimeFormatter.ISO_LOCAL_DATE);
+        }
+        if (GROUP_BY_WEEK.equals(groupBy)) {
+            String[] parts = bucket.split("-W");
+            int year = Integer.parseInt(parts[0]);
+            int week = Integer.parseInt(parts[1]);
+            return LocalDate.of(year, 1, 4)
+                    .with(WeekFields.ISO.weekOfWeekBasedYear(), week)
+                    .with(WeekFields.ISO.dayOfWeek(), 1);
         }
         if (GROUP_BY_YEAR.equals(groupBy)) {
             return LocalDate.of(Integer.parseInt(bucket), 1, 1);
@@ -130,6 +153,9 @@ public final class PlatformAnalyticsSupport {
         if (GROUP_BY_YEAR.equals(groupBy)) {
             return LocalDate.of(date.getYear(), 1, 1);
         }
+        if (GROUP_BY_WEEK.equals(groupBy)) {
+            return date.with(WeekFields.ISO.dayOfWeek(), 1);
+        }
         if (GROUP_BY_MONTH.equals(groupBy)) {
             return LocalDate.of(date.getYear(), date.getMonthValue(), 1);
         }
@@ -140,6 +166,9 @@ public final class PlatformAnalyticsSupport {
         groupBy = normalizeGroupBy(groupBy);
         if (GROUP_BY_YEAR.equals(groupBy)) {
             return date.plusYears(amount);
+        }
+        if (GROUP_BY_WEEK.equals(groupBy)) {
+            return date.plusWeeks(amount);
         }
         if (GROUP_BY_MONTH.equals(groupBy)) {
             return date.plusMonths(amount);
@@ -153,6 +182,11 @@ public final class PlatformAnalyticsSupport {
         LocalDate e = alignStart(end, groupBy);
         if (GROUP_BY_YEAR.equals(groupBy)) {
             return ChronoUnit.YEARS.between(s, e);
+        }
+        if (GROUP_BY_WEEK.equals(groupBy)) {
+            long weeks = ChronoUnit.WEEKS.between(s, e);
+            // Keep previous-period comparison aligned with 4-week dashboard windows.
+            return Math.min(weeks, 3L);
         }
         if (GROUP_BY_MONTH.equals(groupBy)) {
             return ChronoUnit.MONTHS.between(s, e);
