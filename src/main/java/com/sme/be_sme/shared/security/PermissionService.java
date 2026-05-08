@@ -54,8 +54,13 @@ import java.util.stream.Collectors;
             return true;
         }
         // System feedback submit: any authenticated role can submit feedback
-        if ("com.sme.feedback.submit".equalsIgnoreCase(requiredPerm) && !rolesUpper.isEmpty()) {
-            return true;
+        if (requiredPerm != null && !rolesUpper.isEmpty()) {
+            String perm = requiredPerm.trim();
+
+            if ("com.sme.feedback.submit".equalsIgnoreCase(perm)
+                    || "com.sme.feedback.my.list".equalsIgnoreCase(perm)) {
+                return true;
+            }
         }
         // EMPLOYEE: task page, onboarding view, notifications, documents, own profile
         if (rolesUpper.contains("EMPLOYEE") && requiredPerm != null) {
@@ -114,7 +119,8 @@ import java.util.stream.Collectors;
                     || "com.sme.ai.assistant.ask".equalsIgnoreCase(perm)
                     || "com.sme.chat.session.create".equalsIgnoreCase(perm)
                     || "com.sme.chat.session.list".equalsIgnoreCase(perm)
-                    || "com.sme.chat.message.list".equalsIgnoreCase(perm)){
+                    || "com.sme.chat.message.list".equalsIgnoreCase(perm)
+                    || "com.sme.feedback.my.list".equalsIgnoreCase(perm)){
                 return true;
             }
         }
