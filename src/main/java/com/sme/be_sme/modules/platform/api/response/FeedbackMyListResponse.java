@@ -6,7 +6,7 @@ import java.util.List;
 import lombok.Data;
 
 @Data
-public class PlatformFeedbackListResponse {
+public class FeedbackMyListResponse {
 
     private List<FeedbackItem> items = new ArrayList<>();
     private Long total = 0L;
@@ -17,13 +17,6 @@ public class PlatformFeedbackListResponse {
     public static class FeedbackItem {
 
         private String feedbackId;
-
-        private String companyId;
-        private String companyName;
-
-        private String userId;
-        private String userName;
-        private String userEmail;
 
         private String subject;
         private String content;

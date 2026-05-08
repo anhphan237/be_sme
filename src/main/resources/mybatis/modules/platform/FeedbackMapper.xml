@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
 <mapper namespace="com.sme.be_sme.modules.platform.infrastructure.mapper.FeedbackMapper">
 
     <resultMap id="BaseResultMap" type="com.sme.be_sme.modules.platform.infrastructure.persistence.entity.FeedbackEntity">
@@ -11,30 +12,253 @@
         <result column="status" property="status" />
         <result column="resolved_at" property="resolvedAt" />
         <result column="resolved_by" property="resolvedBy" />
+        <result column="resolution_note" property="resolutionNote" />
         <result column="created_at" property="createdAt" />
         <result column="updated_at" property="updatedAt" />
     </resultMap>
 
     <sql id="Base_Column_List">
-        feedback_id, company_id, user_id, subject, content, status, resolved_at, resolved_by, created_at, updated_at
+        feedback_id,
+        company_id,
+        user_id,
+        subject,
+        content,
+        status,
+        resolved_at,
+        resolved_by,
+        resolution_note,
+        created_at,
+        updated_at
     </sql>
 
     <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.String">
-        SELECT <include refid="Base_Column_List" /> FROM feedbacks WHERE feedback_id = #{feedbackId}
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM feedbacks
+        WHERE feedback_id = #{feedbackId}
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap" parameterType="java.lang.String">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM feedbacks
+        WHERE feedback_id = #{feedbackId}
     </select>
 
     <select id="selectAll" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List" /> FROM feedbacks ORDER BY created_at DESC
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM feedbacks
+        ORDER BY created_at DESC
     </select>
 
     <insert id="insert" parameterType="com.sme.be_sme.modules.platform.infrastructure.persistence.entity.FeedbackEntity">
-        INSERT INTO feedbacks (feedback_id, company_id, user_id, subject, content, status, resolved_at, resolved_by, created_at, updated_at)
-        VALUES (#{feedbackId}, #{companyId}, #{userId}, #{subject}, #{content}, #{status}, #{resolvedAt}, #{resolvedBy}, #{createdAt}, #{updatedAt})
+        INSERT INTO feedbacks (
+            feedback_id,
+            company_id,
+            user_id,
+            subject,
+            content,
+            status,
+            resolved_at,
+            resolved_by,
+            resolution_note,
+            created_at,
+            updated_at
+        )
+        VALUES (
+                   #{feedbackId},
+                   #{companyId},
+                   #{userId},
+                   #{subject},
+                   #{content},
+                   #{status},
+                   #{resolvedAt},
+                   #{resolvedBy},
+                   #{resolutionNote},
+                   #{createdAt},
+                   #{updatedAt}
+               )
     </insert>
 
     <update id="updateByPrimaryKey" parameterType="com.sme.be_sme.modules.platform.infrastructure.persistence.entity.FeedbackEntity">
-        UPDATE feedbacks SET company_id=#{companyId}, user_id=#{userId}, subject=#{subject}, content=#{content},
-            status=#{status}, resolved_at=#{resolvedAt}, resolved_by=#{resolvedBy}, updated_at=#{updatedAt}
+        UPDATE feedbacks
+        SET
+            company_id = #{companyId},
+            user_id = #{userId},
+            subject = #{subject},
+            content = #{content},
+            status = #{status},
+            resolved_at = #{resolvedAt},
+            resolved_by = #{resolvedBy},
+            resolution_note = #{resolutionNote},
+            updated_at = #{updatedAt}
         WHERE feedback_id = #{feedbackId}
     </update>
+
+    <!-- Admin Platform: lấy toàn bộ feedback, có filter công ty, người gửi, trạng thái, keyword -->
+    <select id="selectPlatformFeedbackPage"
+            resultType="com.sme.be_sme.modules.platform.infrastructure.dto.PlatformFeedbackRow">
+        SELECT
+        f.feedback_id AS feedbackId,
+        f.company_id AS companyId,
+        c.name AS companyName,
+
+        f.user_id AS userId,
+        u.full_name AS userName,
+        u.email AS userEmail,
+
+        f.subject AS subject,
+        f.content AS content,
+        f.status AS status,
+
+        f.resolved_at AS resolvedAt,
+        f.resolved_by AS resolvedBy,
+        ru.full_name AS resolvedByName,
+        f.resolution_note AS resolutionNote,
+
+        f.created_at AS createdAt,
+        f.updated_at AS updatedAt
+        FROM feedbacks f
+        LEFT JOIN companies c ON c.company_id = f.company_id
+        LEFT JOIN users u ON u.user_id = f.user_id
+        LEFT JOIN users ru ON ru.user_id = f.resolved_by
+        <where>
+            <if test="companyId != null and companyId != ''">
+                f.company_id = #{companyId}
+            </if>
+
+            <if test="userId != null and userId != ''">
+                AND f.user_id = #{userId}
+            </if>
+
+            <if test="status != null and status != ''">
+                AND UPPER(f.status) = UPPER(#{status})
+            </if>
+
+            <if test="keyword != null and keyword != ''">
+                AND (
+                f.subject ILIKE CONCAT('%', #{keyword}, '%')
+                OR f.content ILIKE CONCAT('%', #{keyword}, '%')
+                OR f.resolution_note ILIKE CONCAT('%', #{keyword}, '%')
+                OR c.name ILIKE CONCAT('%', #{keyword}, '%')
+                OR u.full_name ILIKE CONCAT('%', #{keyword}, '%')
+                OR u.email ILIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+        </where>
+        ORDER BY f.created_at DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="countPlatformFeedback" resultType="long">
+        SELECT COUNT(1)
+        FROM feedbacks f
+        LEFT JOIN companies c ON c.company_id = f.company_id
+        LEFT JOIN users u ON u.user_id = f.user_id
+        <where>
+            <if test="companyId != null and companyId != ''">
+                f.company_id = #{companyId}
+            </if>
+
+            <if test="userId != null and userId != ''">
+                AND f.user_id = #{userId}
+            </if>
+
+            <if test="status != null and status != ''">
+                AND UPPER(f.status) = UPPER(#{status})
+            </if>
+
+            <if test="keyword != null and keyword != ''">
+                AND (
+                f.subject ILIKE CONCAT('%', #{keyword}, '%')
+                OR f.content ILIKE CONCAT('%', #{keyword}, '%')
+                OR f.resolution_note ILIKE CONCAT('%', #{keyword}, '%')
+                OR c.name ILIKE CONCAT('%', #{keyword}, '%')
+                OR u.full_name ILIKE CONCAT('%', #{keyword}, '%')
+                OR u.email ILIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+        </where>
+    </select>
+
+    <!-- HR / Manager / Employee: chỉ lấy feedback của chính user đang login -->
+    <select id="selectMyFeedbackPage"
+            resultType="com.sme.be_sme.modules.platform.infrastructure.dto.FeedbackViewRow">
+        SELECT
+        f.feedback_id AS feedbackId,
+        f.company_id AS companyId,
+        c.name AS companyName,
+
+        f.user_id AS userId,
+        u.full_name AS userName,
+        u.email AS userEmail,
+
+        f.subject AS subject,
+        f.content AS content,
+        f.status AS status,
+
+        f.resolved_at AS resolvedAt,
+        f.resolved_by AS resolvedBy,
+        ru.full_name AS resolvedByName,
+        f.resolution_note AS resolutionNote,
+
+        f.created_at AS createdAt,
+        f.updated_at AS updatedAt
+        FROM feedbacks f
+        LEFT JOIN companies c ON c.company_id = f.company_id
+        LEFT JOIN users u ON u.user_id = f.user_id
+        LEFT JOIN users ru ON ru.user_id = f.resolved_by
+        WHERE f.company_id = #{companyId}
+        AND f.user_id = #{userId}
+
+        <if test="status != null and status != ''">
+            AND UPPER(f.status) = UPPER(#{status})
+        </if>
+
+        <if test="keyword != null and keyword != ''">
+            AND (
+            f.subject ILIKE CONCAT('%', #{keyword}, '%')
+            OR f.content ILIKE CONCAT('%', #{keyword}, '%')
+            OR f.resolution_note ILIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+
+        ORDER BY f.created_at DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="countMyFeedback" resultType="long">
+        SELECT COUNT(1)
+        FROM feedbacks f
+        WHERE f.company_id = #{companyId}
+        AND f.user_id = #{userId}
+
+        <if test="status != null and status != ''">
+            AND UPPER(f.status) = UPPER(#{status})
+        </if>
+
+        <if test="keyword != null and keyword != ''">
+            AND (
+            f.subject ILIKE CONCAT('%', #{keyword}, '%')
+            OR f.content ILIKE CONCAT('%', #{keyword}, '%')
+            OR f.resolution_note ILIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+    </select>
+
+    <!-- Admin Platform resolve / close feedback -->
+    <update id="resolveFeedback">
+        UPDATE feedbacks
+        SET
+            status = #{status},
+            resolved_at = #{resolvedAt},
+            resolved_by = #{resolvedBy},
+            resolution_note = #{resolutionNote},
+            updated_at = NOW()
+        WHERE feedback_id = #{feedbackId}
+    </update>
+
 </mapper>
