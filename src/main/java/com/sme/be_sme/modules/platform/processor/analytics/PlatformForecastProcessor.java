@@ -103,21 +103,70 @@ public class PlatformForecastProcessor extends BaseBizProcessor<BizContext> {
 
         List<PlatformForecastResponse.PointItem> forecast = new ArrayList<>();
         LocalDate cursor = PlatformAnalyticsSupport.alignStart(end, groupBy);
+        List<Double> forecastValues = "REVENUE".equals(metric)
+                ? holtLinearForecast(y, forecastPoints)
+                : linearRegressionForecast(intercept, slope, n, forecastPoints);
         for (int i = 1; i <= forecastPoints; i++) {
             cursor = PlatformAnalyticsSupport.step(cursor, groupBy, 1);
             PlatformForecastResponse.PointItem point = new PlatformForecastResponse.PointItem();
             point.setBucket(PlatformAnalyticsSupport.formatBucket(cursor, groupBy));
-            point.setValue(Math.max(0.0, intercept + slope * (n - 1 + i)));
+            point.setValue(Math.max(0.0, forecastValues.get(i - 1)));
             forecast.add(point);
         }
 
         PlatformForecastResponse response = new PlatformForecastResponse();
         response.setMetric(metric);
         response.setGroupBy(groupBy);
-        response.setMethod("LINEAR_REGRESSION");
+        response.setMethod("REVENUE".equals(metric) ? "HOLT_LINEAR" : "LINEAR_REGRESSION");
         response.setConfidenceNote("Forecast is directional and based on historical trend only.");
         response.setHistorical(historical);
         response.setForecast(forecast);
         return response;
+    }
+
+    private List<Double> linearRegressionForecast(double intercept, double slope, int historicalSize, int forecastPoints) {
+        List<Double> output = new ArrayList<>();
+        for (int i = 1; i <= forecastPoints; i++) {
+            output.add(intercept + slope * (historicalSize - 1 + i));
+        }
+        return output;
+    }
+
+    /**
+     * Holt's linear trend (double exponential smoothing).
+     * Alpha/Beta kept fixed for stable and predictable behavior.
+     */
+    private List<Double> holtLinearForecast(List<Double> series, int forecastPoints) {
+        List<Double> output = new ArrayList<>();
+        if (series == null || series.isEmpty()) {
+            for (int i = 0; i < forecastPoints; i++) {
+                output.add(0.0);
+            }
+            return output;
+        }
+        if (series.size() == 1) {
+            for (int i = 0; i < forecastPoints; i++) {
+                output.add(series.get(0));
+            }
+            return output;
+        }
+
+        final double alpha = 0.6;
+        final double beta = 0.3;
+
+        double level = series.get(0);
+        double trend = series.get(1) - series.get(0);
+
+        for (int t = 1; t < series.size(); t++) {
+            double value = series.get(t);
+            double prevLevel = level;
+            level = alpha * value + (1 - alpha) * (level + trend);
+            trend = beta * (level - prevLevel) + (1 - beta) * trend;
+        }
+
+        for (int i = 1; i <= forecastPoints; i++) {
+            output.add(level + i * trend);
+        }
+        return output;
     }
 }
