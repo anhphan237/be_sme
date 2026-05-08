@@ -47,7 +47,9 @@ public class PlatformRevenueAnalyticsProcessor extends BaseBizProcessor<BizConte
 
         Map<String, PlanEntity> planCache = new LinkedHashMap<>();
         for (PlanEntity plan : allPlans) {
-            if (plan != null && plan.getPlanId() != null) {
+            if (plan != null
+                    && plan.getPlanId() != null
+                    && STATUS_ACTIVE.equalsIgnoreCase(plan.getStatus())) {
                 planCache.put(plan.getPlanId(), plan);
             }
         }
