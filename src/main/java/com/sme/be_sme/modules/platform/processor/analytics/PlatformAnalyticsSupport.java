@@ -117,10 +117,8 @@ public final class PlatformAnalyticsSupport {
             return date.format(DateTimeFormatter.ISO_LOCAL_DATE);
         }
         if (GROUP_BY_WEEK.equals(groupBy)) {
-            WeekFields weekFields = WeekFields.ISO;
-            int year = date.get(weekFields.weekBasedYear());
-            int week = date.get(weekFields.weekOfWeekBasedYear());
-            return year + "-W" + String.format("%02d", week);
+            LocalDate weekStart = date.with(WeekFields.ISO.dayOfWeek(), 1);
+            return weekStart.format(DateTimeFormatter.ISO_LOCAL_DATE);
         }
         if (GROUP_BY_YEAR.equals(groupBy)) {
             return String.valueOf(date.getYear());
@@ -134,12 +132,7 @@ public final class PlatformAnalyticsSupport {
             return LocalDate.parse(bucket, DateTimeFormatter.ISO_LOCAL_DATE);
         }
         if (GROUP_BY_WEEK.equals(groupBy)) {
-            String[] parts = bucket.split("-W");
-            int year = Integer.parseInt(parts[0]);
-            int week = Integer.parseInt(parts[1]);
-            return LocalDate.of(year, 1, 4)
-                    .with(WeekFields.ISO.weekOfWeekBasedYear(), week)
-                    .with(WeekFields.ISO.dayOfWeek(), 1);
+            return LocalDate.parse(bucket, DateTimeFormatter.ISO_LOCAL_DATE);
         }
         if (GROUP_BY_YEAR.equals(groupBy)) {
             return LocalDate.of(Integer.parseInt(bucket), 1, 1);
